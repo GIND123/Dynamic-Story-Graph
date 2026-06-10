@@ -4,7 +4,7 @@ import uuid
 from neo4j import Driver, GraphDatabase
 
 from app.config import settings
-from app.models import ManuscriptCreate
+from app.models import ChapterExtraction, ManuscriptCreate
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +40,23 @@ def ensure_constraints() -> None:
     logger.info("Neo4j constraints ensured")
 
 
-def create_manuscript(body: ManuscriptCreate) -> str:
-    """Write Manuscript, Characters, Locations, and Rules via MERGE. Returns manuscript_id."""
-    manuscript_id = uuid.uuid4().hex
+# ---------------------------------------------------------------------------
+# Manuscript CRUD
+# ---------------------------------------------------------------------------
+
+
+def create_manuscript(body: ManuscriptCreate, manuscript_id: str | None = None) -> str:
+    """Write Manuscript, Characters, Locations, and Rules via MERGE. Returns manuscript_id.
+
+    Accepts an optional manuscript_id so that seed.py can use a stable,
+    predictable ID for idempotent seeding.
+    """
+    if manuscript_id is None:
+        manuscript_id = uuid.uuid4().hex
+    mid = manuscript_id
     drv = init_driver()
 
-    def _tx(tx, mid: str) -> None:
+    def _tx(tx) -> None:
         tx.run(
             "MERGE (m:Manuscript {uid: $uid}) "
             "SET m.manuscript_id = $mid, m.title = $title, m.premise = $premise",
@@ -89,9 +100,77 @@ def create_manuscript(body: ManuscriptCreate) -> str:
             )
 
     with drv.session() as session:
-        session.execute_write(_tx, manuscript_id)
+        session.execute_write(_tx)
 
-    return manuscript_id
+    return mid
+
+
+def manuscript_exists(manuscript_id: str) -> bool:
+    drv = init_driver()
+    result = drv.execute_query(
+        "MATCH (m:Manuscript {manuscript_id: $mid}) RETURN count(m) AS cnt",
+        mid=manuscript_id,
+    )
+    return result.records[0]["cnt"] > 0
+
+
+# ---------------------------------------------------------------------------
+# Canon read
+# ---------------------------------------------------------------------------
+
+
+def get_canon(manuscript_id: str) -> dict:
+    """Return structured canon facts: characters, rules, and recent events.
+
+    Includes ALL characters regardless of status so the gate knows who is dead.
+    Query shape from CLAUDE.md §7.2.
+    """
+    drv = init_driver()
+
+    # Characters with their most-recent 3 event summaries (per-character)
+    char_result = drv.execute_query(
+        "MATCH (c:Character {manuscript_id: $mid}) "
+        "OPTIONAL MATCH (c)-[:LOCATED_AT]->(loc:Location) "
+        "OPTIONAL MATCH (e:Event {manuscript_id: $mid})-[:INVOLVES]->(c) "
+        "WITH c, loc, e ORDER BY e.sequence_index DESC "
+        "RETURN c.name AS name, c.status AS status, c.traits AS traits, "
+        "loc.name AS location, collect(e.summary)[..3] AS recent_events",
+        mid=manuscript_id,
+    )
+    characters = [
+        {
+            "name": r["name"],
+            "status": r["status"],
+            "traits": r["traits"],
+            "location": r["location"],
+            "recent_events": [s for s in (r["recent_events"] or []) if s],
+        }
+        for r in char_result.records
+    ]
+
+    rule_result = drv.execute_query(
+        "MATCH (r:Rule {manuscript_id: $mid}) RETURN r.text AS text",
+        mid=manuscript_id,
+    )
+    rules = [r["text"] for r in rule_result.records]
+
+    event_result = drv.execute_query(
+        "MATCH (e:Event {manuscript_id: $mid}) "
+        "RETURN e.summary AS summary, e.sequence_index AS seq "
+        "ORDER BY e.sequence_index ASC LIMIT 10",
+        mid=manuscript_id,
+    )
+    events = [
+        {"summary": r["summary"], "sequence_index": r["seq"]}
+        for r in event_result.records
+    ]
+
+    return {"characters": characters, "rules": rules, "events": events}
+
+
+# ---------------------------------------------------------------------------
+# Chapter lifecycle
+# ---------------------------------------------------------------------------
 
 
 def next_chapter_number(manuscript_id: str) -> int:
@@ -103,6 +182,17 @@ def next_chapter_number(manuscript_id: str) -> int:
         mid=manuscript_id,
     )
     return result.records[0]["next_n"]
+
+
+def is_chapter_committed(manuscript_id: str, chapter_number: int) -> bool:
+    drv = init_driver()
+    result = drv.execute_query(
+        "MATCH (ch:Chapter {manuscript_id: $mid, number: $n, status: 'COMMITTED'}) "
+        "RETURN count(ch) AS cnt",
+        mid=manuscript_id,
+        n=chapter_number,
+    )
+    return result.records[0]["cnt"] > 0
 
 
 def get_chapter(manuscript_id: str, number: int) -> dict | None:
@@ -117,6 +207,148 @@ def get_chapter(manuscript_id: str, number: int) -> dict | None:
         return None
     r = result.records[0]
     return {"number": r["number"], "status": r["status"], "text": r["text"]}
+
+
+def commit_chapter(
+    manuscript_id: str,
+    chapter_number: int,
+    text: str,
+    extraction: ChapterExtraction,
+    embedding: list[float] | None,
+) -> None:
+    """Persist prose, graph updates, and (Phase 4+) the passage embedding in ONE transaction.
+
+    All writes are inside a single execute_write so canon is never half-updated.
+    Reads (max sequence_index, previous event uid) happen first inside the same
+    transaction before any writes, so they see the committed graph state.
+    """
+    drv = init_driver()
+    mid = manuscript_id
+    n = chapter_number
+
+    def _tx(tx) -> None:
+        # ---- READS FIRST (before any writes in this tx) ----
+        max_seq_rec = tx.run(
+            "OPTIONAL MATCH (e:Event {manuscript_id: $mid}) "
+            "RETURN coalesce(max(e.sequence_index), -1) AS max_seq",
+            mid=mid,
+        ).single()
+        max_seq: int = max_seq_rec["max_seq"]
+
+        prev_event_uid: str | None = None
+        if max_seq >= 0:
+            prev_rec = tx.run(
+                "MATCH (e:Event {manuscript_id: $mid, sequence_index: $seq}) "
+                "RETURN e.uid AS uid",
+                mid=mid,
+                seq=max_seq,
+            ).single()
+            if prev_rec:
+                prev_event_uid = prev_rec["uid"]
+
+        # ---- WRITES ----
+        chapter_uid = f"{mid}:Chapter:{n}"
+
+        # 1. MERGE Chapter
+        tx.run(
+            "MERGE (ch:Chapter {uid: $uid}) "
+            "SET ch.manuscript_id = $mid, ch.number = $n, "
+            "ch.text = $text, ch.status = 'COMMITTED'",
+            uid=chapter_uid,
+            mid=mid,
+            n=n,
+            text=text,
+        )
+
+        # 2. MERGE Characters (update status from extraction)
+        for char in extraction.characters:
+            char_uid = f"{mid}:Character:{char.name}"
+            tx.run(
+                "MERGE (c:Character {uid: $uid}) "
+                "SET c.manuscript_id = $mid, c.name = $name, c.status = $status",
+                uid=char_uid,
+                mid=mid,
+                name=char.name,
+                status=char.status,
+            )
+            tx.run(
+                "MATCH (c:Character {uid: $cuid}), (ch:Chapter {uid: $chuid}) "
+                "MERGE (c)-[:APPEARS_IN]->(ch)",
+                cuid=char_uid,
+                chuid=chapter_uid,
+            )
+
+        # 3. CREATE Events with PRECEDES chain
+        seq = max_seq + 1
+        local_prev_uid = prev_event_uid
+        for event in extraction.events:
+            event_uid = f"{mid}:Event:{seq}"
+            tx.run(
+                "MERGE (e:Event {uid: $uid}) "
+                "SET e.manuscript_id = $mid, e.summary = $summary, "
+                "e.sequence_index = $seq",
+                uid=event_uid,
+                mid=mid,
+                summary=event.summary,
+                seq=seq,
+            )
+            if local_prev_uid is not None:
+                tx.run(
+                    "MATCH (prev:Event {uid: $puid}), (curr:Event {uid: $cuid}) "
+                    "MERGE (prev)-[:PRECEDES]->(curr)",
+                    puid=local_prev_uid,
+                    cuid=event_uid,
+                )
+            for char_name in event.involves:
+                tx.run(
+                    "MATCH (e:Event {uid: $euid}), (c:Character {uid: $cuid}) "
+                    "MERGE (e)-[:INVOLVES]->(c)",
+                    euid=event_uid,
+                    cuid=f"{mid}:Character:{char_name}",
+                )
+            tx.run(
+                "MATCH (e:Event {uid: $euid}), (ch:Chapter {uid: $chuid}) "
+                "MERGE (e)-[:OCCURS_IN]->(ch)",
+                euid=event_uid,
+                chuid=chapter_uid,
+            )
+            local_prev_uid = event_uid
+            seq += 1
+
+        # 4. Embedding (Phase 4 adds this; skipped when None)
+        if embedding is not None:
+            tx.run(
+                "MATCH (ch:Chapter {uid: $uid}) SET ch.embedding = $emb",
+                uid=chapter_uid,
+                emb=embedding,
+            )
+
+    with drv.session() as session:
+        session.execute_write(_tx)
+
+
+def mark_needs_review(
+    manuscript_id: str,
+    chapter_number: int,
+    last_feedback: list[str],
+) -> None:
+    """Mark a chapter NEEDS_REVIEW after exhausting all generation retries."""
+    drv = init_driver()
+    chapter_uid = f"{manuscript_id}:Chapter:{chapter_number}"
+    drv.execute_query(
+        "MERGE (ch:Chapter {uid: $uid}) "
+        "SET ch.manuscript_id = $mid, ch.number = $n, "
+        "ch.status = 'NEEDS_REVIEW', ch.last_feedback = $feedback",
+        uid=chapter_uid,
+        mid=manuscript_id,
+        n=chapter_number,
+        feedback="\n".join(last_feedback),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Debug / state
+# ---------------------------------------------------------------------------
 
 
 def get_state(manuscript_id: str) -> dict:
