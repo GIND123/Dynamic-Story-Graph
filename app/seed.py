@@ -14,6 +14,7 @@ from app.models import (
     ExtractedEvent,
     ManuscriptCreate,
 )
+from app.vectors import embed_one
 
 # Stable ID so re-running seed is a no-op (MERGE on uid)
 SEED_MID = "ashen_crown_seed_v1"
@@ -68,6 +69,8 @@ def seed() -> None:
     )
     graph.create_manuscript(body, manuscript_id=SEED_MID)
 
+    print("Computing embeddings for seed chapters...")
+
     # Chapter 1 — the trio meet
     ch1 = ChapterExtraction(
         characters=[
@@ -82,7 +85,9 @@ def seed() -> None:
             )
         ],
     )
-    graph.commit_chapter(SEED_MID, 1, _CHAPTER_1_TEXT, ch1, embedding=None)
+    graph.commit_chapter(
+        SEED_MID, 1, _CHAPTER_1_TEXT, ch1, embedding=embed_one(_CHAPTER_1_TEXT)
+    )
 
     # Chapter 2 — Brann dies
     ch2 = ChapterExtraction(
@@ -100,7 +105,9 @@ def seed() -> None:
             )
         ],
     )
-    graph.commit_chapter(SEED_MID, 2, _CHAPTER_2_TEXT, ch2, embedding=None)
+    graph.commit_chapter(
+        SEED_MID, 2, _CHAPTER_2_TEXT, ch2, embedding=embed_one(_CHAPTER_2_TEXT)
+    )
 
     print("Seeded 'The Ashen Crown' successfully.")
     print(f"Manuscript ID : {SEED_MID}")
