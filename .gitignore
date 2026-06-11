@@ -6,8 +6,12 @@ __pycache__/
 venv/
 .eggs/
 
-# Secrets and environment
+# Secrets and environment — all variants, never commit real keys
 .env
+.env.local
+.env.production
+.env.staging
+.env.*.local
 
 # Docker volumes / local data
 neo4j_data/
