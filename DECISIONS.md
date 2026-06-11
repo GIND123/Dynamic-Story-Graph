@@ -48,6 +48,22 @@ Two-layer idempotency: (1) Redis lock prevents concurrent duplicate execution; (
 
 Chapter prose lives in Neo4j. The Celery result payload contains only `{status, chapter_number, attempts, coherence_score}`. Fat Redis results are an anti-pattern: Redis is not a document store, result TTL is short, and prose retrieval belongs to the API's Neo4j read path.
 
+## fastembed model warmup via worker_process_init signal
+
+`@worker_process_init.connect` in `celery_app.py` calls `vectors.warmup()` in each Celery worker child process before the first task runs. The deferred import (`from app.vectors import warmup` inside the handler) keeps fastembed out of the API process (which also imports `celery_app`). Rejected: warmup inside the first task — adds 10-30s of latency to the first real chapter generation and makes it non-deterministic.
+
+## similar_passages over-fetches k*4 due to index pre-filter limitation
+
+`db.index.vector.queryNodes` returns results from all manuscripts; it cannot pre-filter by `manuscript_id`. We request `k*4` candidates and apply a WHERE clause on `manuscript_id` and `status` after YIELD. With k=3, we fetch 12 candidates and keep up to 3. Rejected: separate vector DB with native filtering — adds a second data store and a second API key.
+
+## Tier-1 gate is a pure function (no DB round-trip)
+
+`graph.tier1_check(extraction, canon)` takes the already-fetched canon dict rather than querying the database again. The canon dict (returned by `graph.get_canon`) already carries every character's current status, so dead-involvement and resurrection checks require only a dict lookup — O(1) per character. A DB round-trip would cost a full network call for every attempt in the retry loop. Rejected: querying Neo4j inside tier1_check — slower and adds an extra failure mode.
+
+## `judge.py` as thin wrapper (separation of concerns)
+
+`app/judge.py` contains `evaluate(canon, draft, llm)`, which calls `format_canon` and then `llm.judge`. Keeping this in a separate module from `llm.py` lets the judge orchestration evolve independently (e.g. add a second-opinion judge, log verdicts, switch models) without touching the LLMClient protocol. Tasks import `judge` as a module reference, so monkeypatching `app.judge.evaluate` in tests intercepts the call cleanly. Rejected: calling `llm.judge` directly in tasks.py — merges orchestration with protocol, harder to extend.
+
 ## TestClient without lifespan for unit tests
 
 Tests use `fastapi.testclient.TestClient(app)` without the context-manager form, so the async lifespan (constraint setup, index creation) does not run. External dependencies (graph functions, Celery task dispatch) are monkeypatched per test. This keeps tests fast, self-contained, and runnable without live services. Integration smoke tests (make up first) cover the live path.

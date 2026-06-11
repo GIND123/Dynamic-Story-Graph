@@ -1,0 +1,86 @@
+[
+  {
+    "id": "c1_dead_acts_present",
+    "description": "Dead character Brann performs a physical action in the present chapter",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "Mara arrived at the Citadel before dawn. To her shock, Brann was there — standing at the gate, pushing it open with both hands. He turned and nodded at her as if nothing had happened. She told herself she was dreaming."
+  },
+  {
+    "id": "c2_dead_speaks_dialogue",
+    "description": "Dead character Brann speaks dialogue in the current scene",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "The chamber was empty except for a single figure by the window. \"I never stopped watching over this city,\" Brann said, his voice unchanged. \"You didn't think I'd really leave, did you?\" Mara took a step back."
+  },
+  {
+    "id": "c3_explicit_resurrection",
+    "description": "Draft explicitly states Brann was resurrected or survived",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "The healer's arts had proven more powerful than anyone had dared hope. Brann opened his eyes in the infirmary three days after the battle. He had lost much blood but he would recover. The city's greatest captain would ride again."
+  },
+  {
+    "id": "c4_rule_violation_magic",
+    "description": "Draft describes resurrection magic being used, violating the world rule",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "The old mage completed the ritual at midnight. Ancient words rose into the air, and the dead stirred. In Duskwall, for the first time in living memory, the boundary between life and death had been crossed. The impossible had become real."
+  },
+  {
+    "id": "c5_wrong_location",
+    "description": "Mara is described as being at the Citadel — her location is Duskwall docks",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "Mara had been stationed at the Citadel for the past week, sleeping in the guards' barracks and eating from their mess hall. It was the only place in the city she felt safe now. She knew every stone of its eastern wall."
+  },
+  {
+    "id": "c6_dead_described_as_alive",
+    "description": "Draft refers to Brann as living and working in the present tense",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "Sera found Brann in the guard room, reviewing the duty roster for the following week. He looked up when she entered, quill still in hand. \"I've assigned extra patrols to the eastern arch,\" he said. \"What do you need, archivist?\""
+  },
+  {
+    "id": "p1_alive_characters_only",
+    "description": "Clean draft — only Mara and Sera act, Brann not mentioned",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "Mara met Sera in the courtyard behind the Old Library. Sera spread three maps across the stones, anchoring the corners with river pebbles. \"The succession documents are in the east vault,\" she said quietly. \"If we can reach them first, we control the next appointment.\" Mara studied the maps. It was possible. Barely."
+  },
+  {
+    "id": "p2_dead_mentioned_past_tense",
+    "description": "Brann mentioned reverently in past tense; no suggestion he is alive",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "Mara laid a single flower at the base of the Citadel gate — where Brann had fallen. She did not linger. He was gone, and grief was a luxury Duskwall could not afford. She turned back toward the docks before the city bells finished their morning toll."
+  },
+  {
+    "id": "p3_characters_at_correct_locations",
+    "description": "Mara at docks, Sera at library — both correct per canon",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "At the docks, Mara moved a crate of salted fish to expose the hidden panel beneath. In the Old Library, three streets away, Sera was cross-referencing the port manifests against the royal ledgers. They were both looking for the same ship. They would not find it until they compared notes."
+  },
+  {
+    "id": "p4_new_character_introduced",
+    "description": "New character Kira introduced; no violations of existing canon",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "A courier arrived at the docks in the early afternoon — a young woman named Kira, dust-stained from the coastal road. She carried sealed letters from the outer provinces, addressed to no one Mara recognised. Mara paid the toll and let her pass. A stranger was still better than an enemy."
+  },
+  {
+    "id": "p5_rule_explicitly_acknowledged",
+    "description": "Characters acknowledge the no-resurrection rule; no violation implied",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "\"People are saying he might come back,\" the dockworker said. Mara shook her head. \"He won't. There is no such thing as coming back in Duskwall. Not from what happened at that gate.\" The dockworker looked down at his hands and said nothing more. Some truths did not need repeating."
+  },
+  {
+    "id": "p6_world_building_no_violations",
+    "description": "World-building chapter; no named canon characters acted on, no violations",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
+    "draft": "The king's treasury had been sealed for five days. By law, it could not be opened until a successor was named. Every faction in the city knew this. Every faction was moving. The harbour master's ledgers went missing on the third day. The night watch doubled on the fourth. By the fifth, even the street children had stopped playing near the Citadel walls."
+  }
+]
