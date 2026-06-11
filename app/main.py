@@ -125,5 +125,7 @@ def get_job(job_id: str) -> dict:
     return {
         "job_id": job_id,
         "status": result.state,
-        "result": result.result if result.ready() else None,
+        "result": str(result.result)
+        if result.state == "FAILURE"
+        else (result.result if result.ready() else None),
     }

@@ -219,6 +219,106 @@ class TestIdempotency:
         assert mock_redis._store.get(lock_key) is None  # lock was released
 
 
+class TestGate:
+    def test_fake_violation_lands_needs_review(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_canon: dict,
+        mock_redis_factory,
+    ) -> None:
+        """FAKE_VIOLATION=1: tier1 catches the dead-Brann violation on every attempt,
+        exhausting all 3 retries and landing NEEDS_REVIEW."""
+        committed: dict = {}
+        review_calls: list = []
+
+        monkeypatch.setattr("app.tasks._redis", mock_redis_factory())
+        monkeypatch.setattr("app.graph.get_canon", lambda mid: fake_canon)
+        monkeypatch.setattr("app.graph.is_chapter_committed", lambda mid, n: False)
+        monkeypatch.setattr(
+            "app.graph.commit_chapter",
+            lambda mid, n, text, extraction, emb: committed.update({(mid, n): text}),
+        )
+        monkeypatch.setattr(
+            "app.graph.mark_needs_review",
+            lambda mid, n, text, feedback: review_calls.append(
+                (mid, n, text, feedback)
+            ),
+        )
+        monkeypatch.setattr("app.vectors.similar_passages", lambda *a, **kw: [])
+        monkeypatch.setattr("app.vectors.embed_one", lambda text: None)
+        monkeypatch.setattr("app.config.settings.fake_violation", 1)
+        monkeypatch.setattr("app.config.settings.llm_mode", "fake")
+
+        from app.tasks import generate_chapter_task
+
+        result = generate_chapter_task.apply(args=["mid_gate", 3, None]).get()
+
+        assert result["status"] == "needs_review"
+        assert result["attempts"] == 3
+        assert not committed  # commit_chapter must not have been called
+        assert len(review_calls) == 1
+        _mid, _n, last_text, last_feedback = review_calls[0]
+        assert last_text  # last draft stored for human review
+        assert last_feedback  # violation strings passed through
+
+    def test_judge_fail_then_pass_commits_on_second_attempt(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_canon: dict,
+        mock_redis_factory,
+    ) -> None:
+        """Tier1 passes; judge FAIL on attempt 1 then PASS on attempt 2 → committed."""
+        from app.models import Contradiction, JudgeVerdict
+
+        committed: dict = {}
+        judge_call_count: list[int] = [0]
+
+        def fake_evaluate(canon: dict, draft: str, llm) -> JudgeVerdict:
+            judge_call_count[0] += 1
+            if judge_call_count[0] == 1:
+                return JudgeVerdict(
+                    verdict="FAIL",
+                    contradictions=[
+                        Contradiction(
+                            violated_fact="Brann is dead",
+                            draft_evidence="Brann appears in the scene",
+                        )
+                    ],
+                    coherence_score=0.1,
+                    reasoning="dead character found",
+                )
+            return JudgeVerdict(
+                verdict="PASS",
+                contradictions=[],
+                coherence_score=0.9,
+                reasoning="no violations",
+            )
+
+        monkeypatch.setattr("app.tasks._redis", mock_redis_factory())
+        monkeypatch.setattr("app.graph.get_canon", lambda mid: fake_canon)
+        monkeypatch.setattr("app.graph.is_chapter_committed", lambda mid, n: False)
+        monkeypatch.setattr(
+            "app.graph.commit_chapter",
+            lambda mid, n, text, extraction, emb: committed.update({(mid, n): text}),
+        )
+        monkeypatch.setattr("app.graph.mark_needs_review", lambda *a, **kw: None)
+        monkeypatch.setattr("app.judge.evaluate", fake_evaluate)
+        monkeypatch.setattr("app.vectors.similar_passages", lambda *a, **kw: [])
+        monkeypatch.setattr("app.vectors.embed_one", lambda text: None)
+        monkeypatch.setattr("app.config.settings.fake_violation", 0)
+        monkeypatch.setattr("app.config.settings.llm_mode", "fake")
+
+        from app.tasks import generate_chapter_task
+
+        result = generate_chapter_task.apply(args=["mid_judge_retry", 5, None]).get()
+
+        assert result["status"] == "committed"
+        assert result["attempts"] == 2
+        assert result["coherence_score"] == 0.9
+        assert ("mid_judge_retry", 5) in committed
+        assert judge_call_count[0] == 2  # judge called twice: FAIL then PASS
+
+
 class TestFakeLLM:
     def test_draft_mentions_alive_characters(self) -> None:
         from app.llm import FakeLLM

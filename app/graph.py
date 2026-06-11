@@ -3,7 +3,7 @@ import uuid
 
 from neo4j import Driver, GraphDatabase
 
-from app.config import settings
+from app.config import EMBED_DIM, settings
 from app.models import ChapterExtraction, ManuscriptCreate
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,15 @@ def ensure_constraints() -> None:
                 f"CREATE CONSTRAINT {label.lower()}_uid IF NOT EXISTS "
                 f"FOR (n:{label}) REQUIRE n.uid IS UNIQUE"
             )
-    logger.info("Neo4j constraints ensured")
+        # Vector index for hybrid retrieval (EMBED_DIM imported from config — single source)
+        session.run(
+            "CREATE VECTOR INDEX passage_index IF NOT EXISTS "
+            "FOR (ch:Chapter) ON (ch.embedding) "
+            f"OPTIONS {{indexConfig: {{`vector.dimensions`: {EMBED_DIM}, `vector.similarity_function`: 'cosine'}}}}"
+        )
+        # Block until the index is online before serving traffic (CLAUDE.md §13.4)
+        session.run("CALL db.awaitIndexes(300)")
+    logger.info("Neo4j constraints and vector index ensured")
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +174,42 @@ def get_canon(manuscript_id: str) -> dict:
     ]
 
     return {"characters": characters, "rules": rules, "events": events}
+
+
+# ---------------------------------------------------------------------------
+# Tier-1 deterministic gate
+# ---------------------------------------------------------------------------
+
+
+def tier1_check(extraction: ChapterExtraction, canon: dict) -> list[str]:
+    """Deterministic canon violation check against pre-fetched canon facts.
+
+    Pure function — no database queries needed; the canon dict already carries
+    all character statuses. Returns violation strings (empty list = PASS).
+
+    Checks:
+    1. Dead character named in any event.involves list
+    2. Dead-in-canon character extracted as alive (resurrection)
+
+    No flashback support in v1: any dead-character involvement is a violation.
+    """
+    violations: list[str] = []
+    canon_status: dict[str, str] = {
+        c["name"]: c["status"] for c in canon.get("characters", [])
+    }
+
+    for event in extraction.events:
+        for name in event.involves:
+            if canon_status.get(name) == "dead":
+                violations.append(f"Dead character '{name}' is involved in an event")
+
+    for char in extraction.characters:
+        if canon_status.get(char.name) == "dead" and char.status == "alive":
+            violations.append(
+                f"Resurrection: '{char.name}' is dead in canon but extracted as alive"
+            )
+
+    return violations
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +374,7 @@ def commit_chapter(
 def mark_needs_review(
     manuscript_id: str,
     chapter_number: int,
+    last_draft: str,
     last_feedback: list[str],
 ) -> None:
     """Mark a chapter NEEDS_REVIEW after exhausting all generation retries."""
@@ -338,10 +383,11 @@ def mark_needs_review(
     drv.execute_query(
         "MERGE (ch:Chapter {uid: $uid}) "
         "SET ch.manuscript_id = $mid, ch.number = $n, "
-        "ch.status = 'NEEDS_REVIEW', ch.last_feedback = $feedback",
+        "ch.text = $text, ch.status = 'NEEDS_REVIEW', ch.last_feedback = $feedback",
         uid=chapter_uid,
         mid=manuscript_id,
         n=chapter_number,
+        text=last_draft,
         feedback="\n".join(last_feedback),
     )
 

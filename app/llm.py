@@ -221,9 +221,10 @@ class AnthropicLLM:
         import anthropic
 
         # Fail fast if installed SDK is too old to have messages.parse
-        assert hasattr(anthropic.resources.Messages, "parse"), (
-            "anthropic SDK missing messages.parse — run: pip install -U anthropic"
-        )
+        if not hasattr(anthropic.resources.Messages, "parse"):
+            raise RuntimeError(
+                "anthropic SDK missing messages.parse — run: pip install -U anthropic"
+            )
 
         self._client = anthropic.Anthropic(
             api_key=settings.anthropic_api_key,

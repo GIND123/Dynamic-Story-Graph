@@ -3,7 +3,7 @@ import logging
 import redis as redis_module
 from neo4j.exceptions import ServiceUnavailable
 
-from app import graph, retrieval, vectors
+from app import graph, judge as judge_module, retrieval, vectors
 from app.celery_app import celery
 from app.config import settings
 from app.llm import get_llm
@@ -30,7 +30,7 @@ def generate_chapter_task(
     chapter_number: int,
     scene_hint: str | None,
 ) -> dict:
-    """Main generation pipeline.
+    """Main generation pipeline with two-tier validation gate.
 
     Idempotency protocol (CLAUDE.md §3.5):
       1. Redis SET NX acquires the per-chapter lock.
@@ -58,6 +58,7 @@ def generate_chapter_task(
 
         llm = get_llm()
         feedback: list[str] | None = None
+        last_draft: str | None = None
 
         for attempt in range(1, 4):
             feedback_block = (
@@ -68,9 +69,29 @@ def generate_chapter_task(
             )
 
             draft = llm.draft_chapter(context + feedback_block, scene_hint)
+            last_draft = draft
             extraction = llm.extract(draft)
 
-            # Gate is added in Phase 3; for now every extraction is committed directly
+            # Tier 1: deterministic checks against canon (free, no LLM call)
+            t1_violations = graph.tier1_check(extraction, canon)
+            if t1_violations:
+                feedback = t1_violations
+                logger.warning(
+                    "Tier-1 violations on attempt %d: %s", attempt, t1_violations
+                )
+                continue
+
+            # Tier 2: LLM judge (uses tokens; skipped when Tier 1 fails)
+            verdict = judge_module.evaluate(canon, draft, llm)
+            if verdict.verdict == "FAIL":
+                feedback = [
+                    f"{c.violated_fact} | {c.draft_evidence}"
+                    for c in verdict.contradictions
+                ] or [verdict.reasoning]
+                logger.warning("Tier-2 FAIL on attempt %d: %s", attempt, feedback)
+                continue
+
+            # PASS: commit prose, graph updates, and embedding in one transaction
             emb = vectors.embed_one(draft)
             graph.commit_chapter(manuscript_id, chapter_number, draft, extraction, emb)
             logger.info("Chapter %d committed on attempt %d", chapter_number, attempt)
@@ -78,11 +99,13 @@ def generate_chapter_task(
                 "status": "committed",
                 "chapter_number": chapter_number,
                 "attempts": attempt,
+                "coherence_score": verdict.coherence_score,
             }
 
-        # Unreachable in Phase 2 (no gate means commit always happens on attempt 1),
-        # but required for Phase 3 when the gate may exhaust all retries.
-        graph.mark_needs_review(manuscript_id, chapter_number, feedback or [])
+        # All 3 attempts failed — store the last draft for human review
+        graph.mark_needs_review(
+            manuscript_id, chapter_number, last_draft or "", feedback or []
+        )
         return {
             "status": "needs_review",
             "chapter_number": chapter_number,
