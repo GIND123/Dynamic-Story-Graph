@@ -67,3 +67,7 @@ Chapter prose lives in Neo4j. The Celery result payload contains only `{status, 
 ## TestClient without lifespan for unit tests
 
 Tests use `fastapi.testclient.TestClient(app)` without the context-manager form, so the async lifespan (constraint setup, index creation) does not run. External dependencies (graph functions, Celery task dispatch) are monkeypatched per test. This keeps tests fast, self-contained, and runnable without live services. Integration smoke tests (make up first) cover the live path.
+
+## seed.py uses logging instead of print
+
+`seed.py` now uses `logger.info` like every other module rather than `print`, for consistent, configurable output. The `__main__` guard calls `logging.basicConfig` so the operator still sees seed progress when running it as a script.

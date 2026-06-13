@@ -6,6 +6,8 @@ Brann already dead and chapter-3 generation can demonstrate the gate.
 Run with: docker compose exec api python -m app.seed
 """
 
+import logging
+
 from app import graph
 from app.models import (
     CharacterSeed,
@@ -15,6 +17,8 @@ from app.models import (
     ManuscriptCreate,
 )
 from app.vectors import embed_one
+
+logger = logging.getLogger(__name__)
 
 # Stable ID so re-running seed is a no-op (MERGE on uid)
 SEED_MID = "ashen_crown_seed_v1"
@@ -38,7 +42,7 @@ _CHAPTER_2_TEXT = (
 
 def seed() -> None:
     if graph.manuscript_exists(SEED_MID):
-        print(f"Already seeded — skipping.  Manuscript ID: {SEED_MID}")
+        logger.info(f"Already seeded — skipping.  Manuscript ID: {SEED_MID}")
         return
 
     body = ManuscriptCreate(
@@ -69,7 +73,7 @@ def seed() -> None:
     )
     graph.create_manuscript(body, manuscript_id=SEED_MID)
 
-    print("Computing embeddings for seed chapters...")
+    logger.info("Computing embeddings for seed chapters...")
 
     # Chapter 1 — the trio meet
     ch1 = ChapterExtraction(
@@ -109,11 +113,13 @@ def seed() -> None:
         SEED_MID, 2, _CHAPTER_2_TEXT, ch2, embedding=embed_one(_CHAPTER_2_TEXT)
     )
 
-    print("Seeded 'The Ashen Crown' successfully.")
-    print(f"Manuscript ID : {SEED_MID}")
-    print("Canon state   : Brann is dead. Mara and Sera are alive.")
-    print(f"\nexport MID={SEED_MID}")
+    logger.info("Seeded 'The Ashen Crown' successfully.")
+    logger.info(f"Manuscript ID : {SEED_MID}")
+    logger.info("Canon state   : Brann is dead. Mara and Sera are alive.")
+    logger.info(f"\nexport MID={SEED_MID}")
 
 
 if __name__ == "__main__":
+    # Configure logging so the operator sees seed progress when run as a script.
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     seed()
