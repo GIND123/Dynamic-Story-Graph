@@ -87,3 +87,7 @@ The `finally` block releases the lock via `_release_lock`, which runs `_LOCK_REL
 ## commit_chapter auto-merges characters named only in event.involves
 
 A name appearing in `event.involves` but not in `extraction.characters` is MERGEd as a `Character` with `status='alive'` so the INVOLVES edge is preserved (otherwise a future Tier-1 check could miss a dead character only referenced via involves). Uses `ON CREATE SET` so an existing node's status is never clobbered. Rejected: silently dropping the edge via MATCH-then-MERGE — loses graph information.
+
+## next_chapter_number filters to COMMITTED only
+
+A NEEDS_REVIEW chapter is retried by re-POSTing rather than skipped: `next_chapter_number` counts only `status='COMMITTED'` chapters, so a failed chapter's number is returned again. On the successful retry, `commit_chapter` overwrites the prior node via MERGE on uid and clears stale failure notes with `REMOVE ch.last_feedback`. Rejected: counting all chapters — permanently skips a failed chapter number, contradicting the documented NEEDS_REVIEW → retry lifecycle.

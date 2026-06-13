@@ -330,6 +330,51 @@ class TestGate:
         assert judge_call_count[0] == 2  # judge called twice: FAIL then PASS
 
 
+class TestRetryAfterNeedsReview:
+    def test_retry_path_recommits_same_chapter(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        fake_canon: dict,
+        mock_redis_factory,
+    ) -> None:
+        """A NEEDS_REVIEW chapter is retried (same number) and commits cleanly."""
+        committed: dict = {}
+        review: dict = {}
+
+        monkeypatch.setattr("app.tasks._redis", mock_redis_factory())
+        monkeypatch.setattr("app.graph.get_canon", lambda mid: fake_canon)
+        monkeypatch.setattr(
+            "app.graph.is_chapter_committed", lambda mid, n: (mid, n) in committed
+        )
+        monkeypatch.setattr(
+            "app.graph.commit_chapter",
+            lambda mid, n, text, extraction, emb: committed.update({(mid, n): text}),
+        )
+        monkeypatch.setattr(
+            "app.graph.mark_needs_review",
+            lambda mid, n, text, feedback: review.update({(mid, n): (text, feedback)}),
+        )
+        monkeypatch.setattr("app.vectors.similar_passages", lambda *a, **kw: [])
+        monkeypatch.setattr("app.vectors.embed_one", lambda text: None)
+        monkeypatch.setattr("app.config.settings.llm_mode", "fake")
+
+        from app.tasks import generate_chapter_task
+
+        # First run: FAKE_VIOLATION=1 → chapter 3 lands NEEDS_REVIEW
+        monkeypatch.setattr("app.config.settings.fake_violation", 1)
+        r1 = generate_chapter_task.apply(args=["mid_retry", 3, None]).get()
+        assert r1["status"] == "needs_review"
+        assert r1["attempts"] == 3
+        assert ("mid_retry", 3) not in committed
+
+        # Second run: FAKE_VIOLATION=0 → SAME chapter 3 commits on attempt 1
+        monkeypatch.setattr("app.config.settings.fake_violation", 0)
+        r2 = generate_chapter_task.apply(args=["mid_retry", 3, None]).get()
+        assert r2["status"] == "committed"  # not already_committed
+        assert r2["attempts"] == 1
+        assert ("mid_retry", 3) in committed
+
+
 class TestFakeLLM:
     def test_draft_mentions_alive_characters(self) -> None:
         from app.llm import FakeLLM

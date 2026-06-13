@@ -405,7 +405,7 @@ A name that appears only in `event.involves` (never in `extraction.characters`) 
 ## 8. API surface (`app/main.py`)
 
 - `POST /manuscripts` body `ManuscriptCreate` -> `{manuscript_id}`. Writes Manuscript, Characters, Locations, Rules via MERGE.
-- `POST /manuscripts/{mid}/chapters` body `ChapterRequest` -> 202 `{job_id, chapter_number}`. Determines next chapter number (max existing + 1), enqueues `generate_chapter_task.delay(mid, n, scene_hint)`.
+- `POST /manuscripts/{mid}/chapters` body `ChapterRequest` -> 202 `{job_id, chapter_number}`. Determines next chapter number (max existing + 1), enqueues `generate_chapter_task.delay(mid, n, scene_hint)`. `next_chapter_number` filters to `status='COMMITTED'` so that a NEEDS_REVIEW chapter is retried on the next POST instead of being skipped.
 - `GET /jobs/{job_id}` -> `{status, result}` from Celery AsyncResult.
 - `GET /manuscripts/{mid}/chapters/{n}` -> `{number, status, text}` from Neo4j (404 if absent).
 - `GET /manuscripts/{mid}/state` -> debug snapshot: characters with status/location, last 5 events in order, rules. This powers the demo.

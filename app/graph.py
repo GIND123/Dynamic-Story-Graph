@@ -218,10 +218,15 @@ def tier1_check(extraction: ChapterExtraction, canon: dict) -> list[str]:
 
 
 def next_chapter_number(manuscript_id: str) -> int:
-    """Return max existing chapter number + 1, or 1 if none exist."""
+    """Return max COMMITTED chapter number + 1, or 1 if none committed.
+
+    Filters to status='COMMITTED' so a NEEDS_REVIEW chapter is retried on the
+    next POST (its number is returned again) instead of being permanently
+    skipped.
+    """
     drv = init_driver()
     result = drv.execute_query(
-        "OPTIONAL MATCH (ch:Chapter {manuscript_id: $mid}) "
+        "OPTIONAL MATCH (ch:Chapter {manuscript_id: $mid, status: 'COMMITTED'}) "
         "RETURN coalesce(max(ch.number), 0) + 1 AS next_n",
         mid=manuscript_id,
     )
@@ -297,11 +302,12 @@ def commit_chapter(
         # ---- WRITES ----
         chapter_uid = f"{mid}:Chapter:{n}"
 
-        # 1. MERGE Chapter
+        # 1. MERGE Chapter (REMOVE clears any stale NEEDS_REVIEW feedback on retry)
         tx.run(
             "MERGE (ch:Chapter {uid: $uid}) "
             "SET ch.manuscript_id = $mid, ch.number = $n, "
-            "ch.text = $text, ch.status = 'COMMITTED'",
+            "ch.text = $text, ch.status = 'COMMITTED' "
+            "REMOVE ch.last_feedback",
             uid=chapter_uid,
             mid=mid,
             n=n,

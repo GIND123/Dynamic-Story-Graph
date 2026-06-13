@@ -88,3 +88,26 @@ class TestCommitChapterAutoMergesInvolves:
         graph.commit_chapter("mid_y", 4, "prose", extraction, embedding=None)
 
         assert not any("ON CREATE SET" in q for q, _ in tx.calls)
+
+
+class TestNextChapterNumberFiltersCommitted:
+    def test_query_filters_to_committed_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured: dict = {}
+
+        def _execute_query(query, **params):
+            captured["query"] = query
+            result = MagicMock()
+            result.records = [{"next_n": 5}]
+            return result
+
+        drv = MagicMock()
+        drv.execute_query.side_effect = _execute_query
+        monkeypatch.setattr("app.graph.init_driver", lambda: drv)
+
+        n = graph.next_chapter_number("mid_z")
+
+        assert n == 5
+        # The bug being fixed: skip past NEEDS_REVIEW by counting COMMITTED only.
+        assert "status: 'COMMITTED'" in captured["query"]
