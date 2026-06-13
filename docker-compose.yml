@@ -2,6 +2,7 @@ services:
   neo4j:
     image: neo4j:5.26
     environment:
+      # Local-dev default. Change for any non-laptop deployment. See README.
       NEO4J_AUTH: neo4j/password
     ports:
       - "7474:7474"

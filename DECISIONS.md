@@ -91,3 +91,7 @@ A name appearing in `event.involves` but not in `extraction.characters` is MERGE
 ## next_chapter_number filters to COMMITTED only
 
 A NEEDS_REVIEW chapter is retried by re-POSTing rather than skipped: `next_chapter_number` counts only `status='COMMITTED'` chapters, so a failed chapter's number is returned again. On the successful retry, `commit_chapter` overwrites the prior node via MERGE on uid and clears stale failure notes with `REMOVE ch.last_feedback`. Rejected: counting all chapters — permanently skips a failed chapter number, contradicting the documented NEEDS_REVIEW → retry lifecycle.
+
+## Default Neo4j password is documented as local-dev only
+
+`docker-compose.yml` and `.env.example` ship `neo4j/password` for one-command laptop setup. README and a compose comment now warn that this must be changed before exposing the stack on any network. Rejected: generating a random password — breaks the zero-config `make up` demo flow the project optimizes for.

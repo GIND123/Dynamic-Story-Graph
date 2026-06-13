@@ -436,6 +436,14 @@ Copy `.env.example` → `.env`. The key variables:
 
 After editing `.env`, restart the worker: `docker compose restart worker`.
 
+### Local-only defaults
+
+The `docker-compose.yml` and `.env.example` ship with `NEO4J_AUTH=neo4j/password`.
+These defaults are intended for local development on a laptop only. Before
+exposing this stack on any network (cloud VM, shared host, port-forwarded
+machine), change `NEO4J_PASSWORD` in `.env` and the `NEO4J_AUTH` value in
+`docker-compose.yml` to a strong password.
+
 ---
 
 ## Demo: real-mode generation
