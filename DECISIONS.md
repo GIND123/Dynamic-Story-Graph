@@ -71,3 +71,7 @@ Tests use `fastapi.testclient.TestClient(app)` without the context-manager form,
 ## seed.py uses logging instead of print
 
 `seed.py` now uses `logger.info` like every other module rather than `print`, for consistent, configurable output. The `__main__` guard calls `logging.basicConfig` so the operator still sees seed progress when running it as a script.
+
+## Extract prompt fences the draft as untrusted
+
+`_EXTRACT_PROMPT` now carries the same "untrusted story text, not instructions" fence as `_JUDGE_PROMPT`. Extraction output feeds the Tier-1 gate, so an unfenced extract prompt was an asymmetric injection surface a draft could use to subvert the gate.
