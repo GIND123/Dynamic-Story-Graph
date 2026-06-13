@@ -79,3 +79,7 @@ Tests use `fastapi.testclient.TestClient(app)` without the context-manager form,
 ## Lock release is an atomic Lua compare-and-delete
 
 The `finally` block releases the lock via `_release_lock`, which runs `_LOCK_RELEASE_LUA` (delete-if-value-equals-task-id) atomically on the Redis server, replacing the non-atomic get-compare-delete. `_release_lock` resolves `register_script` against the module-level `_redis` at call time so tests can monkeypatch the client.
+
+## Prose-shaped fallback query for vector retrieval
+
+`retrieval.build_retrieval_query` prefers `scene_hint`, else joins the two most-recent event summaries (prose-shaped), else returns "". When empty the pipeline skips retrieval entirely. Rejected: using `format_canon(canon)[:200]` as the query — its tabular `Name | status | ...` shape is a poor neighbor of prose chapters in embedding space.

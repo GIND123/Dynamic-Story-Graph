@@ -3,7 +3,12 @@
 No services required — all functions are pure Python.
 """
 
-from app.retrieval import _truncate_at_sentence, assemble_context, format_canon
+from app.retrieval import (
+    _truncate_at_sentence,
+    assemble_context,
+    build_retrieval_query,
+    format_canon,
+)
 
 
 _SAMPLE_CANON = {
@@ -85,6 +90,24 @@ class TestTruncateAtSentence:
         text = "Exactly fits."  # 13 chars, 4 tokens heuristic = 16 chars budget
         result = _truncate_at_sentence(text, 4)
         assert result == text
+
+
+class TestBuildRetrievalQuery:
+    def test_scene_hint_returned_verbatim(self) -> None:
+        result = build_retrieval_query(_SAMPLE_CANON, "Mara sneaks into the vault")
+        assert result == "Mara sneaks into the vault"
+
+    def test_falls_back_to_recent_event_summaries(self) -> None:
+        result = build_retrieval_query(_SAMPLE_CANON, None)
+        # Most recent two summaries, joined with '. '
+        assert result == (
+            "Mara and Sera discovered the king's death. "
+            "Brann fell defending the Citadel gate"
+        )
+
+    def test_empty_when_no_hint_and_no_events(self) -> None:
+        empty_canon = {"characters": [], "rules": [], "events": []}
+        assert build_retrieval_query(empty_canon, None) == ""
 
 
 class TestAssembleContext:

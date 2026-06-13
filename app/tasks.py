@@ -7,7 +7,6 @@ from app import graph, judge as judge_module, retrieval, vectors
 from app.celery_app import celery
 from app.config import settings
 from app.llm import get_llm
-from app.retrieval import format_canon
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,7 @@ def generate_chapter_task(
     Idempotency protocol (CLAUDE.md §3.5):
       1. Redis SET NX acquires the per-chapter lock.
       2. COMMITTED check short-circuits duplicate Celery deliveries.
-      3. try/finally releases the lock using get-compare-delete.
+      3. try/finally releases the lock with an atomic Lua compare-and-delete.
     """
     lock_key = f"lock:{manuscript_id}:chapter:{chapter_number}"
     acquired = _redis.set(lock_key, self.request.id, nx=True, ex=900)
@@ -71,9 +70,8 @@ def generate_chapter_task(
 
         # Context assembly
         canon = graph.get_canon(manuscript_id)
-        passages = vectors.similar_passages(
-            manuscript_id, scene_hint or format_canon(canon)[:200], k=3
-        )
+        query = retrieval.build_retrieval_query(canon, scene_hint)
+        passages = vectors.similar_passages(manuscript_id, query, k=3) if query else []
         context = retrieval.assemble_context(canon, passages)
 
         llm = get_llm()

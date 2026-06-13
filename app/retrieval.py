@@ -39,6 +39,24 @@ def format_canon(canon: dict) -> str:
     return "\n".join(lines)
 
 
+def build_retrieval_query(canon: dict, scene_hint: str | None) -> str:
+    """Build a prose-shaped query for vector retrieval.
+
+    Order of preference:
+      1. The scene_hint if provided.
+      2. The two most-recent event summaries joined with '. ' (prose-shaped).
+      3. The empty string (caller may decide to skip retrieval).
+    """
+    if scene_hint:
+        return scene_hint
+    events = canon.get("events", []) or []
+    # canon["events"] is ASC by sequence_index; take the most recent two.
+    recent = [e["summary"] for e in events[-2:] if e.get("summary")]
+    if recent:
+        return ". ".join(recent)
+    return ""
+
+
 def _truncate_at_sentence(text: str, max_tokens: int) -> str:
     """Return text that fits within max_tokens (heuristic), cutting at the last
     sentence-ending punctuation. Falls back to a hard cut if none is found."""
