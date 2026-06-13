@@ -271,6 +271,10 @@ def commit_chapter(
     n = chapter_number
 
     def _tx(tx) -> None:
+        # Names we will MERGE as full Character nodes from the extraction below.
+        # Used to detect names that appear only in event.involves.
+        declared_char_names = {c.name for c in extraction.characters}
+
         # ---- READS FIRST (before any writes in this tx) ----
         max_seq_rec = tx.run(
             "OPTIONAL MATCH (e:Event {manuscript_id: $mid}) "
@@ -344,6 +348,25 @@ def commit_chapter(
                     cuid=event_uid,
                 )
             for char_name in event.involves:
+                if char_name not in declared_char_names:
+                    # Hallucinated or briefly-mentioned NPC: create a node so the
+                    # INVOLVES edge is preserved. Status defaults to "alive".
+                    # ON CREATE SET ensures an existing character's status (e.g.
+                    # 'dead') is never overwritten.
+                    logger.warning(
+                        "Character %r appears in event.involves but not in "
+                        "extraction.characters; auto-creating with status='alive'",
+                        char_name,
+                    )
+                    tx.run(
+                        "MERGE (c:Character {uid: $uid}) "
+                        "ON CREATE SET c.manuscript_id = $mid, c.name = $name, "
+                        "c.status = 'alive'",
+                        uid=f"{mid}:Character:{char_name}",
+                        mid=mid,
+                        name=char_name,
+                    )
+                    declared_char_names.add(char_name)
                 tx.run(
                     "MATCH (e:Event {uid: $euid}), (c:Character {uid: $cuid}) "
                     "MERGE (e)-[:INVOLVES]->(c)",

@@ -398,6 +398,8 @@ These run BEFORE the judge. If Tier 1 fails, skip the judge (save tokens), go st
 
 ONE `execute_write` transaction function performing, in order: MERGE Chapter node with text, status COMMITTED, embedding; MERGE new/changed Characters (update status); MERGE Locations; CREATE Events with next sequence_index and PRECEDES edge from the previous max-sequence event; APPEARS_IN and INVOLVES edges. Parameterize everything; never string-format Cypher.
 
+A name that appears only in `event.involves` (never in `extraction.characters`) is auto-merged as a `Character` node with `status='alive'` so the INVOLVES edge is never silently dropped. This MERGE uses `ON CREATE SET` so an already-existing character's status (e.g. `dead`) is never overwritten.
+
 -----
 
 ## 8. API surface (`app/main.py`)

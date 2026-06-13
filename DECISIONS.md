@@ -83,3 +83,7 @@ The `finally` block releases the lock via `_release_lock`, which runs `_LOCK_REL
 ## Prose-shaped fallback query for vector retrieval
 
 `retrieval.build_retrieval_query` prefers `scene_hint`, else joins the two most-recent event summaries (prose-shaped), else returns "". When empty the pipeline skips retrieval entirely. Rejected: using `format_canon(canon)[:200]` as the query — its tabular `Name | status | ...` shape is a poor neighbor of prose chapters in embedding space.
+
+## commit_chapter auto-merges characters named only in event.involves
+
+A name appearing in `event.involves` but not in `extraction.characters` is MERGEd as a `Character` with `status='alive'` so the INVOLVES edge is preserved (otherwise a future Tier-1 check could miss a dead character only referenced via involves). Uses `ON CREATE SET` so an existing node's status is never clobbered. Rejected: silently dropping the edge via MATCH-then-MERGE — loses graph information.
