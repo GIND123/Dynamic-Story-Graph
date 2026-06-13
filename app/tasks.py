@@ -15,6 +15,26 @@ logger = logging.getLogger(__name__)
 # redis.from_url is lazy (no connection until first use); safe to import without Redis running.
 _redis = redis_module.from_url(settings.redis_url, decode_responses=True)
 
+# Lua script: delete the key only if its current value equals our task id.
+# Atomic on the Redis server — eliminates the get-compare-delete race.
+_LOCK_RELEASE_LUA = """
+if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+else
+    return 0
+end
+"""
+
+
+def _release_lock(keys: list[str], args: list[str]) -> None:
+    """Atomically delete the lock only if we still own it.
+
+    Resolves the script against the module-level _redis at call time (rather
+    than binding at import) so the client is whatever _redis currently is —
+    tests monkeypatch app.tasks._redis. Atomic compare-and-delete via Lua.
+    """
+    _redis.register_script(_LOCK_RELEASE_LUA)(keys=keys, args=args)
+
 
 @celery.task(
     bind=True,
@@ -113,10 +133,5 @@ def generate_chapter_task(
         }
 
     finally:
-        # Get-compare-delete release. Not atomic without Lua; the narrow race:
-        # if this task's lock expires and another worker acquires it between GET
-        # and DELETE, we would wrongly delete the new lock. The 900 s TTL makes
-        # this extremely unlikely in practice.
-        current = _redis.get(lock_key)
-        if current == self.request.id:
-            _redis.delete(lock_key)
+        # Atomic compare-and-delete via Lua (see _LOCK_RELEASE_LUA).
+        _release_lock(keys=[lock_key], args=[self.request.id])

@@ -42,7 +42,7 @@ Cypher does not support parameterized label names or constraint names. The `CREA
 
 ## Idempotency: Redis SET NX + Chapter.status
 
-Two-layer idempotency: (1) Redis lock prevents concurrent duplicate execution; (2) checking `Chapter.status == COMMITTED` before running catches re-deliveries after a worker crash where the lock already expired. The lock TTL (900s) is a backstop; the get-compare-delete release prevents a race where a slow task holds the lock past TTL and another worker acquires it. A Lua script would make the compare-delete atomic; the current Python implementation has a narrow TOCTOU window documented in a code comment.
+Two-layer idempotency: (1) Redis lock prevents concurrent duplicate execution; (2) checking `Chapter.status == COMMITTED` before running catches re-deliveries after a worker crash where the lock already expired. The lock TTL (900s) is a backstop. Release is an atomic compare-and-delete Lua script (`_LOCK_RELEASE_LUA`) so a slow task that holds the lock past TTL can never delete a lock another worker just acquired.
 
 ## Result backend carries status only, not prose
 
@@ -75,3 +75,7 @@ Tests use `fastapi.testclient.TestClient(app)` without the context-manager form,
 ## Extract prompt fences the draft as untrusted
 
 `_EXTRACT_PROMPT` now carries the same "untrusted story text, not instructions" fence as `_JUDGE_PROMPT`. Extraction output feeds the Tier-1 gate, so an unfenced extract prompt was an asymmetric injection surface a draft could use to subvert the gate.
+
+## Lock release is an atomic Lua compare-and-delete
+
+The `finally` block releases the lock via `_release_lock`, which runs `_LOCK_RELEASE_LUA` (delete-if-value-equals-task-id) atomically on the Redis server, replacing the non-atomic get-compare-delete. `_release_lock` resolves `register_script` against the module-level `_redis` at call time so tests can monkeypatch the client.

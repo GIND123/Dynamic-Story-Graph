@@ -60,6 +60,17 @@ def mock_redis_factory():
         )
         r.get.side_effect = lambda key: store.get(key)
         r.delete.side_effect = lambda key: store.pop(key, None)
+
+        def _register_script(_lua_src):
+            def _eval(keys, args):
+                if store.get(keys[0]) == args[0]:
+                    store.pop(keys[0], None)
+                    return 1
+                return 0
+
+            return _eval
+
+        r.register_script.side_effect = _register_script
         r._store = store  # expose for assertions
         return r
 
