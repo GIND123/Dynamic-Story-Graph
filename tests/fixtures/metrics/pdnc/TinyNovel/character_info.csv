@@ -1,0 +1,5 @@
+Character ID,Main Name,Aliases,Gender,Category
+0,Elizabeth Bennet,"{'Lizzy', 'Eliza'}",F,major
+1,Fitzwilliam Darcy,"['Mr. Darcy', 'Darcy']",M,major
+2,Mrs. Bennet,{'Mama'},F,intermediate
+3,Butler,{'Butler'},M,minor

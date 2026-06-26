@@ -26,6 +26,9 @@ data/
 fastembed_cache/
 *.onnx
 
+# Local evaluation artifacts (generated run results, not source)
+EVALUATION_REPORT.md
+
 # IDE / OS
 .vscode/
 .idea/

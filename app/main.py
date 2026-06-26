@@ -98,6 +98,12 @@ def get_state(mid: str) -> dict:
 
 @app.post("/manuscripts/{mid}/chapters")
 def request_chapter(mid: str, body: ChapterRequest) -> JSONResponse:
+    # Eval-only datasets (PDNC/LitBank, source='eval') are never generated into.
+    if graph.is_eval_manuscript(mid):
+        raise HTTPException(
+            status_code=403,
+            detail="Manuscript is eval-only (source='eval'); generation is disabled.",
+        )
     chapter_number = graph.next_chapter_number(mid)
     task = tasks.generate_chapter_task.delay(mid, chapter_number, body.scene_hint)
     return JSONResponse(

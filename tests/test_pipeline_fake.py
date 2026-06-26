@@ -272,6 +272,64 @@ class TestGate:
         assert last_text  # last draft stored for human review
         assert last_feedback  # violation strings passed through
 
+    def test_relation_violation_alone_drives_needs_review(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        mock_redis_factory,
+    ) -> None:
+        """With an all-alive canon (dead-check cannot fire), the FAKE_VIOLATION
+        kinship self-loop RELATION is the only thing tripping Tier-1 — proving the
+        new relation checks drive the regenerate→NEEDS_REVIEW gate end-to-end."""
+        all_alive_canon = {
+            "characters": [
+                {
+                    "name": "Mara",
+                    "status": "alive",
+                    "traits": "smuggler",
+                    "location": "Docks",
+                    "recent_events": [],
+                },
+                {
+                    "name": "Sera",
+                    "status": "alive",
+                    "traits": "archivist",
+                    "location": "Library",
+                    "recent_events": [],
+                },
+            ],
+            "rules": [],
+            "events": [],
+            "relations": {},
+        }
+        committed: dict = {}
+        review_feedback: list = []
+
+        monkeypatch.setattr("app.tasks._redis", mock_redis_factory())
+        monkeypatch.setattr("app.graph.get_canon", lambda mid: all_alive_canon)
+        monkeypatch.setattr("app.graph.is_chapter_committed", lambda mid, n: False)
+        monkeypatch.setattr(
+            "app.graph.commit_chapter",
+            lambda *a, **kw: committed.update({"called": True}),
+        )
+        monkeypatch.setattr(
+            "app.graph.mark_needs_review",
+            lambda mid, n, text, feedback: review_feedback.append(feedback),
+        )
+        monkeypatch.setattr("app.vectors.similar_passages", lambda *a, **kw: [])
+        monkeypatch.setattr("app.vectors.embed_one", lambda text: None)
+        monkeypatch.setattr("app.config.settings.fake_violation", 1)
+        monkeypatch.setattr("app.config.settings.llm_mode", "fake")
+
+        from app.tasks import generate_chapter_task
+
+        result = generate_chapter_task.apply(args=["mid_kin", 3, None]).get()
+
+        assert result["status"] == "needs_review"
+        assert not committed  # never committed
+        assert any(
+            "self-loop" in f for fb in review_feedback for f in fb
+        )  # the kinship relation check is what tripped
+
     def test_judge_fail_then_pass_commits_on_second_attempt(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -437,3 +495,44 @@ class TestFakeLLM:
 
         assert "Brann" not in char_names  # must not corrupt the graph
         assert "Brann" in all_involves  # tier1_check needs to see this
+
+    def test_extract_emits_structured_physical_trait_that_is_checkable(self) -> None:
+        """FakeLLM emits a HAS_TRAIT with the trait_key/trait_value split, and that
+        real-shaped relation actually drives the Tier-1 trait check (not dead)."""
+        from app.graph import tier1_check
+        from app.llm import FakeLLM
+        from app.models import RelationType
+
+        context = (
+            "CHARACTERS:\n"
+            "- Mara | alive | docks | smuggler\n"
+            "- Sera | alive | library | archivist\n"
+        )
+        extraction = FakeLLM().extract(FakeLLM().draft_chapter(context, None))
+
+        traits = [r for r in extraction.relations if r.type == RelationType.HAS_TRAIT]
+        assert traits, "FakeLLM must emit at least one HAS_TRAIT relation"
+        trait = traits[0]
+        assert trait.category == "physical"
+        assert trait.trait_key and trait.trait_value  # structured, not a bare string
+
+        # The emitted relation is genuinely checkable: a canon with a different
+        # value for the same (character, trait_key) trips the deterministic check.
+        canon = {
+            "characters": [],
+            "rules": [],
+            "events": [],
+            "relations": {
+                "has_trait": [
+                    {
+                        "character": trait.source,
+                        "trait": "other",
+                        "category": "physical",
+                        "trait_key": trait.trait_key,
+                        "trait_value": trait.trait_value + "_different",
+                    }
+                ]
+            },
+        }
+        violations = tier1_check(extraction, canon)
+        assert any("Trait contradiction" in v for v in violations)

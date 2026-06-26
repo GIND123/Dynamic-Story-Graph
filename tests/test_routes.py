@@ -71,6 +71,7 @@ class TestChapterRoutes:
     def test_request_chapter_returns_202(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        monkeypatch.setattr("app.graph.is_eval_manuscript", lambda mid: False)
         monkeypatch.setattr("app.graph.next_chapter_number", lambda mid: 1)
 
         mock_task = MagicMock()
@@ -85,6 +86,16 @@ class TestChapterRoutes:
         data = resp.json()
         assert data["job_id"] == "fake-job-uuid"
         assert data["chapter_number"] == 1
+
+    def test_request_chapter_rejected_for_eval_manuscript(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Eval-only (source='eval') manuscripts must never be generated into."""
+        monkeypatch.setattr("app.graph.is_eval_manuscript", lambda mid: True)
+
+        resp = client.post("/manuscripts/pdnc:SomeNovel/chapters", json={})
+        assert resp.status_code == 403
+        assert "eval" in resp.json()["detail"].lower()
 
     def test_get_chapter_returns_chapter(
         self, client: TestClient, monkeypatch: pytest.MonkeyPatch

@@ -1,0 +1,13 @@
+Elizabeth	B-PER	O
+walked	O	O
+to	O	O
+London	B-LOC	O
+.	O	O
+
+Mr.	B-PER	O
+Darcy	I-PER	O
+met	O	O
+the	O	O
+Bennet	O	B-ORG
+family	O	I-ORG
+.	O	O
