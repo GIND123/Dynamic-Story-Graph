@@ -1,86 +1,218 @@
 [
   {
-    "id": "c1_dead_acts_present",
-    "description": "Dead character Brann performs a physical action in the present chapter",
+    "id": "c_dead_speaks",
+    "cls": "contradiction",
+    "difficulty": "blatant",
+    "description": "Dead Brann speaks in the present scene",
     "expected_verdict": "FAIL",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "Mara arrived at the Citadel before dawn. To her shock, Brann was there — standing at the gate, pushing it open with both hands. He turned and nodded at her as if nothing had happened. She told herself she was dreaming."
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "The chamber was empty but for a figure at the window. \"You didn't think I'd really leave, did you?\" Brann said, his voice unchanged. Mara stepped back."
   },
   {
-    "id": "c2_dead_speaks_dialogue",
-    "description": "Dead character Brann speaks dialogue in the current scene",
+    "id": "c_resurrection",
+    "cls": "contradiction",
+    "difficulty": "blatant",
+    "description": "Brann explicitly recovers from death",
     "expected_verdict": "FAIL",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "The chamber was empty except for a single figure by the window. \"I never stopped watching over this city,\" Brann said, his voice unchanged. \"You didn't think I'd really leave, did you?\" Mara took a step back."
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Brann opened his eyes in the infirmary three days after the battle. He had lost much blood, but he would live. The city's captain would ride again."
   },
   {
-    "id": "c3_explicit_resurrection",
-    "description": "Draft explicitly states Brann was resurrected or survived",
+    "id": "c_dead_fresh_orders",
+    "cls": "contradiction",
+    "difficulty": "moderate",
+    "description": "Dead Brann issues fresh orders (implied alive, never stated)",
     "expected_verdict": "FAIL",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "The healer's arts had proven more powerful than anyone had dared hope. Brann opened his eyes in the infirmary three days after the battle. He had lost much blood but he would recover. The city's greatest captain would ride again."
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "The captain's orders reached the watch at dawn, sealed with Brann's own crest, the wax still soft to the touch. The guards formed up exactly as he directed."
   },
   {
-    "id": "c4_rule_violation_magic",
-    "description": "Draft describes resurrection magic being used, violating the world rule",
+    "id": "c_illiterate_reads",
+    "cls": "contradiction",
+    "difficulty": "moderate",
+    "description": "Illiterate Mara reads a letter herself (trait violation)",
     "expected_verdict": "FAIL",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "The old mage completed the ritual at midnight. Ancient words rose into the air, and the dead stirred. In Duskwall, for the first time in living memory, the boundary between life and death had been crossed. The impossible had become real."
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Mara broke the seal and read the letter through twice, her eyes moving quickly over the cramped script before she folded it away and said nothing."
   },
   {
-    "id": "c5_wrong_location",
-    "description": "Mara is described as being at the Citadel — her location is Duskwall docks",
+    "id": "c_gates_open_midnight",
+    "cls": "contradiction",
+    "difficulty": "moderate",
+    "description": "A city gate opens at midnight, violating the dusk-to-dawn rule",
     "expected_verdict": "FAIL",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "Mara had been stationed at the Citadel for the past week, sleeping in the guards' barracks and eating from their mess hall. It was the only place in the city she felt safe now. She knew every stone of its eastern wall."
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "A little past midnight the eastern gate groaned open, just wide enough to let the two covered wagons roll through into the sleeping city."
   },
   {
-    "id": "c6_dead_described_as_alive",
-    "description": "Draft refers to Brann as living and working in the present tense",
+    "id": "c_estranged_warm",
+    "cls": "contradiction",
+    "difficulty": "subtle",
+    "description": "Estranged sisters written as lifelong-close (relationship violation)",
     "expected_verdict": "FAIL",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "Sera found Brann in the guard room, reviewing the duty roster for the following week. He looked up when she entered, quill still in hand. \"I've assigned extra patrols to the eastern arch,\" he said. \"What do you need, archivist?\""
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Sera laughed and squeezed Mara's hand. \"Just like when we were girls.\" The two sisters had never been closer, and the years fell away between them."
   },
   {
-    "id": "p1_alive_characters_only",
-    "description": "Clean draft — only Mara and Sera act, Brann not mentioned",
-    "expected_verdict": "PASS",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "Mara met Sera in the courtyard behind the Old Library. Sera spread three maps across the stones, anchoring the corners with river pebbles. \"The succession documents are in the east vault,\" she said quietly. \"If we can reach them first, we control the next appointment.\" Mara studied the maps. It was possible. Barely."
+    "id": "c_vault_nonmonarch",
+    "cls": "contradiction",
+    "difficulty": "subtle",
+    "description": "Sera opens the Vault, which only the reigning monarch can open",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Before dawn Sera pressed her palm to the Vault's great door and it swung open for her, as if it had only ever been waiting for the right hand."
   },
   {
-    "id": "p2_dead_mentioned_past_tense",
-    "description": "Brann mentioned reverently in past tense; no suggestion he is alive",
-    "expected_verdict": "PASS",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "Mara laid a single flower at the base of the Citadel gate — where Brann had fallen. She did not linger. He was gone, and grief was a luxury Duskwall could not afford. She turned back toward the docks before the city bells finished their morning toll."
+    "id": "c_timeline_undecided",
+    "cls": "contradiction",
+    "difficulty": "subtle",
+    "description": "Draft rewinds a settled event (Sera already found the papers forged)",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Sera still could not say whether the succession papers were genuine. She resolved to study them properly that evening and settle the question at last."
   },
   {
-    "id": "p3_characters_at_correct_locations",
-    "description": "Mara at docks, Sera at library — both correct per canon",
-    "expected_verdict": "PASS",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "At the docks, Mara moved a crate of salted fish to expose the hidden panel beneath. In the Old Library, three streets away, Sera was cross-referencing the port manifests against the royal ledgers. They were both looking for the same ship. They would not find it until they compared notes."
+    "id": "l_mara_lives_citadel",
+    "cls": "location",
+    "difficulty": "blatant",
+    "description": "Mara is living at the Citadel (her place is the docks)",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Mara had been living at the Citadel for a week now, sleeping in the guards' barracks and taking her meals in their hall. She knew its eastern wall by heart."
   },
   {
-    "id": "p4_new_character_introduced",
-    "description": "New character Kira introduced; no violations of existing canon",
-    "expected_verdict": "PASS",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "A courier arrived at the docks in the early afternoon — a young woman named Kira, dust-stained from the coastal road. She carried sealed letters from the outer provinces, addressed to no one Mara recognised. Mara paid the toll and let her pass. A stranger was still better than an enemy."
+    "id": "l_two_places",
+    "cls": "location",
+    "difficulty": "moderate",
+    "description": "Mara is in two places at the same moment",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "At noon Mara haggled over silk at the Duskwall docks. At that same moment, three streets away, she bent over a ledger deep inside the Old Library."
   },
   {
-    "id": "p5_rule_explicitly_acknowledged",
-    "description": "Characters acknowledge the no-resurrection rule; no violation implied",
-    "expected_verdict": "PASS",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "\"People are saying he might come back,\" the dockworker said. Mara shook her head. \"He won't. There is no such thing as coming back in Duskwall. Not from what happened at that gate.\" The dockworker looked down at his hands and said nothing more. Some truths did not need repeating."
+    "id": "l_sees_citadel_close",
+    "cls": "location",
+    "difficulty": "moderate",
+    "description": "Mara is close enough to count Citadel banners (implies she is there, not docks)",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "From her cot Mara watched the Citadel's banners snap overhead, close enough to count the frayed threads along each edge as they cracked in the wind."
   },
   {
-    "id": "p6_world_building_no_violations",
-    "description": "World-building chapter; no named canon characters acted on, no violations",
+    "id": "l_sera_citadel_barracks",
+    "cls": "location",
+    "difficulty": "moderate",
+    "description": "Sera has relocated into the Citadel (she belongs at the Old Library)",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Sera had moved into the Citadel barracks for good; she slept among the guards now and had handed the Old Library's keys to a clerk she barely trusted."
+  },
+  {
+    "id": "l_sera_docks_allday",
+    "cls": "location",
+    "difficulty": "subtle",
+    "description": "Sera spends the day doing dock work (she is the Library archivist)",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Sera spent the whole day at the docks, weighing crates and tallying manifests for the harbourmaster, her sleeves rolled and her ledgers left in the dust."
+  },
+  {
+    "id": "l_doss_library_allweek",
+    "cls": "location",
+    "difficulty": "subtle",
+    "description": "Dockmaster Doss spends the week at the Old Library (his post is the docks)",
+    "expected_verdict": "FAIL",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Doss had not gone near the docks all week; he'd been up at the Old Library the whole time, helping Sera catalogue scrolls by candlelight."
+  },
+  {
+    "id": "p_correct_locations",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "Mara at docks, Sera at library, communicate by messenger",
     "expected_verdict": "PASS",
-    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler, reads people quickly\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist, keeper of old secrets\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n\nRECENT EVENTS (chronological):\n1. Mara, Brann, and Sera discover the king is dead and join forces\n2. Brann falls defending the Citadel gate",
-    "draft": "The king's treasury had been sealed for five days. By law, it could not be opened until a successor was named. Every faction in the city knew this. Every faction was moving. The harbour master's ledgers went missing on the third day. The night watch doubled on the fourth. By the fifth, even the street children had stopped playing near the Citadel walls."
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Mara sent a dockhand up to the Old Library with a folded note. Within the hour Sera's reply came back in her careful hand. Neither woman left her post."
+  },
+  {
+    "id": "p_dead_past_tense",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "Brann mourned in past tense; no suggestion he lives",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Mara laid a flower where Brann had fallen at the Citadel gate. He was gone, and grief was a luxury Duskwall could not afford. She turned back toward the docks."
+  },
+  {
+    "id": "p_visit_returns",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "BAIT(location): Mara visits the library and returns — movement is not a contradiction",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Mara walked up from the docks to bring Sera the manifest, left it on the reading table, and was back among her crates well before dusk."
+  },
+  {
+    "id": "p_read_it_to_me",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "BAIT(trait): Mara handles a letter but asks Sera to read it (consistent with illiteracy)",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Mara pushed the letter across the table. \"Read it to me,\" she said. Sera broke the seal and read it aloud while Mara listened, arms folded."
+  },
+  {
+    "id": "p_estranged_no_note",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "BAIT(relationship): sisters remain estranged; a cold exchange, consistent",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Mara hadn't spoken to her sister in years. She sent the ledger to the Old Library anyway, with no note and no name, and did not wait to see it received."
+  },
+  {
+    "id": "p_wait_for_dawn",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "BAIT(rule): they wait for dawn to use the gates (respects the rule)",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "There was nothing to do but wait. They sat in the dark by the eastern gate until the first grey light, when the seals were lifted and the gate could open."
+  },
+  {
+    "id": "p_doss_loyal",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "BAIT(allegiance): loyal Doss helps Mara, consistent with canon",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Doss, who owed Mara more than he could ever repay, turned his back and studied the tide while her crates went past the checkpoint uncounted."
+  },
+  {
+    "id": "p_routines_outlived",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "BAIT(dead): Brann's routines continue AFTER his death, explicitly acknowledged",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "Every morning the eastern arch was still swept and its lamps lit, just as the captain had always insisted. His habits had outlived him by weeks now."
+  },
+  {
+    "id": "p_new_character",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "New character introduced; no canon violated",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "A courier reached the docks by the coast road — a young woman named Kira, dust to the knee. She carried sealed letters for names Mara didn't know. Mara let her pass."
+  },
+  {
+    "id": "p_worldbuilding",
+    "cls": "clean",
+    "difficulty": "clean",
+    "description": "World-building; no named canon character acted upon, no violation",
+    "expected_verdict": "PASS",
+    "canon": "CHARACTERS:\n- Mara | alive | Duskwall docks | pragmatic smuggler; cannot read or write (illiterate)\n- Brann | dead | Citadel | royal guard captain, loyal and direct\n- Sera | alive | Old Library | meticulous archivist; Mara's estranged sister\n- Doss | alive | Duskwall docks | dockmaster; owes Mara a debt and is loyal to her\n\nRULES:\n- The dead do not return; Duskwall has no resurrection magic.\n- The city gates are sealed at dusk and cannot be opened again until dawn.\n- The Vault opens only for the reigning monarch, and the throne now sits empty.\n\nRELATIONSHIPS:\n- Mara and Sera are sisters, long estranged.\n- Doss is loyal to Mara; the Ravens are a gang hostile to her.\n\nRECENT EVENTS (in order):\n1. The king dies; Mara, Brann, and Sera briefly join forces.\n2. Brann falls defending the Citadel gate.\n3. Sera discovers the succession papers were forged.",
+    "draft": "The treasury had been sealed five days. By law it stayed shut until a successor was named, and every faction in the city was already moving in the dark."
   }
 ]

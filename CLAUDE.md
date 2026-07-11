@@ -226,7 +226,7 @@ manuscript-memory-engine/
     celery_app.py           # Celery instance + conf (section 3.4)
     tasks.py                # generate_chapter_task (the pipeline)
     models.py               # all Pydantic contracts
-    llm.py                  # LLM protocol + AnthropicLLM + FakeLLM
+    llm.py                  # LLM protocol + AnthropicLLM + FakeLLM + OllamaLLM
     graph.py                # driver, constraints, queries, tier1, commit tx
     retrieval.py            # context assembly + token budget
     judge.py                # tier-2 judge (uses llm.py)
@@ -238,9 +238,14 @@ manuscript-memory-engine/
     test_retrieval.py       # budget truncation logic (pure)
     test_tier1.py           # deterministic checks against a seeded graph
     test_pipeline_fake.py   # end-to-end in FAKE mode
-  evals/
+  evals/                    # evaluation harness (grew well beyond this spec — see DECISIONS.md)
     cases.json              # planted contradictions + clean controls
     run_eval.py             # judge precision/recall (real mode, optional)
+    metrics/                # quote-attribution, name-cloze, coreference, long-context scorers
+    run_model_profile.py    # per-model vanilla-LLM failure profile (10 models)
+    run_context_experiment.py  # context-length failure points (FAILURE_PROFILE_REPORT.md Part 2)
+    plot_context_curves.py  # aggregate context results -> tables + plots
+  baselines/                # graph vs Vector-RAG vs long-context comparison (EVALUATION_REPORT.md)
 ```
 
 -----
@@ -251,10 +256,14 @@ manuscript-memory-engine/
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
-LLM_MODE=fake                 # fake | anthropic
+LLM_MODE=fake                 # fake | anthropic | ollama
 FAKE_VIOLATION=0              # 1 => FakeLLM drafts violate canon (for gate demo/tests)
 GENERATION_MODEL=claude-sonnet-4-6
 JUDGE_MODEL=claude-haiku-4-5
+# Local free backend (LLM_MODE=ollama; no API key). Host Python: localhost:11434.
+# Dockerized worker reaches the host at http://host.docker.internal:11434
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:14b
 NEO4J_URI=bolt://neo4j:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=password
@@ -264,7 +273,7 @@ TOKEN_BUDGET_FACTS=2000
 TOKEN_BUDGET_PASSAGES=2000
 ```
 
-`app/config.py`: a `pydantic-settings` `Settings` class loading the above, plus `EMBED_DIM = 384` as a module constant. Fail fast with a clear error if `LLM_MODE=anthropic` and no API key is set.
+`app/config.py`: a `pydantic-settings` `Settings` class loading the above, plus `EMBED_DIM = 384` as a module constant. Fail fast with a clear error if `LLM_MODE=anthropic` and no API key is set. (`ollama` mode needs no key; it was added for the evaluation harness — see the note at the end of section 6.)
 
 Docker hostnames are the compose service names (`neo4j`, `redis`). NEVER `localhost` inside containers.
 
@@ -281,15 +290,18 @@ class LLMClient(Protocol):
     def judge(self, canon: str, draft: str) -> JudgeVerdict: ...
 ```
 
-Two implementations, selected by `LLM_MODE`:
+Implementations selected by `LLM_MODE`:
 
 - **AnthropicLLM**: real calls per section 3.1. `draft_chapter` uses messages.create; `extract` and `judge` use messages.parse with the Pydantic models.
 - **FakeLLM**: deterministic, zero-cost, used by tests and CI.
   - `draft_chapter`: emits a short templated chapter mentioning the living characters from the provided context. If `FAKE_VIOLATION=1`, it additionally has a character whose context entry says `status: dead` speak a line.
   - `extract`: regex/string-level extraction from its own templated output (it knows its own format).
   - `judge`: string check, returns FAIL with a Contradiction if the draft mentions any name listed as dead in the canon string, else PASS with score 0.9.
+- **OllamaLLM** (added post-spec): the same interface against a local Ollama server (`LLM_MODE=ollama`, `OLLAMA_BASE_URL`/`OLLAMA_MODEL`, no API key). Exposes a per-call `num_ctx` (used by the context-length evaluation) and returns the real prompt token count. Lets the whole fleet of open-source models be scored for free — the basis of the evaluation harness.
 
 Why this exists (write in DECISIONS.md): tests run free and deterministic; the pipeline, gate, retry loop, idempotency, and transactions are all exercised end to end without an API key; and dependency inversion is a strong interview talking point.
+
+**Evaluation harness (added after this spec was fulfilled).** Beyond the core engine, `evals/` + `baselines/` measure how vanilla open-source LLMs fail *without* the memory engine (`FAILURE_PROFILE_REPORT.md` — fixed-context failure profile + context-length failure points) and compare graph vs Vector-RAG vs long-context retrieval (`EVALUATION_REPORT.md`), all driven through `OllamaLLM` on free local models. Design decisions for this work live in `DECISIONS.md`; it is out of scope for the phase gates in section 10.
 
 -----
 

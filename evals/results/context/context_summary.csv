@@ -1,0 +1,7 @@
+model,params,advertised,peak_overall,effective_tokens,effective_is_lower_bound,reality_gap,failure_point_50pct,deepest_tested
+gemma2:9b,9B,8192,0.933,6810,True,—,n/a,6810
+llama3.1:8b,8B,131072,0.933,7293,False,18.0×,n/a,13656
+mistral:7b,7B,32768,0.933,2491,False,13.2×,n/a,14925
+qwen2.5:72b,72B,131072,1.000,29023,True,—,n/a,29023
+qwen2.5:7b,7B,131072,0.800,7292,False,18.0×,n/a,13657
+yi:9b,9B,4096,0.867,1468,False,2.8×,n/a,3500

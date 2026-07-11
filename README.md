@@ -305,7 +305,7 @@ stateDiagram-v2
 
 ## The LLM abstraction (ports & adapters)
 
-A `Protocol` defines the contract; two implementations satisfy it, selected at runtime by `LLM_MODE`. This is dependency inversion — the pipeline depends on the abstraction, never on Anthropic directly.
+A `Protocol` defines the contract; three implementations satisfy it, selected at runtime by `LLM_MODE`. This is dependency inversion — the pipeline depends on the abstraction, never on a concrete provider.
 
 ```mermaid
 classDiagram
@@ -330,6 +330,13 @@ classDiagram
         +judge() via messages.parse
     }
 
+    class OllamaLLM {
+        <<local, free, per-call num_ctx>>
+        +draft_chapter() via /api/chat
+        +extract() via JSON format
+        +judge() via JSON format
+    }
+
     class get_llm {
         <<factory>>
         +reads LLM_MODE
@@ -337,13 +344,17 @@ classDiagram
 
     LLMClient <|.. FakeLLM : implements
     LLMClient <|.. AnthropicLLM : implements
+    LLMClient <|.. OllamaLLM : implements
     get_llm ..> FakeLLM : LLM_MODE=fake
     get_llm ..> AnthropicLLM : LLM_MODE=anthropic
+    get_llm ..> OllamaLLM : LLM_MODE=ollama
 ```
 
 Why this matters: tests run **free, deterministic, and offline**. The full pipeline — the gate, the retry loop, idempotency, the one-transaction commit — is exercised end-to-end in CI without an API key. `FAKE_VIOLATION=1` makes `FakeLLM` deliberately resurrect a dead character, which proves the gate fires all the way to `NEEDS_REVIEW`.
 
 The `AnthropicLLM` adapter encodes the **structured-outputs contract** verbatim: `messages.parse(output_format=PydanticModel)` returns `response.parsed_output`, and every parse call checks `stop_reason` for `"refusal"`/`"max_tokens"` — the two cases where the schema guarantee can be bypassed.
+
+The `OllamaLLM` adapter runs the same three methods against a local Ollama server (`LLM_MODE=ollama`, no API key). It exists for the **evaluation harness** ([see below](#evaluation--reports)): it lets a whole fleet of open-source models be scored for free, and exposes a per-call `num_ctx` used to measure context-length failure points.
 
 ---
 
@@ -423,11 +434,13 @@ Copy `.env.example` → `.env`. The key variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LLM_MODE` | `fake` | `fake` for tests/CI, `anthropic` for real generation |
+| `LLM_MODE` | `fake` | `fake` for tests/CI, `anthropic` for real generation, `ollama` for the free local eval harness |
 | `FAKE_VIOLATION` | `0` | `1` makes `FakeLLM` resurrect a dead character (gate demo) |
 | `ANTHROPIC_API_KEY` | — | Required when `LLM_MODE=anthropic`; fails fast if missing |
 | `GENERATION_MODEL` | `claude-sonnet-4-6` | Model for prose drafting |
 | `JUDGE_MODEL` | `claude-haiku-4-5` | Model for extraction + judging |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Local Ollama server (`LLM_MODE=ollama`); no API key |
+| `OLLAMA_MODEL` | `qwen2.5:14b` | Which local model Ollama serves |
 | `NEO4J_URI` | `bolt://neo4j:7687` | Service name, **not** localhost (Docker networking) |
 | `REDIS_URL` | `redis://redis:6379/0` | Broker (db 0) |
 | `RESULT_BACKEND` | `redis://redis:6379/1` | Result backend (db 1) |
@@ -514,7 +527,7 @@ watch -n2 "curl -s localhost:8000/jobs/$JOB | jq .result"
 ## Testing & evaluation
 
 ```bash
-make test     # 64 tests, all fake mode, no API key
+make test     # 164 tests, offline (fake LLM + stubbed evals), no API key
 make lint     # ruff check + format --check
 ```
 
@@ -526,6 +539,7 @@ make lint     # ruff check + format --check
 | `test_pipeline_fake.py` | End-to-end: happy-path commit, gate → `NEEDS_REVIEW`, idempotent re-run |
 | `test_vectors.py` | `EMBED_DIM` is the single source of truth across DDL + embedder |
 | `test_routes.py` | All FastAPI routes with dependencies monkeypatched |
+| eval-metric tests | Offline scorers: long-context curves, name-cloze, coreference, contradiction rates, model profile |
 
 **Judge evaluation** (real mode, optional):
 
@@ -534,6 +548,15 @@ docker compose run --rm -e ANTHROPIC_API_KEY=sk-ant-... api python evals/run_eva
 ```
 
 Runs the judge against 12 hand-crafted cases — 6 planted contradictions, 6 clean controls — and reports **precision, recall, and F1** for contradiction detection. Exits gracefully if no key is set.
+
+### Evaluation & reports
+
+A broader, zero-cost harness scores **vanilla open-source LLMs** (`LLM_MODE=ollama`, run on free Colab GPUs via `evals/colab/model_server.ipynb`) to justify the memory engine:
+
+- **`FAILURE_PROFILE_REPORT.md`** — how badly 10 models lose narrative coherence with no memory engine: at a fixed context (Part 1) and across growing context length, i.e. each model's *failure point* (Part 2). Drivers: `evals/run_model_profile.py`, `evals/run_context_experiment.py`; aggregated by `evals/plot_context_curves.py`.
+- **`EVALUATION_REPORT.md`** — graph vs Vector-RAG vs long-context retrieval on the same questions (accuracy + token/cost/latency).
+
+Design rationale for all of it lives in `DECISIONS.md`.
 
 ---
 
@@ -546,17 +569,23 @@ app/
   celery_app.py  Celery config + fastembed warmup signal
   tasks.py       generate_chapter_task — the full pipeline
   models.py      Pydantic contracts (ChapterExtraction, JudgeVerdict, …)
-  llm.py         LLMClient Protocol · FakeLLM · AnthropicLLM · get_llm factory
+  llm.py         LLMClient Protocol · FakeLLM · AnthropicLLM · OllamaLLM · get_llm factory
   graph.py       Neo4j driver, constraints, get_canon, tier1_check, commit_chapter
   retrieval.py   token-budgeted context assembly
   judge.py       Tier-2 judge wrapper
   vectors.py     fastembed embed_one + similar_passages (k×4 over-fetch)
   seed.py        idempotent "The Ashen Crown" seeder
 
-tests/           64 tests, all fake mode
-evals/
-  cases.json     6 contradiction + 6 clean judge cases
+tests/           164 tests, offline (no API key)
+evals/           evaluation harness (open-source LLMs; see the two reports)
+  cases.json     planted contradictions + clean judge cases
   run_eval.py    precision/recall report (real mode only)
+  metrics/       quote-attribution, name-cloze, coreference, long-context scorers
+  run_model_profile.py       10-model failure profile
+  run_context_experiment.py  context-length failure points
+  plot_context_curves.py     aggregate -> tables + plots
+  colab/         Ollama model-server notebook (free GPU per session)
+baselines/       graph vs Vector-RAG vs long-context comparison
 ```
 
 ---

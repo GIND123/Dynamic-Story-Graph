@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # Eval dataset roots (ingestion). Paths come from env, never hardcoded in code.
     pdnc_root: str = "data/project-dialogism-novel-corpus"
     litbank_root: str = "data/litbank"
+    # GPT4-Books name-cloze corpus (github.com/bamman-group/gpt4-books). Holds
+    # pre-masked passages with gold answers; read directly (no Neo4j ingestion).
+    gpt4books_root: str = "data/gpt4-books"
 
     @model_validator(mode="after")
     def require_key_in_anthropic_mode(self) -> "Settings":

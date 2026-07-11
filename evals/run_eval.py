@@ -1,93 +1,73 @@
-"""Judge precision/recall evaluation against hand-crafted test cases.
+"""Judge precision/recall evaluation against hand-crafted contradiction cases.
 
-Runs the AnthropicLLM judge (claude-haiku-4-5) against 12 cases:
-  - 6 planted contradictions (expected: FAIL)
-  - 6 clean controls      (expected: PASS)
+Runs a model's judge against evals/cases.json (planted contradictions + clean
+controls) and reports precision, recall, F1, per-class recall, and the two
+headline rates (contradiction, location inconsistency). The scoring core lives in
+evals.metrics.contradiction.score_contradiction so the per-model profiler reuses
+it unchanged.
 
-Reports precision, recall, and F1 for contradiction detection.
-
-Usage (from repo root):
+Usage (from repo root), with a real backend:
     LLM_MODE=anthropic ANTHROPIC_API_KEY=sk-ant-... python evals/run_eval.py
+    LLM_MODE=ollama OLLAMA_BASE_URL=... python evals/run_eval.py
 
-Exits 0 with a skip message if ANTHROPIC_API_KEY is not set.
+Exits 0 with a skip message if no real backend is configured (LLM_MODE=fake).
 """
 
-import json
-import os
 import sys
 from pathlib import Path
 
 # Allow running as a script from the repo root without installing the package
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-CASES_PATH = Path(__file__).parent / "cases.json"
+from app.config import settings  # noqa: E402
+from evals.metrics.contradiction import (  # noqa: E402
+    load_cases,
+    make_judge_fn,
+    score_contradiction,
+)
 
 
 def main() -> None:
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
-        print("ANTHROPIC_API_KEY not set — judge eval skipped (real mode required).")
-        print("Set LLM_MODE=anthropic and ANTHROPIC_API_KEY, then re-run.")
+    if settings.llm_mode not in ("anthropic", "ollama"):
+        print(
+            f"LLM_MODE={settings.llm_mode!r} — judge eval skipped (real backend "
+            "required). Set LLM_MODE=anthropic or LLM_MODE=ollama and re-run."
+        )
         sys.exit(0)
 
-    # Force anthropic mode before importing the LLM factory
-    os.environ["LLM_MODE"] = "anthropic"
+    from app.llm import get_llm  # noqa: PLC0415 (deferred import by design)
 
-    from app.llm import AnthropicLLM  # noqa: PLC0415 (deferred import by design)
+    cases = load_cases()
+    judge_fn = make_judge_fn(get_llm())
+    print(f"Evaluating {len(cases)} cases with LLM_MODE={settings.llm_mode}...\n")
 
-    cases = json.loads(CASES_PATH.read_text())
-    llm = AnthropicLLM()
+    report = score_contradiction(cases, judge_fn)
 
-    tp = fp = fn = tn = 0
+    print(f"{'─' * 52}")
+    print(f"Precision: {report['precision']:.2f}   (of FAIL predictions, real FAILs)")
+    print(f"Recall:    {report['recall']:.2f}   (of real FAILs, how many caught)")
+    print(f"F1:        {report['f1']:.2f}")
     print(
-        f"Evaluating {len(cases)} cases with {os.environ.get('JUDGE_MODEL', 'claude-haiku-4-5')}...\n"
+        f"TP={report['tp']}  FP={report['fp']}  FN={report['fn']}  TN={report['tn']}  "
+        f"malformed={report['malformed']}"
     )
-
-    for case in cases:
-        verdict = llm.judge(case["canon"], case["draft"])
-        predicted = verdict.verdict
-        expected = case["expected_verdict"]
-        correct = predicted == expected
-
-        marker = "✓" if correct else "✗"
-        print(
-            f"{marker}  [{case['id']}]  expected={expected}  got={predicted}  score={verdict.coherence_score:.2f}"
-        )
-
-        if not correct:
-            if verdict.contradictions:
-                for c in verdict.contradictions:
-                    print(f"       contradiction: {c.violated_fact}")
-            else:
-                print(f"       reasoning: {verdict.reasoning[:120]}")
-
-        if expected == "FAIL" and predicted == "FAIL":
-            tp += 1
-        elif expected == "PASS" and predicted == "FAIL":
-            fp += 1
-        elif expected == "FAIL" and predicted == "PASS":
-            fn += 1
-        else:
-            tn += 1
-
-    total = len(cases)
-    correct_count = tp + tn
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    f1 = (
-        (2 * precision * recall / (precision + recall))
-        if (precision + recall) > 0
-        else 0.0
-    )
-
-    print(f"\n{'─' * 50}")
-    print(f"Accuracy:  {correct_count}/{total} ({100 * correct_count / total:.0f}%)")
+    print("\nPer class (recall on planted issues):")
+    for cls, c in report["per_class"].items():
+        print(f"  {cls:14s} recall={c['recall']:.2f}  ({c['caught']}/{c['n_planted']})")
+    print("Per difficulty (recall on planted issues):")
+    for diff in ("blatant", "moderate", "subtle"):
+        c = report["per_difficulty"].get(diff)
+        if c:
+            print(
+                f"  {diff:14s} recall={c['recall']:.2f}  ({c['caught']}/{c['n_planted']})"
+            )
+    loc = report["location_inconsistency_rate"]
+    print("\nHeadline rates:")
+    print(f"  contradiction_rate          = {report['contradiction_rate']:.2f}")
     print(
-        f"Precision: {precision:.2f}   (of FAIL predictions, how many were real FAILs)"
+        "  location_inconsistency_rate = "
+        + (f"{loc:.2f}" if loc is not None else "n/a")
     )
-    print(f"Recall:    {recall:.2f}   (of real FAILs, how many were caught)")
-    print(f"F1:        {f1:.2f}")
-    print(f"TP={tp}  FP={fp}  FN={fn}  TN={tn}")
 
 
 if __name__ == "__main__":

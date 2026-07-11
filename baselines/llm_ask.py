@@ -12,18 +12,22 @@ from __future__ import annotations
 from baselines.base import LLMAsk
 
 
-def make_llm_ask(max_tokens: int = 64) -> LLMAsk | None:
+def make_llm_ask(max_tokens: int = 64, num_ctx: int | None = None) -> LLMAsk | None:
     """Return a live ask for the configured LLM_MODE, or None when none applies.
 
     anthropic -> Anthropic messages.create; ollama -> local Ollama /api/chat;
     anything else (fake/unset) -> None so the baselines abstain gracefully.
+
+    `num_ctx` (ollama only) sets how many tokens the model actually keeps; without
+    it Ollama silently truncates to ~2048. The ollama ask also writes the real
+    prompt-token count into `meta["prompt_tokens"]` for context-length accounting.
     """
     from app.config import settings
 
     if settings.llm_mode == "anthropic" and settings.anthropic_api_key:
         return _anthropic_ask(max_tokens)
     if settings.llm_mode == "ollama":
-        return _ollama_ask(max_tokens)
+        return _ollama_ask(max_tokens, num_ctx)
     return None
 
 
@@ -48,19 +52,25 @@ def _anthropic_ask(max_tokens: int) -> LLMAsk:
     return ask
 
 
-def _ollama_ask(max_tokens: int) -> LLMAsk:
+def _ollama_ask(max_tokens: int, num_ctx: int | None = None) -> LLMAsk:
     """Free local backend, matching OllamaLLM's config (base_url + model).
 
     A short, deterministic (temperature 0) completion. `num_predict` caps output
     so the baselines' answers stay terse and token accounting mirrors Anthropic's
-    `max_tokens`. English is pinned for the same code-switch reason as OllamaLLM.
+    `max_tokens`. `num_ctx`, when set, controls how many input tokens the model
+    keeps (default ~2048 truncates). English is pinned for the same code-switch
+    reason as OllamaLLM. The real prompt-token count is written to
+    `meta["prompt_tokens"]` so callers can plot the true context length.
     """
     from app.config import settings
 
     import httpx
 
-    client = httpx.Client(base_url=settings.ollama_base_url, timeout=180)
+    client = httpx.Client(base_url=settings.ollama_base_url, timeout=600)
     model = settings.ollama_model
+    options: dict = {"temperature": 0.0, "num_predict": max_tokens}
+    if num_ctx is not None:
+        options["num_ctx"] = num_ctx
 
     def ask(prompt: str, meta: dict) -> str:
         resp = client.post(
@@ -72,10 +82,12 @@ def _ollama_ask(max_tokens: int) -> LLMAsk:
                     {"role": "user", "content": prompt},
                 ],
                 "stream": False,
-                "options": {"temperature": 0.0, "num_predict": max_tokens},
+                "options": options,
             },
         )
         resp.raise_for_status()
-        return resp.json()["message"]["content"]
+        body = resp.json()
+        meta["prompt_tokens"] = body.get("prompt_eval_count", 0)
+        return body["message"]["content"]
 
     return ask

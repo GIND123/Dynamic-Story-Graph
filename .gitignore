@@ -26,8 +26,11 @@ data/
 fastembed_cache/
 *.onnx
 
-# Local evaluation artifacts (generated run results, not source)
-EVALUATION_REPORT.md
+# Local evaluation artifacts. Ignore raw per-run data (JSON) + run logs — they are
+# regenerable — but KEEP the summary tables (.md/.csv) and plots (.png) the committed
+# reports embed, so FAILURE_PROFILE_REPORT.md renders from a fresh clone.
+evals/results/**/*.json
+evals/results/**/*.log
 
 # IDE / OS
 .vscode/

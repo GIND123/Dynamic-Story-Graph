@@ -387,9 +387,15 @@ class OllamaLLM:
         import httpx
 
         self._model = settings.ollama_model
-        # One client; generous timeout because local generation is slower than
-        # a hosted API, especially the first call when the model loads into RAM.
-        self._client = httpx.Client(base_url=settings.ollama_base_url, timeout=180)
+        # Context-length controls for the long-context experiment. `num_ctx` sets
+        # how many tokens Ollama actually keeps (default ~2048 truncates silently);
+        # the experiment sets it per length. `last_prompt_tokens` records the real
+        # input length Ollama tokenized (prompt_eval_count) for the honest x-axis.
+        self.num_ctx: int | None = None
+        self.last_prompt_tokens: int = 0
+        # Generous timeout: local generation is slow, and a large num_ctx prefill
+        # (tens of thousands of tokens) is slower still.
+        self._client = httpx.Client(base_url=settings.ollama_base_url, timeout=600)
 
     def draft_chapter(self, context: str, scene_hint: str | None) -> str:
         prompt = _DRAFT_PROMPT.format(
@@ -448,6 +454,9 @@ class OllamaLLM:
         When `schema` is provided it is passed as Ollama's `format`, constraining
         the model to JSON matching that schema (Ollama structured outputs).
         """
+        options: dict = {"temperature": temperature}
+        if self.num_ctx is not None:
+            options["num_ctx"] = self.num_ctx
         payload: dict = {
             "model": self._model,
             "messages": [
@@ -455,14 +464,18 @@ class OllamaLLM:
                 {"role": "user", "content": prompt},
             ],
             "stream": False,
-            "options": {"temperature": temperature},
+            "options": options,
         }
         if schema is not None:
             payload["format"] = schema
 
         resp = self._client.post("/api/chat", json=payload)
         resp.raise_for_status()
-        return resp.json()["message"]["content"]
+        body = resp.json()
+        # Real number of prompt tokens Ollama evaluated (post-truncation) — the
+        # honest context-length x-axis, and a truncation detector.
+        self.last_prompt_tokens = body.get("prompt_eval_count", 0)
+        return body["message"]["content"]
 
 
 # ---------------------------------------------------------------------------

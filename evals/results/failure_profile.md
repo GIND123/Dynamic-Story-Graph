@@ -1,0 +1,16 @@
+# Vanilla-LLM failure profile
+
+| model | quote_acc | cloze_acc | coref_acc | cons_recall | subtle_recall | contradiction | location_incon | over_flag | cons_prec | entity_drift | drift_src | cons_malformed |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| gemma2:2b | 0.206 | 0.007 | 0.728 | 0.643 | 0.400 | 0.357 | 0.667 | 1.000 | 0.474 | 0.272 | coreference | 0 |
+| gemma2:9b | 0.619 | 0.070 | 0.699 | 0.929 | 0.800 | 0.071 | 0.000 | 0.500 | 0.722 | 0.301 | coreference | 0 |
+| llama3.1:8b | 0.577 | 0.077 | 0.772 | 1.000 | 1.000 | 0.000 | 0.000 | 1.000 | 0.583 | 0.228 | coreference | 0 |
+| llama3.2:3b | 0.299 | 0.047 | 0.449 | 1.000 | 1.000 | 0.000 | 0.000 | 1.000 | 0.583 | 0.551 | coreference | 0 |
+| mistral:7b | 0.392 | 0.107 | 0.640 | 0.214 | 0.000 | 0.786 | 0.667 | 0.100 | 0.750 | 0.360 | coreference | 0 |
+| phi3.5 | 0.268 | 0.003 | 0.713 | 0.929 | 0.800 | 0.071 | 0.000 | 0.800 | 0.619 | 0.287 | coreference | 3 |
+| qwen2.5:3b | 0.278 | 0.003 | 0.647 | 0.143 | 0.400 | 0.857 | 1.000 | 0.000 | 1.000 | 0.353 | coreference | 0 |
+| qwen2.5:72b | 0.742 | 0.190 | 0.713 | 0.857 | 0.800 | 0.143 | 0.167 | 0.500 | 0.706 | 0.287 | coreference | 0 |
+| qwen2.5:7b | 0.474 | 0.053 | 0.691 | 0.786 | 0.600 | 0.214 | 0.167 | 0.500 | 0.688 | 0.309 | coreference | 0 |
+| yi:9b | 0.268 | 0.017 | 0.699 | 0.929 | 1.000 | 0.071 | 0.000 | 1.000 | 0.565 | 0.301 | coreference | 0 |
+
+_Rates are share-of-failures (higher = worse). `contradiction` and `location_incon` = 1 − recall on planted cases; `entity_drift` = cloze wrong-but-valid-character rate (a proxy). Small n — directional._

@@ -7,6 +7,7 @@ pydantic-settings
 anthropic
 fastembed
 httpx
+matplotlib
 pytest
 pytest-asyncio
 ruff
