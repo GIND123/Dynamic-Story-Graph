@@ -1,39 +1,11 @@
-# Python
+# --- repo root (Dynamic Narration Graph) ---
 __pycache__/
 *.py[cod]
-*.egg-info/
+.ipynb_checkpoints/
 .venv/
 venv/
-.eggs/
-
-# Secrets and environment — all variants, never commit real keys
 .env
 .env.local
-.env.production
-.env.staging
-.env.*.local
-
-# Docker volumes / local data
-neo4j_data/
-redis_data/
-data/
-
-# Tooling caches
-.ruff_cache/
-.pytest_cache/
-.mypy_cache/
-.fastembed_cache/
-fastembed_cache/
-*.onnx
-
-# Local evaluation artifacts. Ignore raw per-run data (JSON) + run logs — they are
-# regenerable — but KEEP the summary tables (.md/.csv) and plots (.png) the committed
-# reports embed, so FAILURE_PROFILE_REPORT.md renders from a fresh clone.
-evals/results/**/*.json
-evals/results/**/*.log
-
-# IDE / OS
-.vscode/
-.idea/
+*_data/
+.*_cache/
 .DS_Store
-Thumbs.db
