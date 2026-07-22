@@ -1,0 +1,16 @@
+runtime:
+  seed: 42
+  max_regenerations: 2
+  fail_on_warning: false
+
+state:
+  dimension: 128
+  node_dimension: 128
+  encoder: hashing
+  transition: rule_based
+
+generation:
+  backend: template
+  model: meta-llama/Llama-3.1-8B-Instruct
+  conditioning: soft_prompt
+  max_new_tokens: 1024

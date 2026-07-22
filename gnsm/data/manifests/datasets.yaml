@@ -1,0 +1,25 @@
+datasets:
+  litbank:
+    role: [entity, coreference, event]
+    split_policy: document
+  bookcoref:
+    role: [book_scale_coreference]
+    split_policy: book
+  pdnc:
+    role: [speaker, addressee]
+    split_policy: novel
+  evolvtrip:
+    role: [belief, desire, intention, emotion]
+    split_policy: story
+  litchartom:
+    role: [character_theory_of_mind]
+    split_policy: story
+  constory_bench:
+    role: [consistency_evaluation]
+    trainable: false
+  fables:
+    role: [book_length_faithfulness_evaluation]
+    trainable: false
+  gpt4_books:
+    role: [name_cloze, memorization_guardrail]
+    trainable: false

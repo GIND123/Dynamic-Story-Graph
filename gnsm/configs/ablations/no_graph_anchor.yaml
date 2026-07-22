@@ -1,0 +1,8 @@
+name: no_graph_reconstruction_anchor
+graph_reconstruction: false
+supervised_contrastive_identity: true
+auxiliary_property_heads: true
+transition_delta_loss: true
+latent_regression_loss: true
+conditioning: cross_attention
+verifier: true

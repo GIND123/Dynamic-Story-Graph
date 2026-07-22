@@ -9,3 +9,19 @@ venv/
 *_data/
 .*_cache/
 .DS_Store
+
+# --- GNSM ---
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+artifacts/
+checkpoints/
+wandb/
+gnsm/data/raw/*
+gnsm/data/processed/*
+gnsm/data/cache/*
+!gnsm/data/raw/.gitkeep
+!gnsm/data/processed/.gitkeep
+!gnsm/data/cache/.gitkeep

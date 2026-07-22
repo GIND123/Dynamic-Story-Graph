@@ -1,0 +1,5 @@
+generation:
+  backend: huggingface
+  model: Qwen/Qwen2.5-14B-Instruct
+  conditioning: cross_attention
+  max_new_tokens: 1536

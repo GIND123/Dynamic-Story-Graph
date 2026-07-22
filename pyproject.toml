@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gnsm"
+version = "0.1.0"
+description = "Grounded Narrative State Model for consistent long-form generation"
+readme = "gnsm/README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Dynamic Narration Graph contributors" }]
+dependencies = ["numpy>=1.26", "PyYAML>=6.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6", "mypy>=1.11"]
+training = [
+  "torch>=2.4",
+  "transformers>=4.45",
+  "datasets>=3.0",
+  "accelerate>=1.0",
+  "peft>=0.13",
+  "safetensors>=0.4",
+]
+tracking = ["wandb>=0.18", "tensorboard>=2.17"]
+
+[project.scripts]
+gnsm = "gnsm.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["gnsm"]
+
+[tool.hatch.build]
+include = [
+  "gnsm/**/*.py",
+  "gnsm/configs/**/*.yaml",
+  "gnsm/data/**/*.md",
+  "gnsm/data/**/*.yaml",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["Dataset Generation", "Long Model Comparison", "manuscript-memory-engine"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["gnsm"]
