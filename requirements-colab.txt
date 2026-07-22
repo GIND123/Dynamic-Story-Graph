@@ -1,0 +1,40 @@
+# =====================================================================
+# GNSM - Colab / CUDA runtime stack
+# =====================================================================
+# Target runtime : Google Colab GPU (T4 / L4 / A100) or any CUDA 12.1+ box
+# Target CUDA     : 12.1 (cu121 wheels). CUDA 12.4 (cu124) also works.
+# Python          : 3.10 - 3.12
+#
+# IMPORTANT - torch is deliberately NOT pinned in this file.
+#   Colab ships a torch build already matched to its CUDA driver. Reinstalling
+#   torch on Colab is slow and frequently breaks the runtime, so the bootstrap
+#   (`python -m gnsm.colab.bootstrap`) installs torch ONLY if it is missing,
+#   using the official cu121 wheel index:
+#
+#       pip install torch --index-url https://download.pytorch.org/whl/cu121
+#
+#   Everything below layers cleanly on top of Colab's preinstalled torch.
+#   For a non-Colab GPU machine with no torch, run the bootstrap first (it
+#   installs torch), then `pip install -r requirements-colab.txt`.
+# ---------------------------------------------------------------------
+
+# --- Hugging Face generation + adapter stack (C6) ---
+transformers>=4.46,<5
+accelerate>=1.1
+peft>=0.13
+safetensors>=0.4.5
+sentencepiece>=0.2
+huggingface-hub>=0.26
+
+# --- 4-bit quantization for 8B/14B generators on a single GPU ---
+# bitsandbytes requires a CUDA build of torch; skip on CPU-only boxes.
+bitsandbytes>=0.44
+
+# --- data + numerics ---
+datasets>=3.1
+numpy>=1.26
+PyYAML>=6.0
+einops>=0.8
+
+# --- experiment tracking (optional but pinned for reproducibility) ---
+tensorboard>=2.17

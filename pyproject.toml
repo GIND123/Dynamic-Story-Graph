@@ -15,11 +15,20 @@ dependencies = ["numpy>=1.26", "PyYAML>=6.0"]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6", "mypy>=1.11"]
 training = [
   "torch>=2.4",
-  "transformers>=4.45",
+  "transformers>=4.46",
   "datasets>=3.0",
-  "accelerate>=1.0",
+  "accelerate>=1.1",
   "peft>=0.13",
-  "safetensors>=0.4",
+  "safetensors>=0.4.5",
+  "sentencepiece>=0.2",
+  "einops>=0.8",
+]
+# Colab / CUDA extras layered on the training stack. bitsandbytes needs a CUDA
+# build of torch, so it lives here rather than in `training` (kept cross-platform).
+colab = [
+  "bitsandbytes>=0.44",
+  "huggingface-hub>=0.26",
+  "tensorboard>=2.17",
 ]
 tracking = ["wandb>=0.18", "tensorboard>=2.17"]
 
@@ -35,6 +44,8 @@ include = [
   "gnsm/configs/**/*.yaml",
   "gnsm/data/**/*.md",
   "gnsm/data/**/*.yaml",
+  "gnsm/colab/**/*.ipynb",
+  "gnsm/colab/**/*.md",
 ]
 
 [tool.pytest.ini_options]

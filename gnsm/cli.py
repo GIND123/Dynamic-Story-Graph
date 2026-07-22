@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -27,10 +28,36 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--scene-id", default="scene-0")
 
     subparsers.add_parser("tree", help="print the intended project directory map")
+
+    # These two delegate to the module's own argparse, so their flags
+    # (`--json`, `--require-gpu`, `--steps`, `--device`, ...) pass straight through.
+    subparsers.add_parser(
+        "doctor",
+        help="report python/torch/CUDA/GPU readiness (accepts --json, --require-gpu)",
+        add_help=False,
+    )
+    subparsers.add_parser(
+        "smoke",
+        help="train the neural stack on a synthetic batch to verify the GPU path",
+        add_help=False,
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    command = argv[0] if argv else None
+
+    # Delegate optional-dependency subcommands so `--help` and flags belong to them.
+    if command == "doctor":
+        from gnsm.env import main as doctor_main
+
+        return doctor_main(argv[1:])
+    if command == "smoke":
+        from gnsm.training.smoke import main as smoke_main
+
+        return smoke_main(argv[1:])
+
     args = build_parser().parse_args(argv)
     if args.command == "demo":
         return _demo(args.scene, args.intent)
@@ -82,7 +109,9 @@ PROJECT_TREE = """gnsm/
 |-- eval/                consistency, context sweep, human study
 |-- data/                dataset manifests and local data roots
 |-- configs/             defaults, model profiles, ablations
-|-- training/            staged training entry points
+|-- training/            staged training entry points + GPU smoke
+|-- colab/               clone-and-run bootstrap + notebook
+|-- env.py               CUDA/GPU runtime doctor
 |-- schemas.py           cross-plane graph/state contracts
 |-- pipeline.py          end-to-end facade
-`-- cli.py               demo and extraction commands"""
+`-- cli.py               demo, extract, doctor, smoke commands"""
