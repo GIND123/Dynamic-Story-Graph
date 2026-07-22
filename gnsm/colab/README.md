@@ -48,6 +48,44 @@ Flags: `--no-torch`, `--no-requirements`, `--no-editable`, `--no-doctor`.
 cu121 wheels run on CUDA 12.1–12.4 hosts. To move the target, edit
 `TORCH_CUDA_INDEX` / `CUDA_TAG` in [`bootstrap.py`](bootstrap.py).
 
+## Authentication (Hugging Face) — no prompt
+
+GNSM never runs an interactive `login()` and never asks for a token. Gated
+models are reached through a token that is **already active in the session**.
+The token is discovered, in order, from:
+
+1. an environment variable — `HF_TOKEN` (or `HUGGING_FACE_HUB_TOKEN`,
+   `HUGGINGFACE_TOKEN`, `HUGGINGFACEHUB_API_TOKEN`);
+2. a cached `huggingface-cli login` (typical on an HPC login node);
+3. a Colab **secret** named `HF_TOKEN` — lowercase `hf` is also accepted.
+
+On Colab, add the secret under the 🔑 panel and toggle *notebook access*. Because
+each `!python …` line is a subprocess, run `ensure_hf_token()` from a **kernel**
+cell first (the notebook and the drop-in cell already do) so those subprocesses
+inherit `HF_TOKEN`:
+
+```python
+from gnsm.colab.bootstrap import ensure_hf_token
+ensure_hf_token()   # sets HF_TOKEN in this kernel if a token is found; no prompt
+```
+
+On an HPC node the token is usually already an env var or a cached login, so
+nothing extra is needed. `python -m gnsm doctor` prints whether a token is active
+(never the value). `from_pretrained` then uses it implicitly — no `token=`
+argument required.
+
+### Models used by GNSM
+
+| Model | Gating | Notes |
+|---|---|---|
+| `meta-llama/Llama-3.1-8B-Instruct` | **gated** (access granted) | comparability generator |
+| `google/gemma-*`, `meta-llama/Llama-3*` | **gated** (access granted) | optional generators |
+| `Qwen/Qwen2.5-*-Instruct` | public (Apache-2.0) | headline generators |
+| `answerdotai/ModernBERT-large` | public | state-encoder node init |
+| `microsoft/deberta-v3-large` | public | encoder alternative |
+
+Only the gated rows need the token; everything else loads with no auth.
+
 ## Commands you get after bootstrapping
 
 ```bash

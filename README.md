@@ -24,10 +24,15 @@ paste this into a fresh **GPU** Colab cell (Runtime → Change runtime type → 
 ```python
 !git clone https://github.com/GIND123/Dynamic-Narration-Graph.git
 %cd Dynamic-Narration-Graph
+from gnsm.colab.bootstrap import ensure_hf_token; ensure_hf_token()  # activate ambient HF token, no prompt
 !python -m gnsm.colab.bootstrap   # keeps Colab's CUDA torch, installs the rest, prints a report
 !python -m gnsm demo              # deterministic end-to-end loop (no downloads)
 !python -m gnsm smoke --json      # trains the neural state stack on the GPU
 ```
 
-CUDA target is **cu121** (compatible with Colab and CUDA 12.1–12.4 hosts). Full
-notes: [`gnsm/colab/README.md`](gnsm/colab/README.md).
+CUDA target is **cu121** (compatible with Colab and CUDA 12.1–12.4 hosts).
+Hugging Face auth is never prompted: gated models (Llama-3.1, Gemma, ...) are
+reached through a token that is already active in the session — an `HF_TOKEN`
+env var, a prior `huggingface-cli login`, or a Colab secret named `HF_TOKEN`
+(or `hf`). Public models need nothing. Full notes:
+[`gnsm/colab/README.md`](gnsm/colab/README.md).

@@ -30,17 +30,23 @@ or open [`colab/GNSM_Colab.ipynb`](colab/GNSM_Colab.ipynb):
 ```python
 !git clone https://github.com/GIND123/Dynamic-Narration-Graph.git
 %cd Dynamic-Narration-Graph
+from gnsm.colab.bootstrap import ensure_hf_token; ensure_hf_token()  # activate ambient HF token, no prompt
 !python -m gnsm.colab.bootstrap   # keeps Colab's CUDA torch, installs the rest, prints a report
 !python -m gnsm demo              # deterministic end-to-end loop (no downloads)
 !python -m gnsm smoke --json      # trains the neural state stack on the GPU
 ```
 
-- `python -m gnsm doctor` reports python / torch / CUDA / GPU readiness
-  (`--json`, `--require-gpu`).
+- `python -m gnsm doctor` reports python / torch / CUDA / GPU readiness plus
+  whether an HF token is active (`--json`, `--require-gpu`).
 - `python -m gnsm smoke` trains the real `state/neural.py` modules on a synthetic
   batch — a GPU wiring check that should show the loss dropping on `device=cuda`.
 - CUDA target is **cu121** (Colab-compatible; works on CUDA 12.1–12.4). The
   bootstrap keeps Colab's preinstalled torch and only installs torch if missing.
+- **No HF login prompt.** Gated models you already have access to (Llama-3.1,
+  Gemma, ...) are reached via a token that is already active — an `HF_TOKEN` env
+  var, a prior `huggingface-cli login`, or a Colab secret named `HF_TOKEN`/`hf`.
+  `ensure_hf_token()` bridges a Colab secret into the kernel so `!python` cells
+  inherit it; public models need nothing.
 
 Details and the memory guide: [`colab/README.md`](colab/README.md).
 
