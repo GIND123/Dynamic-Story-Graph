@@ -9,12 +9,32 @@ a plain laptop without code changes.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from gnsm.exceptions import OptionalDependencyError
 from gnsm.generation.base import GenerationRequest
 from gnsm.generation.conditioning import build_conditioning_packet
+
+# Root searched for already-downloaded weights before falling back to the Hub.
+MODELS_DIR_ENV = "GNSM_MODELS_DIR"
+
+
+def local_or_hub(reference: str) -> str:
+    """Local weights under `models/` when present, else the reference unchanged.
+
+    The Colab download step writes each checkpoint to the lowercased repo
+    basename, so `meta-llama/Llama-3.1-8B-Instruct` loads from
+    `models/llama-3.1-8b-instruct` instead of re-downloading 15 GB. An explicit
+    path is returned untouched, and an unknown repo id still resolves via the Hub.
+    """
+    if Path(reference).expanduser().is_dir():
+        return reference
+    root = os.environ.get(MODELS_DIR_ENV) or Path(__file__).resolve().parents[2] / "models"
+    candidate = Path(root).expanduser() / reference.rsplit("/", 1)[-1].lower()
+    return str(candidate) if candidate.is_dir() else reference
 
 
 @dataclass(slots=True)
@@ -48,8 +68,12 @@ class HuggingFaceFrozenGenerator:
             kwargs["torch_dtype"] = self._resolve_dtype(torch, has_cuda)
             summary["torch_dtype"] = str(kwargs["torch_dtype"])
 
-        self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self._model = AutoModelForCausalLM.from_pretrained(self.model_name, **kwargs)
+        weights = local_or_hub(self.model_name)
+        summary["weights"] = weights
+        summary["local_weights"] = weights != self.model_name
+
+        self._tokenizer = AutoTokenizer.from_pretrained(weights)
+        self._model = AutoModelForCausalLM.from_pretrained(weights, **kwargs)
         if not has_cuda:
             self._model = self._model.to("cpu")
         self._model.eval()
