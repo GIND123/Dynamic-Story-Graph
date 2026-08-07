@@ -11,7 +11,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
+from typing import Any
 
 from gnsm.exceptions import OptionalDependencyError
 
@@ -61,7 +64,11 @@ def plan(config: SmokeConfig) -> dict[str, int]:
     }
 
 
-def run(config: SmokeConfig | None = None) -> dict[str, object]:
+def run(
+    config: SmokeConfig | None = None,
+    checkpoint_cb: Callable[[int, float, dict[str, Any], dict[str, Any]], None] | None = None,
+    resume_state: dict[str, Any] | None = None,
+) -> dict[str, object]:
     config = config or SmokeConfig()
     try:
         import torch
@@ -130,6 +137,14 @@ def run(config: SmokeConfig | None = None) -> dict[str, object]:
     )
     optimizer = torch.optim.AdamW(parameters, lr=config.lr)
 
+    start_step = 0
+    if resume_state is not None:
+        encoder.load_state_dict(resume_state["encoder"])
+        heads.load_state_dict(resume_state["heads"])
+        transition.load_state_dict(resume_state["transition"])
+        optimizer.load_state_dict(resume_state["optimizer"])
+        start_step = resume_state["step"]
+
     batch_index = (
         torch.arange(config.batch_size, device=device)
         .view(-1, 1)
@@ -166,15 +181,26 @@ def run(config: SmokeConfig | None = None) -> dict[str, object]:
 
     initial_loss = float("nan")
     final_loss = float("nan")
-    for step in range(config.steps):
+    for step in range(start_step, config.steps):
         optimizer.zero_grad(set_to_none=True)
         loss = forward()
         loss.backward()
         optimizer.step()
         value = float(loss.detach().cpu())
-        if step == 0:
+        if step == start_step:
             initial_loss = value
         final_loss = value
+        if checkpoint_cb is not None:
+            checkpoint_cb(
+                step,
+                value,
+                {
+                    "encoder": encoder.state_dict(),
+                    "heads": heads.state_dict(),
+                    "transition": transition.state_dict(),
+                },
+                optimizer.state_dict(),
+            )
 
     peak_memory_gb = None
     if device.type == "cuda":
@@ -207,6 +233,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--json", action="store_true", help="emit metrics as JSON")
+    parser.add_argument(
+        "--hf-repo",
+        default=None,
+        help="Push periodic checkpoints to this private HF repo (owner/name).",
+    )
+    parser.add_argument(
+        "--checkpoint-every", type=int, default=50, help="Push a checkpoint every N steps."
+    )
+    parser.add_argument(
+        "--resume", action="store_true", help="Resume from the latest checkpoint in --hf-repo."
+    )
     args = parser.parse_args(argv)
 
     config = SmokeConfig(
@@ -216,7 +253,20 @@ def main(argv: list[str] | None = None) -> int:
         device=args.device,
         seed=args.seed,
     )
-    result = run(config)
+
+    checkpoint_cb = None
+    resume_state = None
+    if args.hf_repo:
+        from gnsm.training.checkpointing import attach_to_run
+
+        checkpoint_cb, resume_state, _manager = attach_to_run(
+            args.hf_repo,
+            args.checkpoint_every,
+            args.resume,
+            run_id=f"smoke-{int(time.time())}",
+        )
+
+    result = run(config, checkpoint_cb=checkpoint_cb, resume_state=resume_state)
     if args.json:
         print(json.dumps(result, indent=2))
     else:

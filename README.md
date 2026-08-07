@@ -606,6 +606,98 @@ expected and harmless — the row still reads `OK`.
 
 ---
 
+## Run training on Modal, with periodic Hugging Face checkpoints
+
+`gnsm/infra/modal_app.py` runs GNSM training on [Modal](https://modal.com) and
+periodically pushes checkpoints — plus a train/val loss-curve plot, as
+matched PNG + PDF — to a private Hugging Face repo, so training is resumable
+from the Hub after any restart, by you or by anyone else with access to that
+repo. Two entrypoints:
+
+- **`main`** (default) launches `gnsm.training.smoke` — a GPU wiring check on
+  a synthetic batch, not a research result (see that module's docstring).
+- **`evolvtrip`** launches `gnsm.training.train_state`, real supervised
+  training of the encoder/heads/transition modules against real EvolvTrip
+  data (`gnsm/training/evolvtrip_adapter.py`; see its docstring for exactly
+  how a raw record becomes node/edge/attribute/emotion/delta tensors — a
+  documented v1 design). Needs
+  `data/evolvtrip_data/all_books_current.json` on disk first:
+  `git clone https://huggingface.co/datasets/yangbh217/EvolvTrip data/evolvtrip_data`.
+
+Both share the same checkpoint hook (`gnsm.training.checkpointing.attach_to_run`),
+so it carries over unchanged once `train_adapter.py` grows a real loop too.
+
+`evolvtrip` early-stops: it tracks validation loss every epoch and stops after
+`--patience` epochs with no improvement (default 10), rather than always
+running the full `--epochs` budget. Every time val loss improves, the
+checkpoint is pushed separately to `checkpoints/best` (+ a `best.json`
+pointer) in the HF repo — a single stable "the best model so far" artifact,
+distinct from the periodic `checkpoints/checkpoint-step-N` resumability
+snapshots. The loss plot marks the best step with a vertical line.
+
+> **First real run's finding**: with no early stopping, 150 epochs on
+> EvolvTrip's 386 training pairs (a 720K-param model) overfits hard after
+> ~20 epochs — train loss keeps falling while val loss climbs from ~4 to
+> ~8.5. With early stopping (`--patience 10`), a real run on Modal T4 stopped
+> itself at epoch 24, with the best checkpoint recorded at epoch ~14
+> (val loss 3.79) — `checkpoints/best` in the HF repo is that checkpoint,
+> not whatever epoch training happened to end on.
+
+### One-time setup
+
+```bash
+pip install -e ".[modal]"   # installs the modal SDK
+modal setup                 # browser auth flow, links or creates a Modal account
+modal secret create hf-token HF=<your-HF-write-token>
+```
+
+The HF token must have **write** access to the target repo. Locally, the same
+token is read from this repo's `.env` (`HF=...`) — `gnsm.training.checkpointing`
+checks `HF_TOKEN` then the bare `HF` var, so no renaming is needed.
+
+### Running
+
+```bash
+# cheap pre-spend smoke test — a few seconds on the cheapest GPU tier
+modal run gnsm/infra/modal_app.py --steps 5 --gpu t4 \
+    --hf-repo <you>/DNG-GNSM-test --checkpoint-every 2
+
+# a real run
+modal run gnsm/infra/modal_app.py --steps 5000 --gpu t4 \
+    --hf-repo <you>/DNG-GNSM --checkpoint-every 100
+
+# resume after any restart
+modal run gnsm/infra/modal_app.py --steps 5000 --gpu t4 \
+    --hf-repo <you>/DNG-GNSM --checkpoint-every 100 --resume
+
+# is it still making progress? (no GPU spun up, near-zero cost)
+modal run gnsm/infra/modal_app.py::health_check --run-id primary --hf-repo <you>/DNG-GNSM
+
+# real training on EvolvTrip, with early stopping — pushes periodic
+# checkpoints, the best-val-loss checkpoint (checkpoints/best), and
+# plots/{run-id}/loss.{png,pdf} with the best step marked
+modal run gnsm/infra/modal_app.py::evolvtrip --epochs 100 --patience 10 \
+    --batch-size 16 --gpu t4 --hf-repo <you>/DNG-GNSM --checkpoint-every 50
+```
+
+- **GPU sizing**: defaults to `T4` (Modal's cheapest CUDA tier) because the
+  smoke test's modules are sub-10M parameters on a tiny synthetic batch —
+  right-sized, not a guess. Pass `--gpu a10` / `--gpu a100` once real
+  data-scale training replaces the smoke test.
+- **Waste controls**: a hard `timeout` (kill switch against runaway billing)
+  and a `scaledown_window` that tears the container down ~120s after the last
+  call, so idle time isn't billed.
+- **Resumability**: `latest.json` in the HF repo is only written after its
+  checkpoint folder has fully uploaded, so an interrupted push leaves it
+  pointing at the previous good checkpoint, never a partial one.
+- The same workflow works without Modal — `python -m gnsm smoke --hf-repo
+  <you>/DNG-GNSM --checkpoint-every 50 [--resume]` runs locally against
+  whatever device `--device` resolves to.
+
+See `gnsm/infra/modal_app.py`'s module docstring for the full command
+reference, and `gnsm/training/checkpointing.py` for the push/resume/heartbeat
+implementation.
+
 ## Disk layout
 
 ```text

@@ -23,6 +23,7 @@ class LossWeights:
     transition_delta: float = 1.0
     latent_regression: float = 0.1
     supervised_contrastive: float = 0.2
+    emotion: float = 0.3
 
 
 def grounded_state_loss(
@@ -35,6 +36,8 @@ def grounded_state_loss(
     delta_labels: Tensor,
     predicted_state: Tensor,
     encoded_next_state: Tensor,
+    emotion_logits: Tensor | None = None,
+    emotion_labels: Tensor | None = None,
     weights: LossWeights | None = None,
 ) -> tuple[Tensor, dict[str, Tensor]]:
     if functional is None:
@@ -52,4 +55,7 @@ def grounded_state_loss(
         + selected_weights.transition_delta * components["transition_delta"]
         + selected_weights.latent_regression * components["latent_regression"]
     )
+    if emotion_logits is not None and emotion_labels is not None:
+        components["emotion"] = functional.cross_entropy(emotion_logits, emotion_labels)
+        total = total + selected_weights.emotion * components["emotion"]
     return total, components

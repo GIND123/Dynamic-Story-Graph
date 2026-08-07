@@ -64,8 +64,10 @@ a graph-aware feature-hashing encoder, rule transition model, template frozen
 generator, and deterministic verifier. Replace one interface at a time as model
 weights and normalized datasets become available.
 
-See [architecture](docs/architecture.md), [dataset roles](data/README.md), and
-the [decision log](DECISIONS.md).
+See [architecture](docs/architecture.md), [dataset roles](data/README.md), the
+[decision log](DECISIONS.md), and the
+[benchmark & journal-figure plan](docs/benchmark_and_publication_plan.md) for
+P3/P4.
 
 ## Build phases
 

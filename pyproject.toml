@@ -22,6 +22,9 @@ training = [
   "safetensors>=0.4.5",
   "sentencepiece>=0.2",
   "einops>=0.8",
+  "huggingface-hub>=0.26",   # gnsm.training.checkpointing: periodic push/resume
+  "python-dotenv>=1.0",      # optional local .env loading for the HF token
+  "matplotlib>=3.9",         # gnsm.training.plotting: loss-curve figures
 ]
 # Colab / CUDA extras layered on the training stack. bitsandbytes needs a CUDA
 # build of torch, so it lives here rather than in `training` (kept cross-platform).
@@ -31,6 +34,9 @@ colab = [
   "tensorboard>=2.17",
 ]
 tracking = ["wandb>=0.18", "tensorboard>=2.17"]
+# Cloud GPU orchestration; kept separate since some environments (Colab) never
+# need it and it has no bearing on what gets trained.
+modal = ["modal>=0.65"]
 
 [project.scripts]
 gnsm = "gnsm.cli:main"
