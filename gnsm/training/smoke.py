@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -244,6 +243,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--resume", action="store_true", help="Resume from the latest checkpoint in --hf-repo."
     )
+    parser.add_argument(
+        "--run-id",
+        default="smoke-primary",
+        help="Checkpoints are namespaced under this id; --resume must reuse the original run's id.",
+    )
     args = parser.parse_args(argv)
 
     config = SmokeConfig(
@@ -259,11 +263,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.hf_repo:
         from gnsm.training.checkpointing import attach_to_run
 
-        checkpoint_cb, resume_state, _manager = attach_to_run(
+        checkpoint_cb, _best_checkpoint_cb, resume_state, _manager = attach_to_run(
             args.hf_repo,
             args.checkpoint_every,
             args.resume,
-            run_id=f"smoke-{int(time.time())}",
+            run_id=args.run_id,
         )
 
     result = run(config, checkpoint_cb=checkpoint_cb, resume_state=resume_state)

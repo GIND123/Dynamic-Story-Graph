@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from gnsm.training.evolvtrip_adapter import load_examples
+from gnsm.training.evolvtrip_adapter import collate_batch, load_examples
 
 HAS_TORCH = importlib.util.find_spec("torch") is not None
 
@@ -60,7 +60,7 @@ def test_run_stops_early_and_tracks_best_checkpoint(tmp_path: Path) -> None:
     def best_checkpoint_cb(step, val_loss, model_state, optimizer_state):
         best_calls.append((step, val_loss))
 
-    result = run(config, examples, best_checkpoint_cb=best_checkpoint_cb)
+    result = run(config, examples, collate_batch, best_checkpoint_cb=best_checkpoint_cb)
 
     assert result["epochs_run"] <= result["epochs_configured"]
     if result["early_stopped"]:
@@ -94,6 +94,6 @@ def test_run_never_exceeds_configured_epochs_when_patience_is_large(tmp_path: Pa
         device="cpu",
         patience=1000,  # effectively disabled
     )
-    result = run(config, examples)
+    result = run(config, examples, collate_batch)
     assert result["epochs_run"] == 3
     assert result["early_stopped"] is False

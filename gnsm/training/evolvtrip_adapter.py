@@ -39,6 +39,8 @@ from pathlib import Path
 
 import numpy as np
 
+from gnsm.training.batch_config import BatchConfig  # noqa: F401 (re-exported for existing callers)
+
 _TRIPLE_RE = re.compile(r"^\(\s*([^,]+?)\s*,\s*([A-Za-z]+)\s*,\s*(.+?)\s*\)$")
 
 # Longest-prefix-first so e.g. "BelievesAbout" wins over "Believes".
@@ -205,14 +207,6 @@ def load_examples(path: Path) -> list[EvolvTripExample]:
                 )
             )
     return examples
-
-
-@dataclass(frozen=True, slots=True)
-class BatchConfig:
-    nodes: int = 8  # 1 character + up to 7 objects
-    edges_per_graph: int = 8  # median is 6 triples/record; 8 covers most
-    input_dim: int = 64
-    hidden_dim: int = 128
 
 
 def collate_batch(examples: list[EvolvTripExample], config: BatchConfig, seed: int = 0):

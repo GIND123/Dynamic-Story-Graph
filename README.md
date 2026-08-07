@@ -612,36 +612,63 @@ expected and harmless — the row still reads `OK`.
 periodically pushes checkpoints — plus a train/val loss-curve plot, as
 matched PNG + PDF — to a private Hugging Face repo, so training is resumable
 from the Hub after any restart, by you or by anyone else with access to that
-repo. Two entrypoints:
+repo. Three entrypoints:
 
 - **`main`** (default) launches `gnsm.training.smoke` — a GPU wiring check on
   a synthetic batch, not a research result (see that module's docstring).
-- **`evolvtrip`** launches `gnsm.training.train_state`, real supervised
-  training of the encoder/heads/transition modules against real EvolvTrip
-  data (`gnsm/training/evolvtrip_adapter.py`; see its docstring for exactly
-  how a raw record becomes node/edge/attribute/emotion/delta tensors — a
-  documented v1 design). Needs
-  `data/evolvtrip_data/all_books_current.json` on disk first:
-  `git clone https://huggingface.co/datasets/yangbh217/EvolvTrip data/evolvtrip_data`.
+- **`evolvtrip`** and **`pdnc`** both launch `gnsm.training.train_state` (a
+  shared, dataset-agnostic training engine — vocab sizes and the batch
+  collate function are supplied per dataset) against their own adapter:
+  - `gnsm/training/evolvtrip_adapter.py` — 428 examples from EvolvTrip's
+    belief/desire/intention/emotion triples. Needs
+    `data/evolvtrip_data/all_books_current.json` on disk first:
+    `git clone https://huggingface.co/datasets/yangbh217/EvolvTrip data/evolvtrip_data`.
+  - `gnsm/training/pdnc_adapter.py` — ~36K consecutive same-speaker quote
+    pairs across 28 novels, reusing `ingestion.pdnc.PDNCLoader` from
+    `manuscript-memory-engine` rather than re-parsing PDNC's CSVs. Needs
+    `data/pdnc/data/` on disk first:
+    `git clone --depth 1 https://github.com/Priya22/project-dialogism-novel-corpus.git data/pdnc`.
 
-Both share the same checkpoint hook (`gnsm.training.checkpointing.attach_to_run`),
-so it carries over unchanged once `train_adapter.py` grows a real loop too.
+  Each adapter's docstring explains exactly how a raw record becomes
+  node/edge/attribute/(emotion)/delta tensors — a documented v1 design, not a
+  final one. Emotion supervision is optional per-dataset (PDNC has no
+  emotion signal; `gnsm.state.losses.grounded_state_loss` simply omits that
+  term when absent).
 
-`evolvtrip` early-stops: it tracks validation loss every epoch and stops after
-`--patience` epochs with no improvement (default 10), rather than always
+- **`experiment`** runs Stage C: graph-state-conditioned *generation*. It
+  trains a `StatePrefixAdapter` (`gnsm/generation/adapter.py`) that projects
+  the learned narrative state into soft-prompt embeddings prepended to a
+  **frozen** LM's own token embeddings via `inputs_embeds` — standard prefix
+  tuning (Li & Liang, 2021; Lester et al., 2021), with the state rather than
+  a free parameter as the prefix source. Both the encoder (loaded from a
+  trained `best.json` checkpoint) and the LM stay frozen; only the adapter
+  learns. See `gnsm/training/train_adapter.py` and
+  `gnsm/eval/adapter_experiment.py`, and `gnsm/docs/adapter_results.md` for
+  measured results and their limitations.
+
+All of these share the same checkpoint hook (`gnsm.training.checkpointing.attach_to_run`).
+Every path it writes — periodic checkpoints, `latest.json`, the best-val-loss
+checkpoint, `best.json` — is namespaced under `{run_id}/`, so multiple
+training lines (EvolvTrip, PDNC, future datasets) can safely share one HF
+repo without one run's "best" clobbering another's. `--resume` must reuse the
+original run's `--run-id`.
+
+`evolvtrip`/`pdnc` early-stop: they track validation loss every epoch and
+stop after `--patience` epochs with no improvement, rather than always
 running the full `--epochs` budget. Every time val loss improves, the
-checkpoint is pushed separately to `checkpoints/best` (+ a `best.json`
-pointer) in the HF repo — a single stable "the best model so far" artifact,
-distinct from the periodic `checkpoints/checkpoint-step-N` resumability
-snapshots. The loss plot marks the best step with a vertical line.
+checkpoint is pushed separately to `{run_id}/checkpoints/best` (+ a
+`{run_id}/best.json` pointer) — a single stable "the best model so far"
+artifact, distinct from the periodic `checkpoints/checkpoint-step-N`
+resumability snapshots. The loss plot marks the best step with a vertical line.
 
-> **First real run's finding**: with no early stopping, 150 epochs on
-> EvolvTrip's 386 training pairs (a 720K-param model) overfits hard after
-> ~20 epochs — train loss keeps falling while val loss climbs from ~4 to
-> ~8.5. With early stopping (`--patience 10`), a real run on Modal T4 stopped
-> itself at epoch 24, with the best checkpoint recorded at epoch ~14
-> (val loss 3.79) — `checkpoints/best` in the HF repo is that checkpoint,
-> not whatever epoch training happened to end on.
+> **Findings so far**: EvolvTrip has little data (386 train pairs) for a
+> 720K-param model — without early stopping it overfits hard after ~20
+> epochs (val loss climbs from ~4 to ~8.5); with `--patience 10` a Modal T4
+> run stopped itself at epoch 24, best checkpoint at epoch ~14 (val loss
+> 3.79). PDNC has ~76x more data (32,679 train pairs) and converges cleanly
+> with no overfitting — train and val loss track together down to ~1.9 and
+> stay there; a `--patience 5` run stopped around epoch 20 with best val
+> loss ~1.89. More data, less overfitting, as expected.
 
 ### One-time setup
 
@@ -674,10 +701,14 @@ modal run gnsm/infra/modal_app.py --steps 5000 --gpu t4 \
 modal run gnsm/infra/modal_app.py::health_check --run-id primary --hf-repo <you>/DNG-GNSM
 
 # real training on EvolvTrip, with early stopping — pushes periodic
-# checkpoints, the best-val-loss checkpoint (checkpoints/best), and
+# checkpoints, the best-val-loss checkpoint ({run-id}/checkpoints/best), and
 # plots/{run-id}/loss.{png,pdf} with the best step marked
 modal run gnsm/infra/modal_app.py::evolvtrip --epochs 100 --patience 10 \
     --batch-size 16 --gpu t4 --hf-repo <you>/DNG-GNSM --checkpoint-every 50
+
+# real training on PDNC — same shared engine, ~76x more data, no overfitting
+modal run gnsm/infra/modal_app.py::pdnc --epochs 30 --patience 5 \
+    --batch-size 64 --gpu t4 --hf-repo <you>/DNG-GNSM --checkpoint-every 500
 ```
 
 - **GPU sizing**: defaults to `T4` (Modal's cheapest CUDA tier) because the

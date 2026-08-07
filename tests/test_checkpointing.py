@@ -72,7 +72,7 @@ def test_attach_to_run_callback_only_pushes_on_cadence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("HF_TOKEN", "explicit-token")
-    checkpoint_cb, resume_state, manager = checkpointing.attach_to_run(
+    checkpoint_cb, best_checkpoint_cb, resume_state, manager = checkpointing.attach_to_run(
         "acct/repo", checkpoint_every_steps=4, resume=False, run_id="test-run", local_dir=tmp_path
     )
     assert resume_state is None
@@ -87,6 +87,22 @@ def test_attach_to_run_callback_only_pushes_on_cadence(
     for step in range(9):
         checkpoint_cb(step, 0.1, {"encoder": {}}, {})
     assert pushed_steps == [4, 8]
+
+    # best_checkpoint_cb is throttled by should_push_best, independent of the
+    # periodic checkpoint cadence above -- a burst of "improvements" collapses
+    # to a single push rather than one Hub commit per call. The stub mirrors
+    # the real method's side effect (resetting the throttle clock) so the
+    # gate is actually exercised rather than trivially always-true.
+    best_pushed: list[int] = []
+
+    def _fake_push_best(self, step, val_loss, state):
+        best_pushed.append(step)
+        self._last_best_push_time = time.monotonic()
+
+    monkeypatch.setattr(checkpointing.CheckpointManager, "push_best", _fake_push_best)
+    for step in range(5):
+        best_checkpoint_cb(step, 1.0 - step * 0.01, {"encoder": {}}, {})
+    assert best_pushed == [0]  # only the first call fires; the rest are inside the throttle window
 
 
 @pytest.mark.skipif(not (HAS_TORCH and HAS_HF), reason="torch and huggingface_hub required")
@@ -114,11 +130,12 @@ def test_push_promotes_latest_only_after_folder_upload(
     manager.push(step=5, loss=0.42, state={"encoder": {"w": 1}})
 
     # The checkpoint folder must be uploaded before latest.json is promoted,
-    # and the heartbeat is written last.
+    # and the heartbeat is written last. Paths are namespaced by run_id so a
+    # second training line sharing the same repo can't collide with this one.
     assert uploads == [
         ("create_repo", "acct/repo"),
-        ("upload_folder", "checkpoints/checkpoint-step-5"),
-        ("upload_file", "latest.json"),
+        ("upload_folder", "test-run/checkpoints/checkpoint-step-5"),
+        ("upload_file", "test-run/latest.json"),
         ("upload_file", "heartbeats/test-run.json"),
     ]
 
@@ -149,9 +166,62 @@ def test_push_best_promotes_best_json_only_after_folder_upload(
 
     assert uploads == [
         ("create_repo", "acct/repo"),
-        ("upload_folder", "checkpoints/best"),
-        ("upload_file", "best.json"),
+        ("upload_folder", "test-run/checkpoints/best"),
+        ("upload_file", "test-run/best.json"),
     ]
     # push_best always writes to the same stable local path, so a second call
     # (a new best) overwrites rather than accumulating checkpoint-best-N dirs.
     assert (tmp_path / "best" / "state.pt").exists()
+
+
+@pytest.mark.skipif(not (HAS_TORCH and HAS_HF), reason="torch and huggingface_hub required")
+def test_two_run_ids_sharing_a_repo_never_collide_on_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression test: two training lines (e.g. an EvolvTrip run and a PDNC
+    run) pushing to the same HF repo must never write to the same
+    latest.json/best.json/checkpoints/best -- that was a real bug caught
+    before it could clobber a real checkpoint."""
+
+    uploads: list[tuple[str, str]] = []
+
+    class FakeApi:
+        def __init__(self, token: str) -> None:
+            self.token = token
+
+        def create_repo(self, repo_id: str, private: bool, exist_ok: bool) -> None:
+            uploads.append(("create_repo", repo_id))
+
+        def upload_folder(self, folder_path: str, repo_id: str, path_in_repo: str) -> None:
+            uploads.append(("upload_folder", path_in_repo))
+
+        def upload_file(self, path_or_fileobj: bytes, path_in_repo: str, repo_id: str) -> None:
+            uploads.append(("upload_file", path_in_repo))
+
+    monkeypatch.setattr(checkpointing, "_hf_api", lambda token: FakeApi(token))
+
+    manager_a = checkpointing.CheckpointManager(
+        checkpointing.CheckpointConfig(
+            hf_repo_id="acct/repo", local_dir=tmp_path / "a", token="explicit-token"
+        ),
+        run_id="dataset-a",
+    )
+    manager_b = checkpointing.CheckpointManager(
+        checkpointing.CheckpointConfig(
+            hf_repo_id="acct/repo", local_dir=tmp_path / "b", token="explicit-token"
+        ),
+        run_id="dataset-b",
+    )
+
+    manager_a.push(step=10, loss=1.0, state={"encoder": {}})
+    manager_a.push_best(step=10, val_loss=1.0, state={"encoder": {}})
+    manager_b.push(step=20, loss=2.0, state={"encoder": {}})
+    manager_b.push_best(step=20, val_loss=2.0, state={"encoder": {}})
+
+    paths_written = {path for _kind, path in uploads if _kind != "create_repo"}
+    a_paths = {p for p in paths_written if p.startswith("dataset-a/")}
+    b_paths = {p for p in paths_written if p.startswith("dataset-b/")}
+    assert a_paths and b_paths
+    assert a_paths.isdisjoint(b_paths)
+    # every non-heartbeat path must be namespaced -- nothing floats at repo root
+    assert all(p.startswith(("dataset-a/", "dataset-b/", "heartbeats/")) for p in paths_written)

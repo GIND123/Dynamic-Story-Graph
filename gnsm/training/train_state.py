@@ -1,35 +1,31 @@
 """Stage B trainer: real supervised training of the encoder, grounded decode
-heads, and transition model against EvolvTrip -- gnsm.training.smoke's
-synthetic-batch counterpart, but on real (book, character, plot_index) data.
+heads, and transition model against real data -- gnsm.training.smoke's
+synthetic-batch counterpart. Dataset-agnostic: pass any adapter's examples,
+its ``collate_fn``, and its vocab sizes (edge/attribute/emotion/delta class
+counts) via ``TrainStateConfig``. Each dataset gets its own thin CLI entry
+point (this module's own ``main()`` is the EvolvTrip one -- see
+gnsm/training/evolvtrip_adapter.py's docstring for its tensor design;
+gnsm/training/pdnc_adapter.py + train_pdnc.py are the PDNC counterpart) that
+all funnel into the shared :func:`run` below.
 
-See gnsm/training/evolvtrip_adapter.py's module docstring for exactly how a
-raw EvolvTrip record becomes node/edge/attribute/emotion/delta tensors (a
-documented v1 design, not a final one), and gnsm/docs/benchmark_and_publication_plan.md
-for how this fits the rest of the P2/P3 build-out.
+See gnsm/docs/benchmark_and_publication_plan.md for how this fits the rest of
+the P2/P3 build-out.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import random
-import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 from gnsm.exceptions import OptionalDependencyError
-from gnsm.training.evolvtrip_adapter import (
-    ATTRIBUTE_CLASSES,
-    DELTA_CLASSES,
-    EDGE_TYPES,
-    EMOTION_CLASSES,
-    BatchConfig,
-    EvolvTripExample,
-    collate_batch,
-    load_examples,
-)
+from gnsm.training.batch_config import BatchConfig
+from gnsm.training.splitting import shuffled_batches, train_val_split
+
+CollateFn = Callable[[list[Any], BatchConfig, int], dict[str, Any]]
 
 
 @dataclass(slots=True)
@@ -47,6 +43,13 @@ class TrainStateConfig:
     seed: int = 0
     device: str = "auto"
     patience: int = 10  # stop after this many epochs with no val-loss improvement
+    # Vocab sizes -- defaults match gnsm.training.evolvtrip_adapter's; a
+    # different adapter (e.g. pdnc_adapter.py) overrides these to match its
+    # own RELATION_VOCAB / DIMENSION_VOCAB / DELTA_VOCAB sizes.
+    edge_types: int = 13
+    attribute_classes: int = 5
+    emotion_classes: int = 2
+    delta_classes: int = 5
 
 
 def resolve_device(requested: str) -> str:
@@ -61,26 +64,10 @@ def resolve_device(requested: str) -> str:
     return "cpu"
 
 
-def _split(
-    examples: list[EvolvTripExample], val_fraction: float, seed: int
-) -> tuple[list[EvolvTripExample], list[EvolvTripExample]]:
-    shuffled = list(examples)
-    random.Random(seed).shuffle(shuffled)
-    n_val = max(1, int(len(shuffled) * val_fraction)) if len(shuffled) > 1 else 0
-    return shuffled[n_val:], shuffled[:n_val]
-
-
-def _batches(
-    examples: list[EvolvTripExample], batch_size: int, seed: int
-) -> list[list[EvolvTripExample]]:
-    shuffled = list(examples)
-    random.Random(seed).shuffle(shuffled)
-    return [shuffled[i : i + batch_size] for i in range(0, len(shuffled), batch_size)]
-
-
 def run(
     config: TrainStateConfig,
-    examples: list[EvolvTripExample],
+    examples: list[Any],
+    collate_fn: CollateFn,
     checkpoint_cb: Callable[[int, float, dict[str, Any], dict[str, Any]], None] | None = None,
     best_checkpoint_cb: Callable[[int, float, dict[str, Any], dict[str, Any]], None] | None = None,
     resume_state: dict[str, Any] | None = None,
@@ -100,9 +87,7 @@ def run(
     from gnsm.state.neural import GraphStateEncoder, GroundedStateHeads, NeuralTransitionModel
 
     if len(examples) < 2:
-        raise ValueError(
-            f"Need at least 2 EvolvTrip examples to train and validate, got {len(examples)}."
-        )
+        raise ValueError(f"Need at least 2 examples to train and validate, got {len(examples)}.")
 
     torch.manual_seed(config.seed)
     device = torch.device(resolve_device(config.device))
@@ -113,23 +98,23 @@ def run(
         hidden_dim=config.hidden_dim,
     )
 
-    train_examples, val_examples = _split(examples, config.val_fraction, config.seed)
+    train_examples, val_examples = train_val_split(examples, config.val_fraction, config.seed)
 
     encoder = GraphStateEncoder(
         input_dim=config.input_dim,
         hidden_dim=config.hidden_dim,
         layers=config.layers,
         heads=config.heads,
-        edge_types=EDGE_TYPES,
+        edge_types=config.edge_types,
     ).to(device)
     heads = GroundedStateHeads(
         hidden_dim=config.hidden_dim,
-        edge_types=EDGE_TYPES,
-        attribute_classes=ATTRIBUTE_CLASSES,
-        emotion_classes=EMOTION_CLASSES,
+        edge_types=config.edge_types,
+        attribute_classes=config.attribute_classes,
+        emotion_classes=config.emotion_classes,
     ).to(device)
     transition = NeuralTransitionModel(
-        hidden_dim=config.hidden_dim, delta_classes=DELTA_CLASSES
+        hidden_dim=config.hidden_dim, delta_classes=config.delta_classes
     ).to(device)
     parameters = (
         list(encoder.parameters()) + list(heads.parameters()) + list(transition.parameters())
@@ -151,8 +136,10 @@ def run(
         edge_pairs = batch["edge_pairs"].to(device)
         edge_labels = batch["edge_labels"].to(device)
         attribute_labels = batch["attribute_labels"].to(device)
-        emotion_labels = batch["emotion_labels"].to(device)
         delta_labels = batch["delta_labels"].to(device)
+        # Not every dataset has an emotion signal (e.g. PDNC doesn't); the
+        # loss term is optional and simply omitted when absent.
+        emotion_labels = batch["emotion_labels"].to(device) if "emotion_labels" in batch else None
 
         batch_size = node_features.shape[0]
         node_embeddings, global_state = encoder(node_features)
@@ -174,7 +161,7 @@ def run(
             delta_labels=delta_labels,
             predicted_state=predicted_state,
             encoded_next_state=encoded_next,
-            emotion_logits=head_out["emotion_logits"],
+            emotion_logits=head_out["emotion_logits"] if emotion_labels is not None else None,
             emotion_labels=emotion_labels,
         )
         return loss
@@ -185,8 +172,8 @@ def run(
         transition.eval()
         total, n = 0.0, 0
         with torch.no_grad():
-            for val_batch in _batches(val_examples, config.batch_size, seed=config.seed):
-                batch = collate_batch(val_batch, batch_config, seed=config.seed)
+            for val_batch in shuffled_batches(val_examples, config.batch_size, seed=config.seed):
+                batch = collate_fn(val_batch, batch_config, config.seed)
                 total += float(forward(batch).detach().cpu()) * len(val_batch)
                 n += len(val_batch)
         encoder.train()
@@ -217,8 +204,10 @@ def run(
 
     for epoch in range(config.epochs):
         epochs_run = epoch + 1
-        for batch_examples in _batches(train_examples, config.batch_size, seed=config.seed + epoch):
-            batch = collate_batch(batch_examples, batch_config, seed=config.seed)
+        for batch_examples in shuffled_batches(
+            train_examples, config.batch_size, seed=config.seed + epoch
+        ):
+            batch = collate_fn(batch_examples, batch_config, config.seed)
             optimizer.zero_grad(set_to_none=True)
             loss = forward(batch)
             loss.backward()
@@ -314,12 +303,19 @@ def main(argv: list[str] | None = None) -> int:
         "--resume", action="store_true", help="Resume from the latest checkpoint in --hf-repo."
     )
     parser.add_argument(
+        "--run-id",
+        default="train-state-primary",
+        help="Checkpoints are namespaced under this id; --resume must reuse the original run's id.",
+    )
+    parser.add_argument(
         "--plot-dir",
         type=Path,
         default=Path(".gnsm_checkpoints/plots"),
         help="Where to save the loss-curve PNG/PDF locally.",
     )
     args = parser.parse_args(argv)
+
+    from gnsm.training.evolvtrip_adapter import collate_batch, load_examples
 
     examples = load_examples(args.data)
 
@@ -337,18 +333,13 @@ def main(argv: list[str] | None = None) -> int:
     best_checkpoint_cb = None
     resume_state = None
     manager = None
-    run_id = f"train-state-{int(time.time())}"
+    run_id = args.run_id
     if args.hf_repo:
         from gnsm.training.checkpointing import attach_to_run
 
-        checkpoint_cb, resume_state, manager = attach_to_run(
+        checkpoint_cb, best_checkpoint_cb, resume_state, manager = attach_to_run(
             args.hf_repo, args.checkpoint_every, args.resume, run_id=run_id
         )
-
-        def best_checkpoint_cb(
-            step: int, val_loss: float, model_state: dict, optimizer_state: dict
-        ) -> None:
-            manager.push_best(step, val_loss, {**model_state, "optimizer": optimizer_state})
 
     def plot_cb(
         train_steps: list[int],
@@ -378,6 +369,7 @@ def main(argv: list[str] | None = None) -> int:
     result = run(
         config,
         examples,
+        collate_batch,
         checkpoint_cb=checkpoint_cb,
         best_checkpoint_cb=best_checkpoint_cb,
         resume_state=resume_state,

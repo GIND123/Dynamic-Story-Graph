@@ -2,9 +2,15 @@
 
 The Hub, not local disk, is the source of truth for "the latest checkpoint" so
 that a restart -- by the same person or anyone else with repo access -- can
-resume training from wherever it left off. ``latest.json`` is only written
-after its checkpoint folder has fully uploaded, so an interrupted push leaves
-it pointing at the previous good checkpoint rather than a partial one.
+resume training from wherever it left off. ``{run_id}/latest.json`` is only
+written after its checkpoint folder has fully uploaded, so an interrupted push
+leaves it pointing at the previous good checkpoint rather than a partial one.
+
+Everything except heartbeats is namespaced under ``{run_id}/`` so multiple
+training lines (different datasets, different experiments) can share one HF
+repo without one run's "latest"/"best" silently overwriting another's --
+e.g. an EvolvTrip run and a PDNC run pushing to the same repo must not
+collide on a single global ``latest.json``/``best.json``/``checkpoints/best``.
 """
 
 from __future__ import annotations
@@ -76,6 +82,12 @@ class CheckpointConfig:
     local_dir: Path
     checkpoint_every_steps: int = 50
     checkpoint_every_seconds: float = 300.0
+    # A fast-converging dataset can improve val loss almost every epoch early
+    # on; pushing a full checkpoint to the Hub on every single improvement
+    # is enough commit volume in a short window to trip HF's rate limiting
+    # (seen in practice: HTTP 429 on a PDNC run). Throttle independently of
+    # the periodic checkpoint cadence above.
+    best_checkpoint_every_seconds: float = 30.0
     token: str | None = None
 
 
@@ -87,6 +99,8 @@ class CheckpointManager:
         self.run_id = run_id
         self.token = resolve_token(config.token)
         self._last_push_time = time.monotonic()
+        # Allow the first improvement to push immediately.
+        self._last_best_push_time = time.monotonic() - config.best_checkpoint_every_seconds
         self._repo_ready = False
 
     def _ensure_repo(self) -> None:
@@ -99,6 +113,16 @@ class CheckpointManager:
         if step > 0 and step % self.config.checkpoint_every_steps == 0:
             return True
         return (time.monotonic() - self._last_push_time) >= self.config.checkpoint_every_seconds
+
+    def should_push_best(self) -> bool:
+        """Gate for push_best's caller. A fast-converging run can improve
+        val loss on many consecutive epochs; without this, every single
+        improvement fires a full Hub commit in quick succession, which is
+        exactly the burst pattern that trips HF's rate limiting."""
+
+        return (
+            time.monotonic() - self._last_best_push_time
+        ) >= self.config.best_checkpoint_every_seconds
 
     def push(self, step: int, loss: float, state: dict[str, Any]) -> None:
         try:
@@ -115,7 +139,7 @@ class CheckpointManager:
         ckpt_dir.mkdir(parents=True, exist_ok=True)
         torch.save(state, ckpt_dir / "state.pt")
 
-        path_in_repo = f"checkpoints/checkpoint-step-{step}"
+        path_in_repo = f"{self.run_id}/checkpoints/checkpoint-step-{step}"
         api.upload_folder(
             folder_path=str(ckpt_dir), repo_id=self.config.hf_repo_id, path_in_repo=path_in_repo
         )
@@ -123,7 +147,7 @@ class CheckpointManager:
         latest = json.dumps({"step": step, "path": path_in_repo, "run_id": self.run_id})
         api.upload_file(
             path_or_fileobj=latest.encode("utf-8"),
-            path_in_repo="latest.json",
+            path_in_repo=f"{self.run_id}/latest.json",
             repo_id=self.config.hf_repo_id,
         )
         self._last_push_time = time.monotonic()
@@ -151,7 +175,7 @@ class CheckpointManager:
         best_dir.mkdir(parents=True, exist_ok=True)
         torch.save(state, best_dir / "state.pt")
 
-        path_in_repo = "checkpoints/best"
+        path_in_repo = f"{self.run_id}/checkpoints/best"
         api.upload_folder(
             folder_path=str(best_dir), repo_id=self.config.hf_repo_id, path_in_repo=path_in_repo
         )
@@ -161,9 +185,10 @@ class CheckpointManager:
         )
         api.upload_file(
             path_or_fileobj=best.encode("utf-8"),
-            path_in_repo="best.json",
+            path_in_repo=f"{self.run_id}/best.json",
             repo_id=self.config.hf_repo_id,
         )
+        self._last_best_push_time = time.monotonic()
 
     def write_heartbeat(self, step: int, loss: float) -> None:
         self._ensure_repo()
@@ -188,35 +213,82 @@ class CheckpointManager:
         )
 
 
-def resume_from_hub(
-    hf_repo_id: str, local_dir: Path, token: str | None = None
+def _read_pointer(
+    hf_repo_id: str, pointer_filename: str, run_id: str, token: str
 ) -> dict[str, Any] | None:
-    """Download and load the latest checkpoint, or None for a fresh start."""
+    """Read a latest/best pointer, falling back to the pre-namespacing flat
+    path for runs that predate run_id namespacing.
+
+    The legacy artifact is only accepted when its own recorded ``run_id``
+    matches the one being asked for -- otherwise a flat pointer left by some
+    other run would be silently mistaken for this one's.
+    """
+
+    from huggingface_hub import hf_hub_download
 
     try:
+        path = hf_hub_download(repo_id=hf_repo_id, filename=pointer_filename, token=token)
+        return dict(json.loads(Path(path).read_text()))
+    except _not_found_errors():
+        pass
+
+    legacy_filename = pointer_filename.split("/", 1)[-1]
+    try:
+        path = hf_hub_download(repo_id=hf_repo_id, filename=legacy_filename, token=token)
+    except _not_found_errors():
+        return None
+    pointer = dict(json.loads(Path(path).read_text()))
+    return pointer if pointer.get("run_id") == run_id else None
+
+
+def _resume_from_pointer(
+    hf_repo_id: str, pointer_filename: str, run_id: str, local_dir: Path, token: str | None
+) -> dict[str, Any] | None:
+    try:
         import torch
-        from huggingface_hub import hf_hub_download, snapshot_download
+        from huggingface_hub import snapshot_download
     except ImportError as exc:
         raise OptionalDependencyError(
             "Resuming requires torch and huggingface_hub: pip install -e '.[training]'."
         ) from exc
 
     resolved = resolve_token(token)
-    try:
-        latest_path = hf_hub_download(repo_id=hf_repo_id, filename="latest.json", token=resolved)
-    except _not_found_errors():
+    pointer = _read_pointer(hf_repo_id, pointer_filename, run_id, resolved)
+    if pointer is None:
         return None
 
-    latest = json.loads(Path(latest_path).read_text())
     snapshot_dir = snapshot_download(
         repo_id=hf_repo_id,
-        allow_patterns=[f"{latest['path']}/*"],
+        allow_patterns=[f"{pointer['path']}/*"],
         local_dir=str(local_dir),
         token=resolved,
     )
-    state = torch.load(Path(snapshot_dir) / latest["path"] / "state.pt", map_location="cpu")
-    state["step"] = latest["step"]
+    state = torch.load(Path(snapshot_dir) / pointer["path"] / "state.pt", map_location="cpu")
+    state["step"] = pointer["step"]
     return state
+
+
+def resume_from_hub(
+    hf_repo_id: str, run_id: str, local_dir: Path, token: str | None = None
+) -> dict[str, Any] | None:
+    """Download and load the latest checkpoint for this run_id, or None for a
+    fresh start. run_id must match the original run's -- checkpoints are
+    namespaced per run_id, not shared across the whole repo."""
+
+    return _resume_from_pointer(hf_repo_id, f"{run_id}/latest.json", run_id, local_dir, token)
+
+
+def resume_best_from_hub(
+    hf_repo_id: str, run_id: str, local_dir: Path, token: str | None = None
+) -> dict[str, Any] | None:
+    """Download and load the best-val-loss checkpoint for this run_id (per
+    push_best/best.json), or None if the run never pushed one. Use this
+    rather than resume_from_hub when you want the checkpoint a downstream
+    consumer should actually trust (e.g. loading a trained encoder as a
+    frozen feature extractor) -- resume_from_hub's "latest" reflects wherever
+    early stopping happened to land, `patience` epochs after the real best."""
+
+    return _resume_from_pointer(hf_repo_id, f"{run_id}/best.json", run_id, local_dir, token)
 
 
 def read_heartbeat(hf_repo_id: str, run_id: str, token: str | None = None) -> dict[str, Any] | None:
@@ -248,18 +320,21 @@ def attach_to_run(
     resume: bool,
     run_id: str,
     local_dir: Path | None = None,
-) -> tuple[CheckpointCallback, dict[str, Any] | None, CheckpointManager]:
-    """Build (checkpoint_cb, resume_state, manager) for a training loop's run().
+) -> tuple[CheckpointCallback, CheckpointCallback, dict[str, Any] | None, CheckpointManager]:
+    """Build (checkpoint_cb, best_checkpoint_cb, resume_state, manager) for a
+    training loop's run().
 
-    ``checkpoint_cb`` is safe to call every step -- it consults
-    :meth:`CheckpointManager.should_checkpoint` itself and only pushes when the
-    step/time cadence fires. ``manager`` is returned too so callers can push
-    extra artifacts (e.g. plots via :meth:`CheckpointManager.push_artifact`)
-    once training finishes.
+    Both callbacks are safe to call as often as the loop likes -- each
+    consults its own :class:`CheckpointManager` cadence gate
+    (:meth:`~CheckpointManager.should_checkpoint` /
+    :meth:`~CheckpointManager.should_push_best`) and only pushes when that
+    cadence fires. ``manager`` is returned too so callers can push extra
+    artifacts (e.g. plots via :meth:`CheckpointManager.push_artifact`) once
+    training finishes.
     """
 
-    local_dir = local_dir or Path(".gnsm_checkpoints") / hf_repo_id.replace("/", "__")
-    resume_state = resume_from_hub(hf_repo_id, local_dir) if resume else None
+    local_dir = local_dir or Path(".gnsm_checkpoints") / hf_repo_id.replace("/", "__") / run_id
+    resume_state = resume_from_hub(hf_repo_id, run_id, local_dir) if resume else None
 
     manager = CheckpointManager(
         CheckpointConfig(
@@ -276,4 +351,10 @@ def attach_to_run(
         if manager.should_checkpoint(step):
             manager.push(step, loss, {**model_state, "optimizer": optimizer_state})
 
-    return checkpoint_cb, resume_state, manager
+    def best_checkpoint_cb(
+        step: int, val_loss: float, model_state: dict[str, Any], optimizer_state: dict[str, Any]
+    ) -> None:
+        if manager.should_push_best():
+            manager.push_best(step, val_loss, {**model_state, "optimizer": optimizer_state})
+
+    return checkpoint_cb, best_checkpoint_cb, resume_state, manager
