@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -44,6 +45,7 @@ def run_matrix(
     lr: float = 1e-4,
     device: str = "auto",
     lm_name: str | None = None,
+    max_target_tokens: int = 64,
     progress: bool = True,
 ) -> dict[str, Any]:
     """Train one adapter per (condition, seed) and collect best val losses."""
@@ -53,9 +55,22 @@ def run_matrix(
 
     per_condition: dict[str, list[float]] = {condition: [] for condition in conditions}
     runs: list[dict[str, Any]] = []
+    total = len(conditions) * len(seeds)
+    done = 0
+    started_all = time.time()
 
     for condition in conditions:
         for seed in seeds:
+            done += 1
+            if progress:
+                # Printed BEFORE the run so a long/hung cell is visible while it
+                # is happening, not only in hindsight once it finishes.
+                print(
+                    f"[{done}/{total}] starting condition={condition} seed={seed} "
+                    f"(elapsed {time.time() - started_all:.0f}s)",
+                    flush=True,
+                )
+            started = time.time()
             config = TrainAdapterConfig(
                 epochs=epochs,
                 batch_size=batch_size,
@@ -65,6 +80,7 @@ def run_matrix(
                 device=device,
                 lm_name=lm_name or DEFAULT_LM,
                 state_mode=condition,
+                max_target_tokens=max_target_tokens,
             )
             result = run_adapter(config, examples, encoder_state_dict)
             best = result["best_val_loss"]
@@ -76,12 +92,15 @@ def run_matrix(
                     "best_val_loss": best,
                     "epochs_run": result["epochs_run"],
                     "early_stopped": result["early_stopped"],
+                    "seconds": round(time.time() - started, 1),
                 }
             )
             if progress:
                 print(
-                    f"[{condition:>8} seed={seed}] best_val_loss={best} "
-                    f"epochs_run={result['epochs_run']} early_stopped={result['early_stopped']}",
+                    f"[{done}/{total}] done condition={condition} seed={seed} "
+                    f"best_val_loss={best} epochs_run={result['epochs_run']} "
+                    f"early_stopped={result['early_stopped']} "
+                    f"took={time.time() - started:.0f}s",
                     flush=True,
                 )
 
@@ -146,6 +165,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--patience", type=int, default=5)
     parser.add_argument("--lr", type=float, default=1e-4)
+    parser.add_argument("--max-target-tokens", type=int, default=64)
     parser.add_argument("--device", default="auto")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", type=Path, default=None, help="Write the summary JSON here.")
@@ -173,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
         lr=args.lr,
         device=args.device,
         lm_name=args.lm,
+        max_target_tokens=args.max_target_tokens,
     )
     summary["n_examples"] = len(examples)
 

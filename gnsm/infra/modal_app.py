@@ -212,6 +212,7 @@ def adapter_experiment(
     hf_repo: str,
     encoder_run_id: str,
     run_id: str,
+    max_target_tokens: int = 64,
     limit: int | None = None,
 ) -> dict:
     """Train one StatePrefixAdapter per (state condition, seed) and report the
@@ -254,6 +255,7 @@ def adapter_experiment(
         patience=patience,
         lr=lr,
         device="cuda",
+        max_target_tokens=max_target_tokens,
     )
     summary["n_examples"] = len(examples)
     summary["encoder_run_id"] = encoder_run_id
@@ -484,6 +486,7 @@ def experiment(
     batch_size: int = 8,
     patience: int = 5,
     lr: float = 1e-4,
+    max_target_tokens: int = 64,
     gpu: str = DEFAULT_GPU,
     hf_repo: str = "",
     encoder_run_id: str = "evolvtrip-v2-earlystop",
@@ -513,6 +516,7 @@ def experiment(
         hf_repo=hf_repo,
         encoder_run_id=encoder_run_id,
         run_id=run_id,
+        max_target_tokens=max_target_tokens,
         limit=limit or None,
     )
     print(f"gpu={gpu}  wall_time_s={time.time() - started:.1f}")
@@ -522,4 +526,10 @@ def experiment(
             f"n={stats['n_seeds']} seeds"
         )
     for name, comparison in result.get("comparisons", {}).items():
-        print(f"{name}: mean_delta={comparison['mean_delta']}  p={comparison['p_value']}")
+        verdict = "CI excludes 0" if comparison["delta_ci_excludes_zero"] else "CI includes 0"
+        print(
+            f"{name}: mean_delta={comparison['mean_delta']} "
+            f"CI [{comparison['delta_ci_low']}, {comparison['delta_ci_high']}] ({verdict})  "
+            f"sign_test_p={comparison['sign_test_p_value']} "
+            f"(floor {comparison['sign_test_p_floor']} at this seed count)"
+        )

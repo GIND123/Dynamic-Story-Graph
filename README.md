@@ -643,8 +643,19 @@ repo. Three entrypoints:
   a free parameter as the prefix source. Both the encoder (loaded from a
   trained `best.json` checkpoint) and the LM stay frozen; only the adapter
   learns. See `gnsm/training/train_adapter.py` and
-  `gnsm/eval/adapter_experiment.py`, and `gnsm/docs/adapter_results.md` for
-  measured results and their limitations.
+  `gnsm/eval/adapter_experiment.py`.
+
+> **Measured Stage C result — the primary hypothesis was not supported.**
+> Across 5 paired seeds on a Modal T4, conditioning on the *matched* narrative
+> state performed no better than conditioning on a deliberately *mismatched*
+> one (Δ +0.0015, 95% CI [−0.0144, +0.0189] — spans zero). A varying prefix
+> did beat a constant one (Δ −0.039, CI [−0.0631, −0.0101]), so the benefit
+> comes from the prefix varying, not from the state being correct. Full
+> numbers, figure, qualitative samples, and limitations:
+> [`gnsm/docs/adapter_results.md`](gnsm/docs/adapter_results.md). The most
+> likely cause and cheapest next test is stated there: the frozen encoder was
+> trained on 428 EvolvTrip examples to val_loss 3.79, versus 1.90 available
+> from PDNC's ~36K.
 
 All of these share the same checkpoint hook (`gnsm.training.checkpointing.attach_to_run`).
 Every path it writes — periodic checkpoints, `latest.json`, the best-val-loss

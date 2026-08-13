@@ -1,0 +1,74 @@
+[
+  {
+    "book": "King Lear",
+    "character": "King Lear",
+    "step_from": "6",
+    "step_to": "8",
+    "state_mode": "real",
+    "gold_next_scene": "In the midst of a violent, apocalyptic storm on a desolate heath, King Lear, having been betrayed by his daughters Goneril and Regan, wanders exposed to the brutal elements. The landscape is bleak and unforgiving - a vast, open terrain with no shelter, symbolizing Lear's internal emotional devastation. Wind whips across the barren ground, rain pelts down mercilessly, and thunder roars like an angry god. Lear, stripped of his royal status and familial protection, is reduced to a vulnerable, raging figure confronting both the physical tempest and the metaphorical storm of his own fractured kingd",
+    "generated": "In a dimly lit room, the setting is tense and foreboding. The walls are adorned with thick, black curtains that seem to close in on the room's occupants, creating an atmosphere of dread and suspense. Dr. Henry Hall, a"
+  },
+  {
+    "book": "King Lear",
+    "character": "King Lear",
+    "step_from": "8",
+    "step_to": "9",
+    "state_mode": "real",
+    "gold_next_scene": "The scene is set on a wild and desolate heath, enveloped by a raging storm. The sky is a turbulent canvas of dark clouds, and the air is filled with the deafening sound of roaring winds and thunder. Lightning sporadically illuminates the scene, casting eerie shadows across the bleak landscape. King Lear, disheveled and frantic, stands exposed to the elements, his regal garments now drenched and clinging to him. The Fool, dressed in motley, remains a loyal but concerned presence at Lear's side, intermittently attempting humor to cut through the tension. Standing close by is Kent, disguised as a",
+    "generated": "The scene takes place in the heart of London, a bustling urban environment. The streets are filled with the sound of honking cars and the chatter of people hurrying to work or errands. It's a time of day that often brings chaos but"
+  },
+  {
+    "book": "King Lear",
+    "character": "King Lear",
+    "step_from": "9",
+    "step_to": "13",
+    "state_mode": "real",
+    "gold_next_scene": "The scene is set in the British camp, a tense and charged atmosphere suffuses the air, infused with the echoes of distant trumpets and the ominous anticipation of impending conflict. The camp serves as the backdrop for this climactic confrontation, where loyalty and treachery collide. Here, amidst the chaos of war, where the fate of the kingdom hangs in the balance, hidden truths are set to emerge, and the darkest of schemes will be exposed. The remaining soldiers and nobles look on, their faces etched with anxiety and foreboding, as they witness the pivotal moment that will decide the fates o",
+    "generated": "The scene takes place in a small, secluded village outside the city walls. The air is thick with tension and anticipation as the villagers gather to hear the news of the murder. The atmosphere is charged with an intensity that mirrors the senseless nature of the"
+  },
+  {
+    "book": "King Lear",
+    "character": "King Lear",
+    "step_from": "13",
+    "step_to": "19",
+    "state_mode": "real",
+    "gold_next_scene": "The final act of King Lear unfolds on a bleak battlefield, now quiet after the din of war. The stage is somber, littered with reminders of the recent struggle, reflecting a kingdom torn apart by betrayal and ambition. As King Lear enters, heartbroken and frail, he carries the lifeless body of his beloved daughter Cordelia in his arms. Overhead, gray clouds loom, mirroring the deep despair weighing upon the characters. The atmosphere is one of tragedy and introspection, as each character grapples with the personal and political consequences of their actions amidst the fallen majesty of their wo",
+    "generated": "In a dimly lit room, the setting is tense and claustrophobic. The walls are thick with shadows that seem to whisper secrets, as if the atmosphere is charged with tension. Dr. Gurney's voice echoes through the air,"
+  },
+  {
+    "book": "King Lear",
+    "character": "King Lear",
+    "step_from": "6",
+    "step_to": "8",
+    "state_mode": "shuffled",
+    "gold_next_scene": "In the midst of a violent, apocalyptic storm on a desolate heath, King Lear, having been betrayed by his daughters Goneril and Regan, wanders exposed to the brutal elements. The landscape is bleak and unforgiving - a vast, open terrain with no shelter, symbolizing Lear's internal emotional devastation. Wind whips across the barren ground, rain pelts down mercilessly, and thunder roars like an angry god. Lear, stripped of his royal status and familial protection, is reduced to a vulnerable, raging figure confronting both the physical tempest and the metaphorical storm of his own fractured kingd",
+    "generated": "In a dimly lit room, the setting is tense and foreboding. The air is thick with tension as Detective Inspector Jameson sits at his desk, surrounded by papers and paperwork strewn about. His secretary, Miss Johnson, approaches him with"
+  },
+  {
+    "book": "King Lear",
+    "character": "King Lear",
+    "step_from": "8",
+    "step_to": "9",
+    "state_mode": "shuffled",
+    "gold_next_scene": "The scene is set on a wild and desolate heath, enveloped by a raging storm. The sky is a turbulent canvas of dark clouds, and the air is filled with the deafening sound of roaring winds and thunder. Lightning sporadically illuminates the scene, casting eerie shadows across the bleak landscape. King Lear, disheveled and frantic, stands exposed to the elements, his regal garments now drenched and clinging to him. The Fool, dressed in motley, remains a loyal but concerned presence at Lear's side, intermittently attempting humor to cut through the tension. Standing close by is Kent, disguised as a",
+    "generated": "The scene is set in the heart of London, with the sun casting a warm glow over the city's streets. The air is thick with tension as Detective Inspector Thomas Swift and his partner, Sergeant John Hargreaves, arrive at their latest case"
+  },
+  {
+    "book": "King Lear",
+    "character": "King Lear",
+    "step_from": "9",
+    "step_to": "13",
+    "state_mode": "shuffled",
+    "gold_next_scene": "The scene is set in the British camp, a tense and charged atmosphere suffuses the air, infused with the echoes of distant trumpets and the ominous anticipation of impending conflict. The camp serves as the backdrop for this climactic confrontation, where loyalty and treachery collide. Here, amidst the chaos of war, where the fate of the kingdom hangs in the balance, hidden truths are set to emerge, and the darkest of schemes will be exposed. The remaining soldiers and nobles look on, their faces etched with anxiety and foreboding, as they witness the pivotal moment that will decide the fates o",
+    "generated": "The scene takes place in a small, secluded house in the heart of Oxfordshire. The air is charged with tension as Sir Thomas More and his wife Lady Margaret stand guard over their son, William. The room is filled with shadows and the soft hum"
+  },
+  {
+    "book": "King Lear",
+    "character": "King Lear",
+    "step_from": "13",
+    "step_to": "19",
+    "state_mode": "shuffled",
+    "gold_next_scene": "The final act of King Lear unfolds on a bleak battlefield, now quiet after the din of war. The stage is somber, littered with reminders of the recent struggle, reflecting a kingdom torn apart by betrayal and ambition. As King Lear enters, heartbroken and frail, he carries the lifeless body of his beloved daughter Cordelia in his arms. Overhead, gray clouds loom, mirroring the deep despair weighing upon the characters. The atmosphere is one of tragedy and introspection, as each character grapples with the personal and political consequences of their actions amidst the fallen majesty of their wo",
+    "generated": "In a small, cramped room, two men are sitting in silence, their eyes locked on each other. The air is thick with tension as they discuss the latest scandal that has shaken their town. They have been in the same position for weeks, yet"
+  }
+]

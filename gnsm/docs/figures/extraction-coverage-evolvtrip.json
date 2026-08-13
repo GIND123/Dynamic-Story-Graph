@@ -1,0 +1,10 @@
+{
+  "n_texts": 100,
+  "mean_entities": 7.0,
+  "mean_edges": 0.26,
+  "mean_attributes": 0.0,
+  "mean_quotes": 0.01,
+  "texts_with_any_edge": 16,
+  "texts_with_any_attribute": 0,
+  "supports_consistency_checks": true
+}

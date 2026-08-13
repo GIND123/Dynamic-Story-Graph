@@ -1,0 +1,201 @@
+{
+  "per_condition": {
+    "real": {
+      "values": [
+        2.4805,
+        2.5094,
+        2.6711,
+        2.4843,
+        2.595
+      ],
+      "mean": 2.5481,
+      "ci_low": 2.4878,
+      "ci_high": 2.6185,
+      "n_seeds": 5
+    },
+    "shuffled": {
+      "values": [
+        2.4633,
+        2.5232,
+        2.679,
+        2.454,
+        2.6133
+      ],
+      "mean": 2.5466,
+      "ci_low": 2.4716,
+      "ci_high": 2.6216,
+      "n_seeds": 5
+    },
+    "zero": {
+      "values": [
+        2.5441,
+        2.5709,
+        2.7345,
+        2.5008,
+        2.5851
+      ],
+      "mean": 2.5871,
+      "ci_low": 2.5263,
+      "ci_high": 2.6637,
+      "n_seeds": 5
+    }
+  },
+  "runs": [
+    {
+      "condition": "real",
+      "seed": 0,
+      "best_val_loss": 2.4805,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 364.3
+    },
+    {
+      "condition": "real",
+      "seed": 1,
+      "best_val_loss": 2.5094,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 362.8
+    },
+    {
+      "condition": "real",
+      "seed": 2,
+      "best_val_loss": 2.6711,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.6
+    },
+    {
+      "condition": "real",
+      "seed": 3,
+      "best_val_loss": 2.4843,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.7
+    },
+    {
+      "condition": "real",
+      "seed": 4,
+      "best_val_loss": 2.595,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.1
+    },
+    {
+      "condition": "shuffled",
+      "seed": 0,
+      "best_val_loss": 2.4633,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.2
+    },
+    {
+      "condition": "shuffled",
+      "seed": 1,
+      "best_val_loss": 2.5232,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 360.7
+    },
+    {
+      "condition": "shuffled",
+      "seed": 2,
+      "best_val_loss": 2.679,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.2
+    },
+    {
+      "condition": "shuffled",
+      "seed": 3,
+      "best_val_loss": 2.454,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.1
+    },
+    {
+      "condition": "shuffled",
+      "seed": 4,
+      "best_val_loss": 2.6133,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.8
+    },
+    {
+      "condition": "zero",
+      "seed": 0,
+      "best_val_loss": 2.5441,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 362.2
+    },
+    {
+      "condition": "zero",
+      "seed": 1,
+      "best_val_loss": 2.5709,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.7
+    },
+    {
+      "condition": "zero",
+      "seed": 2,
+      "best_val_loss": 2.7345,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.8
+    },
+    {
+      "condition": "zero",
+      "seed": 3,
+      "best_val_loss": 2.5008,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.3
+    },
+    {
+      "condition": "zero",
+      "seed": 4,
+      "best_val_loss": 2.5851,
+      "epochs_run": 12,
+      "early_stopped": false,
+      "seconds": 361.0
+    }
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "comparisons": {
+    "real_vs_shuffled": {
+      "mean_delta": 0.0015,
+      "delta_ci_low": -0.0144,
+      "delta_ci_high": 0.0189,
+      "delta_ci_excludes_zero": false,
+      "real_better_on_n_seeds": 3,
+      "control_better_on_n_seeds": 2,
+      "ties": 0,
+      "sign_test_p_value": 1.0,
+      "sign_test_p_floor": 0.0625,
+      "note": "negative mean_delta favours 'real' (lower loss is better); the sign test cannot go below its p_floor at this seed count, so read the bootstrap CI on the paired difference alongside it"
+    },
+    "real_vs_zero": {
+      "mean_delta": -0.039,
+      "delta_ci_low": -0.0631,
+      "delta_ci_high": -0.0101,
+      "delta_ci_excludes_zero": true,
+      "real_better_on_n_seeds": 4,
+      "control_better_on_n_seeds": 1,
+      "ties": 0,
+      "sign_test_p_value": 0.375,
+      "sign_test_p_floor": 0.0625,
+      "note": "negative mean_delta favours 'real' (lower loss is better); the sign test cannot go below its p_floor at this seed count, so read the bootstrap CI on the paired difference alongside it"
+    }
+  },
+  "n_examples": 428,
+  "encoder_run_id": "evolvtrip-v2-earlystop",
+  "encoder_step": 350
+}
