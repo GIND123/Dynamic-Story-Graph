@@ -81,6 +81,9 @@ overturned our first reading of the revision profile (§7).
 
 ## 2. Related work
 
+*Full survey with per-work positioning: [`RELATED_WORK.md`](RELATED_WORK.md).
+Architecture and claim-to-evidence map: [`ARCHITECTURE.md`](ARCHITECTURE.md).*
+
 **Incremental interpretation.** Chen (2026) draws the distinction between
 revision-driven update and delayed elaboration, and argues that representing
 early structure as underspecified converts rollbacks into monotone refinement.
@@ -102,11 +105,36 @@ typed representation. Our object of study is different — the *correctness of t
 state itself*, measured against human annotation — and our constraint is
 different: a 1.5B–14B open-weight model, no API anywhere in the pipeline.
 
+**A versioned narrative world graph already exists.** Shadow-Loom (Wilmot,
+2026) builds the closest architectural cousin: a typed, *versioned* world graph
+with fabula and syuzhet indices on every node, beliefs carrying provenance, and
+the language model confined to extraction, rendering and audit while a symbolic
+core does the reasoning. It is, by its author's description, "offered as a
+research artefact rather than as a benchmarked NLP model" — twenty hand-authored
+fixtures, no quantitative evaluation — and its ingestion is a multi-pass
+extraction over the *whole* text. Its versioning also serves a different
+purpose: counterfactual forks ("what if Macbeth refuses?"), not correction of a
+reader's belief as the reader acquires it. What is left open is precisely what
+we do: build under a prefix-causal constraint, and measure.
+
 **Coreference at book scale.** LitBank (Bamman et al., 2019) and BookCoref
 (Martinelli et al., 2025) established gold coreference over literary text, the
 latter at full-book length. Both are evaluated non-causally: a system may see
 the whole document. We reuse this style of annotation under a prefix-causal
 protocol, which changes the task rather than the data.
+
+A separate line makes coreference *incremental* for efficiency — a fixed-size
+cache with LRU or dual-cache eviction (Xia et al., 2020; Toshniwal et al., 2020;
+Guo et al., 2023), a lightweight Transformer over historical clusters
+(Martinelli et al., 2024), and memory-budgeted variants reaching 81.3 CoNLL F1
+on LitBank (Luo et al., 2025). We take pains not to invite a comparison we
+would lose and that would not mean anything: those are supervised coreference
+systems scored on mention clusters, while our identity plane is unsupervised
+and scored on a surface-string partition over gold alias sets. The word
+"incremental" also differs. There it means *streaming under a memory budget*,
+and the operative decision is eviction. Here it means *epistemically
+constrained* — the system must not know what it has not read — and the
+operative decision is commitment.
 
 **Entity state tracking.** Small language models track entities in short
 naturalistic narratives well (2026). Our question begins where that one ends:
@@ -148,12 +176,52 @@ length control, model-scale ablation, paired bootstrap over books)*
 
 ## References
 
-- Bamman, Popat & Shen (2019). An Annotated Dataset of Literary Entities. NAACL.
+Core positioning:
+
 - Chen (2026). Distinguishing Revision and Delayed Elaboration in Incremental
   Narrative Interpretation. CMN. arXiv:2608.21364.
-- Martinelli, Bonomo, Huguet Cabot & Navigli (2025). BookCoref: Coreference
-  Resolution at Book Scale. ACL.
+- Wilmot (2026). Shadow-Loom: Causal Reasoning over Graphical World Model of
+  Narratives. arXiv:2605.02475.
 - Saifullah et al. (2026). Narrative World Model: Narratology-Grounded Writer
   Memory for Long-Form Fiction. arXiv:2607.05577.
+
+Data and annotation:
+
+- Bamman, Popat & Shen (2019). An Annotated Dataset of Literary Entities. NAACL.
+- Bamman, Lewke & Mansoor (2020). An Annotated Dataset of Coreference in English
+  Literature. LREC.
 - Vishnubhotla, Hammond & Hirst (2022). The Project Dialogism Novel Corpus.
   LREC.
+- Martinelli, Bonomo, Huguet Cabot & Navigli (2025). BookCoref: Coreference
+  Resolution at Book Scale. ACL. arXiv:2507.12075.
+
+Incremental coreference:
+
+- Xia et al. (2020); Toshniwal et al. (2020). Incremental clustering for
+  coreference.
+- Guo et al. (2023). Dual cache for long-document neural coreference. ACL.
+- Martinelli et al. (2024). Maverick: efficient coreference with a lightweight
+  Transformer.
+- Luo et al. (2025). MEIC-DT: Memory-Efficient Incremental Clustering.
+  arXiv:2512.24711.
+
+Foundations:
+
+- Alchourrón, Gärdenfors & Makinson (1985). On the Logic of Theory Change. JSL.
+- Doyle (1979). A Truth Maintenance System. Artificial Intelligence.
+- Kamp (1981); Kamp & Reyle (1993). Discourse Representation Theory.
+- Zwaan & Radvansky (1998). Situation Models in Language Comprehension and
+  Memory. Psychological Bulletin.
+- Genette (1980). Narrative Discourse: An Essay in Method.
+- Sternberg (1992). Telling in Time (II): Chronology, Teleology, Narrativity.
+- Liu et al. (2024). Lost in the Middle. TACL.
+- Bamman, Chang, Lucy & Zhou (2024). On Classification with Large Language
+  Models in Cultural Analytics. arXiv:2410.12029.
+
+Metrics:
+
+- Vilain et al. (1995) MUC; Bagga & Baldwin (1998) B³; Luo (2005) CEAF.
+
+*The full annotated survey, including which entries were read directly and
+which still need checking against the published version, is in
+[`RELATED_WORK.md`](RELATED_WORK.md).*
