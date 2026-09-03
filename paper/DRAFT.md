@@ -1,4 +1,9 @@
-# Premature Commitment, Not Incrementality: Revision-Aware Narrative State for Book-Length Fiction
+# Memory Without Revision: Persistent Narrative State Is Self-Poisoning
+
+*Working title. The original framing -- "premature commitment, not
+incrementality" -- predicted an identity-accuracy gain the experiments did
+not find; that was a pre-registered falsifier and it fired. The claim below
+follows the result instead.*
 
 *Draft. Results sections are filled from `artifacts/report/*/results.md`; every
 number in this file is generated, not typed.*
@@ -25,13 +30,26 @@ design for any system that must read as a reader does — a generation assistant
 that must not know chapter 40 while drafting chapter 5, a model of suspense or
 surprise, or any measurement of what a text makes available to a reader *when*.
 
-When such pipelines are made incremental, the structure degrades, and the
-degradation is usually attributed to incrementality itself: less context, worse
-extraction. **We argue the mechanism is different. The damage is done by
-premature commitment** — writing a decision into the graph as settled when the
-text has not settled it. An append-only store cannot express "this was true
-then", "this was never true", or "these two people are one", so the errors it
-makes are permanent and they compound.
+When such pipelines are made incremental the structure degrades, which is
+usually attributed to incrementality itself: less context, worse extraction.
+Our measurements say something more specific and less comfortable. **Carrying
+state forward is both necessary and self-poisoning.** Across 28 novels, a
+system that remembers earlier windows answers 31 points more mention-linking
+questions correctly than one that reads each window in isolation — and at the
+same time turns a third of its own state self-contradictory (+0.32 in the share
+of single-valued slots holding rival live values). Memory buys accuracy and
+manufactures contradiction in the same motion.
+
+An append-only store cannot say "this was true then", "this was never true", or
+"these two people are one", so every such contradiction it creates is
+permanent. Giving it those operations removes the contradiction entirely — on
+every one of 28 books — **at no measurable cost in accuracy**. What revision
+buys is not a better answer; it is a state that still means something after
+500,000 characters.
+
+We report the negative half of this plainly: the revision calculus does **not**
+improve identity accuracy at any model size we tested. That was a
+pre-registered falsifier, and it fired.
 
 We make three contributions.
 
@@ -41,6 +59,9 @@ We make three contributions.
    and non-monotone `REVISE` of a mistaken reader belief. The
    `SUPERSEDE`/`REVISE` split is the operational form of the narratological
    distinction between an event in the story and a disclosure in the telling.
+   The mechanisms are separable and we price each one: identity merging
+   *without* fact revision makes the state strictly worse, so the two are
+   complementary rather than additive.
 2. **An implemented, prefix-causal system** (§4) in which a small open-weight
    model *proposes* typed updates over a bounded window and a deterministic
    reconciler *disposes* — classifying, resolving identity, and enforcing seven
@@ -48,8 +69,15 @@ We make three contributions.
    size, not book length.
 3. **A gold-scored evaluation protocol for time-indexed state** (§5), with no
    LLM in any primary metric: identity against human alias annotation over 28
-   novels, speaker attribution over 37,131 human-annotated quotations, and
-   process-integrity measures over discourse position.
+   novels, mention linking probed at the reading position where each mention
+   occurs, speaker attribution over 37,131 human-annotated quotations, and
+   process-integrity measures. Reading forward is itself priced against a
+   non-causal oracle given the same extraction: causality costs 3.1 points of
+   mention accuracy at 3B and 5.0 at 1.5B.
+
+Every trend against discourse position is reported with a shuffled-window
+control, because state growth alone manufactures such trends — a control that
+overturned our first reading of the revision profile (§7).
 
 ## 2. Related work
 
