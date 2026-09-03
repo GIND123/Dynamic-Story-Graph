@@ -14,9 +14,20 @@ score () {  # score <corpus> <run-dir-name> <out-name>
   $PY -m dsg report --results "artifacts/results/$out" --out "artifacts/report/$out"
 }
 
+# The in-flight runs of 2026-09-03 were named before a fix to run-id ordering
+# and landed in "-w0" directories. Normalise them to the setting actually used
+# so paths match what the extractor writes from now on.
+for pair in "pdnc-qwen7b-w0:pdnc-qwen7b-w3200" "litbank-qwen7b-w0:litbank-qwen7b-w1200" \
+            "pdnc-qwen3b-w0:pdnc-qwen3b-w3200" "pdnc-qwen1.5b-w0:pdnc-qwen1.5b-w3200" \
+            "pdnc-qwen14b-w0:pdnc-qwen14b-w3200"; do
+  src="artifacts/proposals/${pair%%:*}"; dst="artifacts/proposals/${pair##*:}"
+  [ -d "$src" ] && [ ! -d "$dst" ] && mv "$src" "$dst" && echo "renamed $src -> $dst"
+done
+
 score pdnc    pdnc-qwen7b-w3200     pdnc-qwen7b
 score litbank litbank-qwen7b-w1200  litbank-qwen7b
 score pdnc    pdnc-qwen3b-w3200     pdnc-qwen3b
 score pdnc    pdnc-qwen1.5b-w3200   pdnc-qwen1.5b
 score pdnc    pdnc-qwen14b-w3200    pdnc-qwen14b
 echo "analysis complete"
+

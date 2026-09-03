@@ -238,9 +238,10 @@ def main(
 
     model_id = MODELS.get(model, model)
     gpu_name = gpu or GPU_FOR.get(model, "A10G")
-    run_id = run_id or f"{corpus}-{model}-w{window_chars}"
-
+    # Resolve the window size *before* naming the run: the name records the
+    # setting the extraction actually used.
     window_chars = window_chars or WINDOW_CHARS.get(corpus, 3200)
+    run_id = run_id or f"{corpus}-{model}-w{window_chars}"
     novels = load(corpus, limit=books or None)
     payload_books = [{"id": n.book_id, "text": n.text} for n in novels]
     total_chars = sum(len(b["text"]) for b in payload_books)
