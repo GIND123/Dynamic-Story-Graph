@@ -11,6 +11,7 @@ rather than re-measuring the extractor.
 from __future__ import annotations
 
 import re
+from bisect import bisect_right
 from dataclasses import dataclass, field
 
 from dsg.data.pdnc import Novel
@@ -67,13 +68,16 @@ def score_speakers(
     calls_by_window: dict[int, list] = {}
     for call in result.speaker_calls:
         calls_by_window.setdefault(call.window, []).append(call)
-    windows = sorted({(c.window, c.char_start, c.char_end) for c in result.speaker_calls})
+    windows = sorted({(c.char_start, c.char_end, c.window) for c in result.speaker_calls})
+    starts = [w[0] for w in windows]
 
     def window_of(pos: int) -> int | None:
-        for index, start, end in windows:
-            if start <= pos < end:
-                return index
-        return None
+        """Binary search, since this runs once per gold quotation per policy."""
+        i = bisect_right(starts, pos) - 1
+        if i < 0:
+            return None
+        start, end, index = windows[i]
+        return index if start <= pos < end else None
 
     text_len = max(1, len(novel.text))
     correct = matched = resolved = 0

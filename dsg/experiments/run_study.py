@@ -82,6 +82,17 @@ def _prefix_curves(
     return curves
 
 
+def _lead_character(novel: Novel) -> str:
+    """The most-quoted character: the one a reader would most want traced."""
+    from collections import Counter
+
+    counts = Counter(q.speaker for q in novel.quotes if q.speaker)
+    if counts:
+        return counts.most_common(1)[0][0]
+    major = [c.name for c in novel.characters if c.category == "major"]
+    return major[0] if major else (novel.characters[0].name if novel.characters else "")
+
+
 def run_study(
     proposals_dir: Path,
     out_dir: Path,
@@ -106,6 +117,7 @@ def run_study(
     records: list[dict] = []
     example_rows: list[dict] = []
     latency_results: dict[str, object] = {}
+    trajectories: dict[str, dict] = {}
     curves: dict[str, dict[str, list]] = {}
     profiles: dict[str, dict[str, list]] = {}
     growth: dict[str, dict[str, list]] = {}
@@ -139,6 +151,12 @@ def run_study(
                     e.as_dict() for e in ex.collect(result, novel, limit=25)
                 )
                 latency_results[book_id] = result
+                lead = _lead_character(novel)
+                if lead:
+                    trajectories[book_id] = {
+                        "character": lead,
+                        "rows": ex.trajectory(result, novel, lead),
+                    }
             profiles.setdefault(book_id, {})[policy] = revision_profile(result)
             growth.setdefault(book_id, {})[policy] = growth_curve(result)
             row["speaker_by_decile"] = speaker.by_decile
@@ -160,6 +178,7 @@ def run_study(
         "profiles": profiles,
         "growth": growth,
         "examples": example_rows,
+        "trajectories": trajectories,
         "instrument": instrument.analyse(latency_results, novels),
         "comparisons": compare(records, policies),
     }

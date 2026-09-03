@@ -130,3 +130,84 @@ def to_markdown(rows: list[dict], limit: int = 25) -> str:
             f"{change[:90]} | …{context}… |"
         )
     return "\n".join(lines)
+
+
+@dataclass(slots=True)
+class TrajectoryEntry:
+    d_open: int
+    d_close: int | None
+    predicate: str
+    object: str
+    status: str
+    certainty: str
+    position: float
+    evidence: str = ""
+
+    def as_dict(self) -> dict:
+        return {
+            "d_open": self.d_open, "d_close": self.d_close,
+            "predicate": self.predicate, "object": self.object,
+            "status": self.status, "certainty": self.certainty,
+            "position": round(self.position, 3), "evidence": self.evidence,
+        }
+
+
+def trajectory(
+    result: RunResult, novel: Novel, character: str, limit: int = 40
+) -> list[dict]:
+    """Everything the reader came to believe about one character, in reading order.
+
+    Superseded and retracted beliefs are kept, with the discourse interval over
+    which they were held. This is the view that shows the two clocks doing their
+    work: a fact can leave the believed set because the world moved on, or
+    because the reader was corrected, and the record says which.
+    """
+    state = result.state
+    node_id = state.resolve(character)
+    if node_id is None:
+        return []
+    node_id = state.deref(node_id)
+    windows = max(1, result.windows)
+
+    rows = [
+        TrajectoryEntry(
+            d_open=a.d_open,
+            d_close=a.d_close,
+            predicate=a.predicate,
+            object=(
+                state.entities[a.object].canonical
+                if a.object in state.entities
+                else a.object
+            ),
+            status=a.status.value,
+            certainty=a.certainty.value,
+            position=a.d_open / windows,
+            evidence=(
+                _context(novel, a.provenance.start, a.provenance.start + 1, pad=90)
+                if a.provenance is not None
+                else ""
+            ),
+        )
+        for a in state.assertions.values()
+        if a.subject == node_id
+    ]
+    rows.sort(key=lambda r: (r.d_open, r.predicate))
+    return [r.as_dict() for r in rows[:limit]]
+
+
+def trajectory_markdown(rows: list[dict], character: str) -> str:
+    if not rows:
+        return f"_no state recorded for {character}_"
+    lines = [
+        f"**{character}** — what the reader believes, and when.",
+        "",
+        "| read at | predicate | value | held until | status | source |",
+        "|---|---|---|---|---|---|",
+    ]
+    for r in rows:
+        held = "—" if r["d_close"] is None else f"window {r['d_close']}"
+        lines.append(
+            f"| {r['position']:.2f} | {r['predicate']} | {str(r['object'])[:40]} | "
+            f"{held} | {r['status']} | {r['certainty']} |"
+        )
+    return "\n".join(lines)

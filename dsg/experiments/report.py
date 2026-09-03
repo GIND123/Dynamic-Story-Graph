@@ -285,6 +285,20 @@ def _instrument_table(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _trajectory_section(trajectories: dict, n_books: int = 2, rows: int = 12) -> str:
+    from dsg.eval.examples import trajectory_markdown
+
+    if not trajectories:
+        return "_none recorded_"
+    out = []
+    for book, entry in list(trajectories.items())[:n_books]:
+        out.append(f"### {book}")
+        out.append("")
+        out.append(trajectory_markdown(entry["rows"][:rows], entry["character"]))
+        out.append("")
+    return "\n".join(out)
+
+
 def _examples_table(rows: list[dict]) -> str:
     from dsg.eval.examples import to_markdown
 
@@ -334,6 +348,10 @@ def build_report(results_dir: Path, out_dir: Path) -> Path:
         "## Identity-resolution latency (measurement instrument)",
         "",
         _instrument_table(payload.get("instrument", {})),
+        "",
+        "## One character, traced (dsg-full)",
+        "",
+        _trajectory_section(payload.get("trajectories", {})),
         "",
         "## Revision events on real text (dsg-full)",
         "",
