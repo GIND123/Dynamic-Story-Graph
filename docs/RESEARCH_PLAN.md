@@ -3,9 +3,8 @@
 **Working title.** *Premature Commitment, Not Incrementality: Revision-Aware
 Construction of Narrative State in Book-Length Fiction*
 
-**Target venue.** TACL (primary) — with a humanities-facing companion for the
-*Journal of Cultural Analytics*. Both are venues where the intended reader
-(David Bamman, UC Berkeley) publishes and reviews.
+**Target venue.** TACL (primary), with a humanities-facing companion suitable
+for the *Journal of Cultural Analytics*.
 
 **Hard constraints (fixed by the project).** No paid API. All inference runs on
 a local open-weight model on a single Apple M4 (16 GB). Every primary metric is
@@ -141,7 +140,7 @@ sink the central claim:
 - **P2** LLM proposal pass + caching; the five policies
 - **P3** metrics (coref scorers, speaker eval, process metrics) + bootstrap
 - **P4** run the grid; figures; results doc
-- **P5** paper draft + outreach
+- **P5** paper draft
 
 Raw corpora and model weights stay out of Git; only manifests, code, cached
 proposals, and results are tracked.
