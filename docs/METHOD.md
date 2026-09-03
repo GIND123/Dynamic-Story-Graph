@@ -75,6 +75,34 @@ which a store that only appends cannot do.
 candidate anyway and leaves both beliefs live. That is the modelled failure of
 append-only pipelines, and it is what invariant I1 then detects.
 
+## 3a. What an identity link may and may not assert
+
+Merging is the one operation that is irreversible in practice: once two
+characters are fused, the combined node matches both name sets and attracts
+further merges, so a single bad link cascades through the rest of the book. The
+store therefore constrains merging structurally rather than trusting the
+extractor's confidence.
+
+An identity link may bind an **unnamed reference** to a named character
+("the young man" is Winterbourne), or link two **surface-compatible** names
+("Mr. Darcy" and "Darcy"). It may not assert that two *separately named*
+characters are one person. That claim does occur in fiction -- it is the
+Magwitch case -- but the text always makes it explicitly, so it requires an
+identity revelation rather than a passing mention.
+
+This constraint was adopted after measurement, not assumption. On *Pride and
+Prejudice* a 3B extractor proposed 205 identity links, 185 of them between two
+proper names, and repetition did **not** separate the good from the bad:
+`Mr. Darcy -> Elizabeth` was proposed nine times, exactly as often as the
+correct `Mr. Bingley -> Bingley`. A corroboration threshold would therefore
+not have worked; only a structural constraint does.
+
+Titles are treated as **distinguishing**, not decorative. In this corpus
+"Mr. Bennet", "Mrs. Bennet" and "Miss Bennet" are three people who share a
+surname, so comparing surfaces with the honorific stripped collapses a
+household into a single node. Two surfaces that both carry a title match only
+when the titles are the same or spelling variants of each other.
+
 ## 4. Deferred commitment
 
 A reference that is a definite or indefinite description (`the stranger`,
@@ -101,6 +129,12 @@ Checked after every step; violations are counted, never silently repaired.
 | I5 | intervals are well-formed; a live assertion has no close time |
 | I6 | no provenance beyond the prefix already read |
 | I7 | one-way predicates do not flip back (the dead stay dead) |
+
+The raw I1 count is pairwise, so it grows quadratically in how badly a slot
+has broken -- one slot with twenty rival values contributes 190 violations.
+That is real signal but an unreadable headline, so the bounded companion
+**inconsistent slot rate** is reported alongside it: the share of
+single-valued slots holding two or more live conflicting values.
 
 ## 6. What the model is and is not allowed to do
 
