@@ -29,3 +29,7 @@ gnsm/data/cache/*
 !gnsm/data/raw/.gitkeep
 !gnsm/data/processed/.gitkeep
 !gnsm/data/cache/.gitkeep
+artifacts/
+data/
+.venv/
+*.sqlite

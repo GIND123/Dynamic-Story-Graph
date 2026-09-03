@@ -4,6 +4,13 @@ Research workspace for long-context consistent story generation.
 
 ## Projects
 
+- [`dsg/`](dsg/) — **Dynamic Story Graph**: revision-aware, prefix-causal
+  narrative state. Builds the reader's model of a novel *as the novel is read*,
+  with an explicit calculus separating monotone elaboration, story-world change,
+  and correction of a mistaken reader belief. Scored against human annotation on
+  28 novels. Start at [`dsg/README.md`](dsg/README.md); the plan is in
+  [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) and the formal specification
+  in [`docs/METHOD.md`](docs/METHOD.md).
 - [`gnsm/`](gnsm/) — Grounded Narrative State Model: symbolic extraction,
   learned narrative state, supervised transitions, conditioned generation, and
   deterministic consistency verification.
@@ -12,7 +19,8 @@ Research workspace for long-context consistent story generation.
 - [`Dataset Generation/`](Dataset%20Generation/) and
   [`Long Model Comparison/`](Long%20Model%20Comparison/) — research notebooks.
 
-Start with `python -m gnsm demo` for a dependency-light end-to-end GNSM run.
+Start with `python -m dsg doctor` for the current line of work, or
+`python -m gnsm demo` for a dependency-light end-to-end GNSM run.
 See [`gnsm/README.md`](gnsm/README.md) for setup, architecture, and extension
 points.
 
