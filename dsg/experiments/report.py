@@ -234,6 +234,72 @@ def figure_violation_growth(growth: dict, out: Path) -> Path:
     return _save(fig, out)
 
 
+LADDER = (
+    ("append-only_vs_window-only", "persistent state"),
+    ("dsg-merge_vs_append-only", "+ identity merging"),
+    ("dsg-eager_vs_dsg-merge", "+ fact revision"),
+    ("dsg-full_vs_dsg-eager", "+ deferred commitment"),
+    ("retrospective_vs_dsg-full", "(cost of causality)"),
+)
+
+
+def figure_ladder(comparisons: dict, out: Path) -> Path:
+    """Each rung of the ladder priced separately, on the metrics it should move.
+
+    This is the paper's argument in one picture: the mechanisms are separable,
+    and each buys a different thing. A rung whose interval crosses zero bought
+    nothing on that metric, and is drawn in grey.
+    """
+    panels = [
+        ("conll_f1", "Identity CoNLL F1", "Δ (higher is better)"),
+        ("mention_acc", "Mention linking accuracy", "Δ (higher is better)"),
+        ("inconsistent_slot_rate", "Self-contradictory slots", "Δ (lower is better)"),
+        ("rollback", "Rollback operations", "Δ (lower is better)"),
+    ]
+    rungs = [(key, label) for key, label in LADDER if key in comparisons]
+    if not rungs:
+        return out
+    # Drop a panel whose metric is undefined for this corpus -- LitBank has
+    # no quotation annotation, so an all-zero mention panel would read as a
+    # null result rather than as "not measured here".
+    panels = [
+        panel for panel in panels
+        if any(
+            (comparisons[key].get(panel[0]) or {}).get("mean_delta")
+            for key, _ in rungs
+        )
+    ]
+    if not panels:
+        return out
+    fig, axes = plt.subplots(1, len(panels), figsize=(13.5, 3.4))
+    for ax, (metric, title, xlabel) in zip(axes, panels, strict=False):
+        ys = list(range(len(rungs)))
+        for y, (key, _label) in zip(ys, rungs, strict=False):
+            stat = comparisons[key].get(metric)
+            if not stat:
+                continue
+            colour = FOCAL if stat["excludes_zero"] else CONTEXT
+            ax.plot(
+                [stat["ci_low"], stat["ci_high"]], [y, y],
+                color=colour, linewidth=2, zorder=3,
+            )
+            ax.plot([stat["mean_delta"]], [y], marker="o", markersize=7,
+                    color=colour, zorder=4)
+        ax.axvline(0, color=INK_SOFT, linewidth=1, linestyle=(0, (3, 3)), zorder=2)
+        ax.set_yticks(ys)
+        ax.set_yticklabels([label for _key, label in rungs], fontsize=8)
+        ax.invert_yaxis()
+        _style(ax, xlabel=xlabel, title=title)
+        ax.grid(axis="y", visible=False)
+    fig.suptitle(
+        "Each mechanism, priced on its own: paired bootstrap over books, "
+        "95% intervals; grey means the interval crosses zero",
+        fontsize=10, color=INK, x=0.01, ha="left",
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
+    return _save(fig, out)
+
+
 def _save(fig, out: Path) -> Path:
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -316,6 +382,7 @@ def build_report(results_dir: Path, out_dir: Path) -> Path:
     figs = out_dir / "figures"
 
     figure_main(records, figs / "fig1-main-results")
+    figure_ladder(payload.get("comparisons", {}), figs / "fig1b-ladder")
     if payload.get("curves"):
         figure_prefix_curve(payload["curves"], figs / "fig2-prefix-curve")
     figure_paired_deltas(records, figs / "fig3-paired-deltas")
@@ -361,6 +428,7 @@ def build_report(results_dir: Path, out_dir: Path) -> Path:
         "## Figures",
         "",
         "![main](figures/fig1-main-results.png)",
+        "![ladder](figures/fig1b-ladder.png)",
         "![prefix](figures/fig2-prefix-curve.png)",
         "![paired](figures/fig3-paired-deltas.png)",
         "![revision](figures/fig4-revision-profile.png)",
