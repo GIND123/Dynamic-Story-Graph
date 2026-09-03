@@ -143,6 +143,22 @@ def _table(runs: dict[str, dict], metrics: tuple[str, ...], a: str, b: str) -> s
     return "\n".join(lines)
 
 
+def _yield_table(runs: dict[str, dict]) -> str:
+    lines = ["| run | books | windows | parse failures | parse rate |",
+             "|---|---|---|---|---|"]
+    for name, payload in sorted(runs.items()):
+        rows = [r for r in payload["records"] if r["policy"] == "dsg-full"]
+        if not rows:
+            continue
+        windows = sum(r["windows"] for r in rows)
+        failures = sum(int(r.get("parse_failures", 0)) for r in rows)
+        rate = 1 - failures / windows if windows else 0.0
+        lines.append(
+            f"| {name} | {len(rows)} | {windows:,} | {failures:,} | {rate:.3f} |"
+        )
+    return "\n".join(lines)
+
+
 def build(results_root: Path, out_dir: Path, names: list[str] | None = None) -> Path:
     names = names or [
         "pdnc-qwen7b", "litbank-qwen7b", "pdnc-qwen3b", "pdnc-qwen1.5b", "pdnc-qwen14b",
@@ -154,11 +170,22 @@ def build(results_root: Path, out_dir: Path, names: list[str] | None = None) -> 
     figure_scale(runs, figs / "fig6-model-scale")
     figure_length_dependence(runs, figs / "fig7-length-dependence")
 
-    metrics = ("violations_per_100w", "conll_f1", "mention_acc", "rollback", "monotone_fraction")
+    metrics = (
+        "violations_per_100w", "conll_f1", "mention_acc", "rollback", "monotone_fraction",
+    )
     body = [
         "# Cross-run comparison",
         "",
         f"Runs included: {', '.join(sorted(runs))}",
+        "",
+        "## Extraction yield per run",
+        "",
+        "A smaller model does not merely extract *worse*, it extracts *less*: "
+        "a window whose output cannot be parsed contributes nothing to any "
+        "policy. The scale comparison below is therefore partly confounded by "
+        "yield, so the parse rate is reported alongside it rather than buried.",
+        "",
+        _yield_table(runs),
         "",
         "## DSG (`dsg-full`) versus the standard incremental pipeline (`append-only`)",
         "",
