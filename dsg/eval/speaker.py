@@ -87,7 +87,7 @@ def score_speakers(
         if index is None:
             continue
         best, best_score = None, min_similarity
-        for i, call in enumerate(calls_by_window.get(index, [])):
+        for call in calls_by_window.get(index, []):
             key = id(call)
             if key in used:
                 continue

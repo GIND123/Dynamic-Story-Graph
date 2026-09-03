@@ -109,7 +109,7 @@ def _run_extraction(
             )
         outputs = llm.generate(prompts, params, use_tqdm=False)
         staged = []
-        for p, out in zip(active, outputs):
+        for p, out in zip(active, outputs, strict=False):
             window, _ = p["windows"][step]
             staged.append((p, window, parse_proposal(out.outputs[0].text, window)))
 
@@ -131,7 +131,9 @@ def _run_extraction(
             )
         if prompts2:
             for (proposal, unnamed, names), out in zip(
-                asks, llm.generate(prompts2, resolve_params, use_tqdm=False)
+                asks,
+                llm.generate(prompts2, resolve_params, use_tqdm=False),
+                strict=False,
             ):
                 proposal.links.extend(
                     parse_resolve(out.outputs[0].text, unnamed, names)
@@ -153,7 +155,11 @@ def _run_extraction(
     elapsed = time.time() - t0
     total = sum(len(p["out"]) for p in plans)
     ok = sum(1 for p in plans for w in p["out"] if w.get("parse_ok", True))
-    print(f"[dsg] done: {total} windows in {elapsed / 60:.1f} min, parse_ok {ok}/{total}", flush=True)
+    print(
+        f"[dsg] done: {total} windows in {elapsed / 60:.1f} min, "
+        f"parse_ok {ok}/{total}",
+        flush=True,
+    )
     return {
         "meta": {
             "model": model_id, "window_chars": window_chars, "lead_chars": lead_chars,

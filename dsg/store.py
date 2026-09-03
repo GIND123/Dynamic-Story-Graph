@@ -58,6 +58,12 @@ class PolicyConfig:
     allow_committed_merge: bool = True
     allow_supersede: bool = True
     allow_revise: bool = True
+    # ELABORATE rewrites an assertion's object in place. It is monotone in
+    # information but it is still a write, so a store that only ever appends
+    # cannot perform it: it must add a second assertion and hold both. That
+    # inability is precisely the modelled failure, so it is not granted for
+    # free to the baselines.
+    allow_elaborate: bool = True
     commit_min_mentions: int = 2
     merge_threshold: float = MERGE_THRESHOLD
     # A weaker match still binds when it is the *only* candidate: a reader
@@ -74,18 +80,20 @@ POLICIES: dict[str, PolicyConfig] = {
     "window-only": PolicyConfig(
         "window-only", carry_state=False, deferred_commitment=False,
         allow_merge=False, allow_committed_merge=False,
-        allow_supersede=False, allow_revise=False,
+        allow_supersede=False, allow_revise=False, allow_elaborate=False,
     ),
     # The standard incremental pipeline: accumulate, never unwrite.
     "append-only": PolicyConfig(
         "append-only", deferred_commitment=False, allow_merge=False,
         allow_committed_merge=False, allow_supersede=False, allow_revise=False,
+        allow_elaborate=False,
     ),
     # + identity merging (as a rollback, since commitment is eager), but
     # still no fact-level revision: isolates what fixing identity alone buys.
     "dsg-merge": PolicyConfig(
         "dsg-merge", deferred_commitment=False, allow_merge=True,
         allow_committed_merge=True, allow_supersede=False, allow_revise=False,
+        allow_elaborate=False,
     ),
     # Full calculus but *eager* commitment: every node commits on first sight,
     # so identity fixes must be non-monotone rollbacks.
@@ -346,7 +354,8 @@ class NarrativeState:
 
         conflicts = [
             a for a in existing
-            if not is_multi_valued(predicate) or a.object.strip().lower() == str(obj).strip().lower()
+            if not is_multi_valued(predicate)
+            or a.object.strip().lower() == str(obj).strip().lower()
         ]
         conflicts = [a for a in conflicts if not (a.object == obj and a.polarity == cand.polarity)]
 
@@ -356,7 +365,7 @@ class NarrativeState:
 
         op = self._classify(conflicts[0], str(obj), cand, predicate)
 
-        if op is Op.ELABORATE:
+        if op is Op.ELABORATE and self.policy.allow_elaborate:
             target = conflicts[0]
             target.object = str(obj)
             target.confidence = max(target.confidence, cand.confidence)
@@ -505,14 +514,17 @@ class NarrativeState:
             self._matchable.clear()
 
     def close_step(self) -> list[Violation]:
-        found = invariants.check(self.entities, self.assertions.values(), self.index, self.prefix_end)
+        found = invariants.check(
+            self.entities, self.assertions.values(), self.index, self.prefix_end
+        )
         self.violations.extend(found)
         self.trace.append(
             {
                 "index": self.index,
                 "entities_live": len(self.live_entities()),
                 "entities_committed": sum(
-                    1 for n in self.live_entities() if n.commit is CommitLevel.COMMITTED
+                    1 for n in self.live_entities()
+                    if n.commit is CommitLevel.COMMITTED
                 ),
                 "assertions_live": sum(1 for a in self.assertions.values() if a.live),
                 "violations_new": len(found),

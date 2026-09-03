@@ -10,12 +10,15 @@ from dsg.proposals import WindowProposal
 
 def _stream():
     return [
-        WindowProposal(index=0, start=0, end=100,
-                       entities=[{"surface": "Elizabeth", "kind": "name"}]),
-        WindowProposal(index=1, start=100, end=200,
-                       entities=[{"surface": "Mr. Darcy", "kind": "name"}]),
-        WindowProposal(index=2, start=200, end=300,
-                       entities=[{"surface": "Mr. Darcy", "kind": "name"}]),
+        WindowProposal(
+            index=0, start=0, end=100, entities=[{"surface": "Elizabeth", "kind": "name"}]
+        ),
+        WindowProposal(
+            index=1, start=100, end=200, entities=[{"surface": "Mr. Darcy", "kind": "name"}]
+        ),
+        WindowProposal(
+            index=2, start=200, end=300, entities=[{"surface": "Mr. Darcy", "kind": "name"}]
+        ),
     ]
 
 
@@ -59,9 +62,9 @@ def test_probe_construction_skips_unlinkable_gold():
         text="x" * 300,
         characters=[GoldCharacter("1", "Elizabeth", {"Elizabeth"})],
         mentions=[
-            GoldMention(0, 9, "Elizabeth", "Elizabeth"),   # kept
-            GoldMention(20, 23, "she", "Elizabeth"),       # pronoun, dropped
-            GoldMention(40, 45, "Darcy", "Mr. Darcy"),     # no such gold character
+            GoldMention(0, 9, "Elizabeth", "Elizabeth"),  # kept
+            GoldMention(20, 23, "she", "Elizabeth"),  # pronoun, dropped
+            GoldMention(40, 45, "Darcy", "Mr. Darcy"),  # no such gold character
         ],
     )
     probes = build_probes(novel)
@@ -70,10 +73,13 @@ def test_probe_construction_skips_unlinkable_gold():
 
 def test_unanswered_probes_count_against_accuracy_not_coverage():
     novel = Novel(
-        book_id="toy", text="x" * 300,
+        book_id="toy",
+        text="x" * 300,
         characters=[GoldCharacter("1", "Elizabeth", {"Elizabeth"})],
-        mentions=[GoldMention(10, 19, "Elizabeth", "Elizabeth"),
-                  GoldMention(250, 259, "Elizabeth", "Elizabeth")],
+        mentions=[
+            GoldMention(10, 19, "Elizabeth", "Elizabeth"),
+            GoldMention(250, 259, "Elizabeth", "Elizabeth"),
+        ],
     )
     result = run_policy(_stream(), "dsg-full", text_length=300, probes=build_probes(novel))
     score = score_mentions(result, novel)

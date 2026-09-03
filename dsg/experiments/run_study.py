@@ -38,15 +38,17 @@ def load_book_proposals(run_dir: Path) -> dict[str, list[WindowProposal]]:
     return out
 
 
-def _prefix_curve(
-    proposals: list[WindowProposal], novel: Novel, policy: str, causal: bool
-) -> list[dict[str, float]]:
-    """Identity quality as a function of how much of the book has been read.
+def _prefix_curves(
+    proposals: list[WindowProposal], novel: Novel, policies: list[str]
+) -> dict[str, list[dict[str, float]]]:
+    """Identity quality against how much of the book has been read.
 
-    The gold item set is recomputed on each prefix, so a checkpoint is never
-    penalised for characters the reader has not met yet.
+    The gold item set is recomputed on each prefix -- a checkpoint is never
+    penalised for characters the reader has not met yet -- but only *once* per
+    prefix, and shared across policies. Recomputing it per policy would mean
+    tens of thousands of full-text scans for no additional information.
     """
-    curve = []
+    curves: dict[str, list[dict[str, float]]] = {p: [] for p in policies}
     n = len(proposals)
     for fraction in PREFIX_FRACTIONS:
         k = max(1, int(round(n * fraction)))
@@ -61,20 +63,23 @@ def _prefix_curve(
         items = occurring_aliases(prefix_novel)
         if not items:
             continue
-        result = run_policy(head, policy, causal=causal, text_length=prefix_end)
-        score = score_identity(result.state, prefix_novel, items=items)
-        curve.append(
-            {
-                "fraction": fraction, "windows": k, "chars": prefix_end,
-                "conll_f1": score.conll_f1, "b3_f1": score.b3_f1,
-                "b3_f1_multi": score.b3_f1_multi, "ceaf_f1": score.ceaf_f1,
-                "muc_f1": score.muc_f1,
-                "coverage": score.coverage, "fragmentation": score.fragmentation,
-                "conflation": score.conflation, "n_items": score.n_items,
-                "violations": len(result.state.violations),
-            }
-        )
-    return curve
+        for policy in policies:
+            result = run_policy(
+                head, policy, causal=(policy != "retrospective"), text_length=prefix_end
+            )
+            score = score_identity(result.state, prefix_novel, items=items)
+            curves[policy].append(
+                {
+                    "fraction": fraction, "windows": k, "chars": prefix_end,
+                    "conll_f1": score.conll_f1, "b3_f1": score.b3_f1,
+                    "b3_f1_multi": score.b3_f1_multi, "ceaf_f1": score.ceaf_f1,
+                    "muc_f1": score.muc_f1,
+                    "coverage": score.coverage, "fragmentation": score.fragmentation,
+                    "conflation": score.conflation, "n_items": score.n_items,
+                    "violations": len(result.state.violations),
+                }
+            )
+    return curves
 
 
 def run_study(
@@ -136,12 +141,10 @@ def run_study(
                 latency_results[book_id] = result
             profiles.setdefault(book_id, {})[policy] = revision_profile(result)
             growth.setdefault(book_id, {})[policy] = growth_curve(result)
-            if with_curves:
-                curves.setdefault(book_id, {})[policy] = _prefix_curve(
-                    proposals, novel, policy, causal
-                )
             row["speaker_by_decile"] = speaker.by_decile
             row["mention_by_decile"] = mentions.by_decile
+        if with_curves:
+            curves[book_id] = _prefix_curves(proposals, novel, policies)
         print(f"[study] {book_id}: {len(policies)} policies done", flush=True)
 
     payload = {
@@ -208,7 +211,8 @@ def summarize(payload: dict) -> str:
     """A compact per-policy table, means over books."""
     records = payload["records"]
     policies = payload["meta"]["policies"]
-    cols = ["conll_f1", "mention_acc", "mention_acc_answered", "b3_f1_multi", "coverage", "fragmentation", "conflation",
+    cols = ["conll_f1", "mention_acc", "mention_acc_answered", "b3_f1_multi",
+            "coverage", "fragmentation", "conflation",
             "speaker_acc", "speaker_acc_matched", "violations_per_100w",
             "monotone_fraction", "rollback", "live_entities"]
     lines = ["| policy | " + " | ".join(cols) + " |",

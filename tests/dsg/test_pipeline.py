@@ -20,7 +20,7 @@ def test_windows_tile_the_text_without_gaps_or_overlap():
     windows = [w for w, _ in iter_windows(TEXT, 400, 50)]
     assert windows[0].start == 0
     assert windows[-1].end == len(TEXT)
-    for a, b in zip(windows, windows[1:]):
+    for a, b in zip(windows, windows[1:], strict=False):
         assert a.end == b.start
     assert "".join(w.text for w in windows) == TEXT
 
@@ -34,10 +34,10 @@ def test_line_parser_survives_truncation_and_repetition():
     window = Window(0, 0, 10, "x")
     raw = (
         "CHAR | Mr. Bennet | name\n"
-        "CHAR | Mr. Bennet | name\n"          # duplicate, must be dropped
+        "CHAR | Mr. Bennet | name\n"  # duplicate, must be dropped
         "FACT | Mr. Bennet | location | Longbourn | narrated | at home\n"
         "SAID | My dear Mr | Mrs. Bennet\n"
-        "FACT | Mr. Bennet | locat"           # truncated mid-line
+        "FACT | Mr. Bennet | locat"  # truncated mid-line
     )
     p = parse_proposal(raw, window)
     assert p.parse_ok
@@ -80,10 +80,8 @@ def test_policies_diverge_on_the_same_proposal_stream():
         results["dsg-full"].state.live_entities()
     )
     # And the revising policy must not leave contradictions standing.
-    assert len(results["dsg-full"].state.violations) <= len(
-        results["append-only"].state.violations
-    )
-    for name, result in results.items():
+    assert len(results["dsg-full"].state.violations) <= len(results["append-only"].state.violations)
+    for result in results.values():
         assert result.windows == len(proposals)
         assert len(result.state.trace) == len(proposals)
 
@@ -103,19 +101,29 @@ def _stream_with_links():
 
     return [
         WindowProposal(
-            index=0, start=0, end=100,
+            index=0,
+            start=0,
+            end=100,
             entities=[{"surface": "the stranger", "kind": "description"}],
-            facts=[FactProposal("the stranger", "location", "the marshes", evidence="on the marshes")],
+            facts=[
+                FactProposal("the stranger", "location", "the marshes", evidence="on the marshes")
+            ],
         ),
         WindowProposal(
-            index=1, start=100, end=200,
-            entities=[{"surface": "Magwitch", "kind": "name"},
-                      {"surface": "the stranger", "kind": "description"}],
+            index=1,
+            start=100,
+            end=200,
+            entities=[
+                {"surface": "Magwitch", "kind": "name"},
+                {"surface": "the stranger", "kind": "description"},
+            ],
             links=[{"surface": "the stranger", "same_as": "Magwitch"}],
             speech=[SpeechProposal("I am no stranger", "the stranger")],
         ),
         WindowProposal(
-            index=2, start=200, end=300,
+            index=2,
+            start=200,
+            end=300,
             entities=[{"surface": "Magwitch", "kind": "name"}],
             facts=[FactProposal("Magwitch", "location", "London", evidence="went to London")],
         ),
@@ -167,7 +175,7 @@ def test_identity_questions_are_asked_only_about_people():
         "CHAR | the pool | description\n"
         "CHAR | a very large jar | description\n"
         "CHAR | the young man | description\n"
-        "CHAR | Mrs. Miller | description\n"      # a name the model mislabelled
+        "CHAR | Mrs. Miller | description\n"  # a name the model mislabelled
         "CHAR | Winterbourne | name\n"
     )
     proposal = parse_proposal(raw, Window(0, 0, 10, "x"))

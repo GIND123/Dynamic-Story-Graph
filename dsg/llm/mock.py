@@ -31,11 +31,11 @@ class MockBackend:
             names.append(s)
         names = names[:6]
         facts = []
-        for i, n in enumerate(names[:2]):
+        for name in names[:2]:
             loc = re.search(r"\bin ([A-Z][a-z]+)", body)
             if loc:
                 facts.append(
-                    {"subject": n, "predicate": "location", "object": loc.group(1),
+                    {"subject": name, "predicate": "location", "object": loc.group(1),
                      "certainty": "narrated", "evidence": loc.group(0)}
                 )
         speech = []

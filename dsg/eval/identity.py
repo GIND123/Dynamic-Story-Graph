@@ -150,7 +150,9 @@ def _muc(gold: dict[str, str], system: dict[str, str]) -> float:
     return 2 * p * r / (p + r) if p + r else 0.0
 
 
-def score_identity(state: NarrativeState, novel: Novel, items: dict[str, str] | None = None) -> IdentityScore:
+def score_identity(
+    state: NarrativeState, novel: Novel, items: dict[str, str] | None = None
+) -> IdentityScore:
     gold = items if items is not None else occurring_aliases(novel)
     if not gold:
         return IdentityScore(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -200,7 +202,9 @@ def score_identity(state: NarrativeState, novel: Novel, items: dict[str, str] | 
         coverage=observed / len(gold),
         fragmentation=fragmentation, conflation=conflation,
         n_items=len(gold), n_gold_clusters=len(set(gold.values())),
-        n_system_clusters=len({v for v in system.values() if not v.startswith("__unseen__")}),
+        n_system_clusters=len(
+            {v for v in system.values() if not v.startswith("__unseen__")}
+        ),
         observed_items=observed,
     )
 

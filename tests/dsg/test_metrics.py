@@ -64,7 +64,9 @@ def test_conflation_is_penalised():
 
 def test_unseen_aliases_stay_in_the_item_set_as_singletons():
     """Extracting less must not raise the score."""
-    full = score_identity(_state_with([["Elizabeth", "Lizzy"], ["Mr. Darcy", "Darcy"], ["Jane"]]), NOVEL)
+    full = score_identity(
+        _state_with([["Elizabeth", "Lizzy"], ["Mr. Darcy", "Darcy"], ["Jane"]]), NOVEL
+    )
     partial = score_identity(_state_with([["Elizabeth", "Lizzy"]]), NOVEL)
     assert partial.coverage < full.coverage
     assert partial.b3_f1 < full.b3_f1

@@ -411,9 +411,13 @@ def parse_resolve(raw: str, unnamed: list[str], names: list[str]) -> list[dict[s
         if len(cells) < 3 or cells[0].upper().lstrip("- ").strip() != "SAME":
             continue
         source, target = offered.get(cells[1].lower()), known.get(cells[2].lower())
-        if source and target and source.lower() != target.lower():
-            if not any(existing["surface"] == source for existing in links):
-                links.append({"surface": source, "same_as": target})
+        if (
+            source
+            and target
+            and source.lower() != target.lower()
+            and not any(existing["surface"] == source for existing in links)
+        ):
+            links.append({"surface": source, "same_as": target})
     return links
 
 

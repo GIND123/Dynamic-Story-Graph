@@ -65,7 +65,7 @@ extraction is deterministic, so a change to the calculus is re-scored for free.
 Every policy replays a **byte-identical** proposal stream, so differences are
 differences of representation, not of extractor quality.
 
-| Policy | State | Merge identity | Revise facts | Commitment | Causal |
+| Policy | State | Merge identity | Elaborate / supersede / revise facts | Commitment | Causal |
 | --- | --- | --- | --- | --- | --- |
 | `window-only` | — | — | — | — | yes |
 | `append-only` | yes | — | — | eager | yes |
@@ -73,6 +73,11 @@ differences of representation, not of extractor quality.
 | `dsg-eager` | yes | yes | **yes** | eager | yes |
 | `dsg-full` | yes | yes | yes | **deferred** | yes |
 | `retrospective` | yes | yes | yes | deferred | **no** |
+
+Note that `ELABORATE` sits on the revision side of the line. It is monotone
+in information, but it still rewrites a stored value, and a store that only
+appends cannot do that — it has to add a second assertion and hold both. The
+baselines are therefore not quietly granted it.
 
 Each rung adds exactly one mechanism, so each is separately priced:
 

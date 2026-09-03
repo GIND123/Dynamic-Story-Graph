@@ -19,7 +19,9 @@ def test_underspecified_object_is_elaborated_not_contradicted():
     e = s.observe_entity("Pip", Span(0, 3))
     s.apply_assertion(CandidateAssertion(e, "location", "a house", evidence="in a house"))
     s.step(1, 10_000)
-    op = s.apply_assertion(CandidateAssertion(e, "location", "Satis House", evidence="at Satis House"))
+    op = s.apply_assertion(
+        CandidateAssertion(e, "location", "Satis House", evidence="at Satis House")
+    )
     assert op is Op.ELABORATE
     live = [a for a in s.assertions.values() if a.live]
     assert len(live) == 1 and live[0].object == "Satis House"
@@ -35,7 +37,7 @@ def test_world_change_supersedes_and_keeps_history():
     assert op is Op.SUPERSEDE
     old = next(a for a in s.assertions.values() if a.object == "the forge")
     assert old.status is Status.SUPERSEDED
-    assert old.valid_to == 5 and old.valid_from == 0   # history preserved, not deleted
+    assert old.valid_to == 5 and old.valid_from == 0  # history preserved, not deleted
     assert sum(1 for a in s.assertions.values() if a.live) == 1
 
 
@@ -44,10 +46,12 @@ def test_immutable_predicate_conflict_is_a_revision():
     e = s.observe_entity("Estella", Span(0, 7))
     s.apply_assertion(CandidateAssertion(e, "parent_of", "Miss Havisham", evidence="her mother"))
     s.step(9, 10_000)
-    op = s.apply_assertion(CandidateAssertion(e, "parent_of", "Magwitch", evidence="her real father"))
+    op = s.apply_assertion(
+        CandidateAssertion(e, "parent_of", "Magwitch", evidence="her real father")
+    )
     assert op is Op.REVISE
     old = next(a for a in s.assertions.values() if a.object == "Miss Havisham")
-    assert old.status is Status.RETRACTED   # never was true, so not kept as history
+    assert old.status is Status.RETRACTED  # never was true, so not kept as history
 
 
 def test_revelation_marker_promotes_supersede_to_revise():
@@ -56,7 +60,9 @@ def test_revelation_marker_promotes_supersede_to_revise():
     s.apply_assertion(CandidateAssertion(e, "occupation", "blacksmith", evidence="a blacksmith"))
     s.step(3, 10_000)
     op = s.apply_assertion(
-        CandidateAssertion(e, "occupation", "gentleman", evidence="in fact he had never been a smith")
+        CandidateAssertion(
+            e, "occupation", "gentleman", evidence="in fact he had never been a smith"
+        )
     )
     assert op is Op.REVISE, "an explicit correction is not a world change"
 
@@ -67,11 +73,15 @@ def test_reported_belief_yields_to_narration():
     s = state()
     e = s.observe_entity("Pip", Span(0, 3))
     s.apply_assertion(
-        CandidateAssertion(e, "occupation", "clerk", certainty=Certainty.REPORTED, evidence="he claimed")
+        CandidateAssertion(
+            e, "occupation", "clerk", certainty=Certainty.REPORTED, evidence="he claimed"
+        )
     )
     s.step(4, 10_000)
     op = s.apply_assertion(
-        CandidateAssertion(e, "occupation", "thief", certainty=Certainty.NARRATED, evidence="he was")
+        CandidateAssertion(
+            e, "occupation", "thief", certainty=Certainty.NARRATED, evidence="he was"
+        )
     )
     assert op is Op.REVISE
 
@@ -152,3 +162,34 @@ def test_every_policy_runs_and_logs(policy):
     s.apply_assertion(CandidateAssertion(e, "location", "the forge"))
     s.close_step()
     assert s.log and s.trace
+
+
+def test_append_only_cannot_elaborate_and_so_holds_both_values():
+    """Refinement is still a write. A store that only appends must hold both."""
+    s = state("append-only")
+    e = s.observe_entity("Pip", Span(0, 3))
+    s.apply_assertion(CandidateAssertion(e, "location", "a house", evidence="in a house"))
+    s.close_step()
+    s.step(1, 10_000)
+    op = s.apply_assertion(
+        CandidateAssertion(e, "location", "Satis House", evidence="at Satis House")
+    )
+    assert op is Op.ASSERT
+    assert sum(1 for a in s.assertions.values() if a.live) == 2
+    assert any(v.code == "I1" for v in s.close_step())
+
+
+def test_the_same_refinement_is_monotone_under_the_full_calculus():
+    s = state("dsg-full")
+    e = s.observe_entity("Pip", Span(0, 3))
+    s.apply_assertion(CandidateAssertion(e, "location", "a house", evidence="in a house"))
+    s.close_step()
+    s.step(1, 10_000)
+    assert (
+        s.apply_assertion(
+            CandidateAssertion(e, "location", "Satis House", evidence="at Satis House")
+        )
+        is Op.ELABORATE
+    )
+    assert sum(1 for a in s.assertions.values() if a.live) == 1
+    assert not s.close_step()

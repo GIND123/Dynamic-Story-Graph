@@ -61,7 +61,10 @@ def collect(result: RunResult, novel: Novel, limit: int = 40) -> list[Example]:
         )
         assertion = state.assertions.get(record.target)
         if assertion is not None:
-            example.subject = state.entities[assertion.subject].canonical if assertion.subject in state.entities else assertion.subject
+            subject_node = state.entities.get(assertion.subject)
+            example.subject = (
+                subject_node.canonical if subject_node else assertion.subject
+            )
             example.predicate = assertion.predicate
             example.new_value = assertion.object
             prior = state.assertions.get(record.payload or "")

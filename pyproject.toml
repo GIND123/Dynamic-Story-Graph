@@ -66,6 +66,11 @@ exclude = ["Dataset Generation", "Long Model Comparison", "manuscript-memory-eng
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+# Prompt strings are data, not code: reflowing them changes what the model
+# is asked, so line length is not enforced where prompts are defined.
+"dsg/proposals.py" = ["E501"]
+
 [tool.ruff.format]
 quote-style = "double"
 

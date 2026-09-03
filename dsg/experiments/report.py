@@ -79,12 +79,13 @@ def figure_main(records: list[dict], out: Path) -> Path:
     """Three horizontal bar panels: identity, speaker, integrity."""
     panels = [
         ("conll_f1", "Identity CoNLL F1", "higher is better", False),
-        ("mention_acc", "Mention linking accuracy\n(probed in reading order)", "higher is better", False),
+        ("mention_acc", "Mention linking accuracy\n(probed in reading order)",
+         "higher is better", False),
         ("violations_per_100w", "Structural violations per 100 windows", "lower is better", True),
     ]
     policies = _present(records)
     fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.6))
-    for ax, (metric, title, note, lower_better) in zip(axes, panels):
+    for ax, (metric, title, note, _lower_better) in zip(axes, panels, strict=False):
         means = _mean_by_policy(records, metric)
         vals = [means.get(p, 0.0) for p in policies]
         colors = [COLOR_FOR[p] for p in policies]
@@ -106,7 +107,7 @@ def figure_main(records: list[dict], out: Path) -> Path:
 def figure_prefix_curve(curves: dict, out: Path, metric: str = "conll_f1") -> Path:
     """Identity quality against how much of the book has been read."""
     series: dict[str, dict[float, list[float]]] = {}
-    for book, by_policy in curves.items():
+    for by_policy in curves.values():
         for policy, points in by_policy.items():
             for point in points:
                 series.setdefault(policy, {}).setdefault(point["fraction"], []).append(
@@ -176,7 +177,7 @@ def figure_paired_deltas(records: list[dict], out: Path, metric: str = "conll_f1
 def figure_revision_profile(profiles: dict, out: Path, policy: str = "dsg-full") -> Path:
     """Where in a book the reader's model is refined versus corrected."""
     bins: dict[int, dict[str, list[float]]] = {}
-    for book, by_policy in profiles.items():
+    for by_policy in profiles.values():
         for entry in by_policy.get(policy, []):
             slot = bins.setdefault(entry["bin"], {"elab": [], "rev": []})
             slot["elab"].append(float(entry["elaboration_rate"]))
@@ -203,7 +204,7 @@ def figure_revision_profile(profiles: dict, out: Path, policy: str = "dsg-full")
 def figure_violation_growth(growth: dict, out: Path) -> Path:
     """Cumulative structural violations against reading position."""
     series: dict[str, dict[float, list[float]]] = {}
-    for book, by_policy in growth.items():
+    for by_policy in growth.values():
         for policy, trace in by_policy.items():
             n = max(1, len(trace))
             for point in trace:

@@ -67,6 +67,10 @@ Identity has the parallel pair: folding a **provisional** node into another is
 substructure of `S_{t+1}`. `SUPERSEDE` is history-preserving but not monotone in
 the believed set. `{REVISE, MERGE_COMMITTED, SPLIT}` are rollbacks.
 
+`ELABORATE` is classed with the revision operations rather than with plain
+appending: it is monotone in information, but it rewrites a stored value,
+which a store that only appends cannot do.
+
 **A policy that lacks an operation does not skip the update.** It asserts the
 candidate anyway and leaves both beliefs live. That is the modelled failure of
 append-only pipelines, and it is what invariant I1 then detects.

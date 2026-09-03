@@ -1,0 +1,27 @@
+name: dsg-ci
+
+# The whole pipeline runs on the mock backend: no model weights, no network,
+# no GPU. That is deliberate -- windowing, parsing, the calculus, the
+# invariants and every metric are exercised on each push.
+on:
+  push:
+    paths: ["dsg/**", "tests/dsg/**", ".github/workflows/dsg-ci.yml"]
+  pull_request:
+    paths: ["dsg/**", "tests/dsg/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy matplotlib pytest ruff
+      - name: Lint
+        run: python -m ruff check dsg tests/dsg --line-length 100
+      - name: Test
+        run: python -m pytest tests/dsg -q
