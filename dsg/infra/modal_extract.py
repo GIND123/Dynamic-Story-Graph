@@ -10,8 +10,8 @@ sequential: window ``t``'s prompt carries a digest built only from windows
 lockstep -- step ``t`` submits window ``t`` of every book at once. Each book
 still sees only its own prefix, while vLLM gets a batch as wide as the corpus.
 
-    modal run dsg/infra/modal_extract.py --books 2 --max-windows 8   # smoke
-    modal run --detach dsg/infra/modal_extract.py --model qwen7b     # full run
+    modal run dsg/infra/modal_extract.py::main --books 2 --max-windows 8   # smoke
+    modal run --detach dsg/infra/modal_extract.py::main --model qwen7b     # full run
 
 Always pass ``--detach`` for a full run. Without it, Modal cancels the remote
 function the moment the local client disconnects, and an hour of GPU time is
