@@ -62,6 +62,17 @@ def _study(args: argparse.Namespace) -> int:
     return 0
 
 
+def _compare(args: argparse.Namespace) -> int:
+    from dsg.experiments.compare_runs import build
+
+    path = build(
+        Path(args.results_root), Path(args.out),
+        names=args.runs.split(",") if args.runs else None,
+    )
+    print(f"comparison -> {path}")
+    return 0
+
+
 def _report(args: argparse.Namespace) -> int:
     from dsg.experiments.report import build_report
 
@@ -94,6 +105,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-curves", action="store_true")
     p.add_argument("--corpus", default="pdnc")
     p.set_defaults(func=_study)
+
+    p = sub.add_parser("compare", help="cross-corpus and cross-scale comparison")
+    p.add_argument("--results-root", default="artifacts/results")
+    p.add_argument("--out", default="artifacts/report/comparison")
+    p.add_argument("--runs", default="")
+    p.set_defaults(func=_compare)
 
     p = sub.add_parser("report", help="tables and figures")
     p.add_argument("--results", required=True)
