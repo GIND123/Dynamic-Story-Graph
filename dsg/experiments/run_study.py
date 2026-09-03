@@ -189,7 +189,7 @@ def run_study(
 COMPARISON_METRICS = (
     "conll_f1", "mention_acc", "mention_acc_answered", "mention_coverage",
     "b3_f1_multi", "b3_f1", "ceaf_f1", "muc_f1", "fragmentation", "conflation", "coverage",
-    "speaker_acc", "speaker_acc_matched", "violations_per_100w",
+    "speaker_acc", "speaker_acc_matched", "violations_per_100w", "inconsistent_slot_rate",
     "monotone_fraction", "rollback", "live_entities",
 )
 
@@ -236,7 +236,7 @@ def summarize(payload: dict) -> str:
     records = payload["records"]
     policies = payload["meta"]["policies"]
     cols = ["conll_f1", "mention_acc", "mention_acc_answered", "b3_f1_multi",
-            "coverage", "fragmentation", "conflation",
+            "coverage", "fragmentation", "conflation", "inconsistent_slot_rate",
             "speaker_acc", "speaker_acc_matched", "violations_per_100w",
             "monotone_fraction", "rollback", "live_entities"]
     lines = ["| policy | " + " | ".join(cols) + " |",

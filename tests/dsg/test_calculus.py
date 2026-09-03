@@ -193,3 +193,45 @@ def test_the_same_refinement_is_monotone_under_the_full_calculus():
     )
     assert sum(1 for a in s.assertions.values() if a.live) == 1
     assert not s.close_step()
+
+
+def test_inconsistent_slot_rate_is_bounded_and_reflects_breakage():
+    from dsg import invariants
+
+    broken = state("append-only")
+    e = broken.observe_entity("Pip", Span(0, 3))
+    broken.apply_assertion(CandidateAssertion(e, "location", "the forge"))
+    broken.step(1, 10_000)
+    broken.apply_assertion(CandidateAssertion(e, "location", "London"))
+    rate, bad, total = invariants.inconsistent_slot_rate(broken.assertions.values())
+    assert (bad, total) == (1, 1) and rate == 1.0
+
+    clean = state("dsg-full")
+    e = clean.observe_entity("Pip", Span(0, 3))
+    clean.apply_assertion(CandidateAssertion(e, "location", "the forge"))
+    clean.step(1, 10_000)
+    clean.apply_assertion(CandidateAssertion(e, "location", "London"))
+    rate, bad, total = invariants.inconsistent_slot_rate(clean.assertions.values())
+    assert (bad, total) == (0, 1) and rate == 0.0
+
+
+def test_merge_of_separately_named_characters_is_refused():
+    """A passing mention may not assert that two named characters are one."""
+    s = state("dsg-full")
+    jane = s.observe_entity("Jane Bennet", Span(0, 11))
+    s.observe_entity("Jane Bennet", Span(20, 31))
+    liz = s.observe_entity("Elizabeth Bennet", Span(40, 56))
+    s.observe_entity("Elizabeth Bennet", Span(60, 76))
+    op = s.merge_entities(liz, jane, reason="link")
+    assert op is Op.NOOP
+    assert s.deref(jane) != s.deref(liz)
+    # An explicit revelation is the one thing that licenses it.
+    assert s.merge_entities(liz, jane, reason="revealed", revealed=True) is not Op.NOOP
+
+
+def test_titles_distinguish_people_who_share_a_surname():
+    s = state("dsg-full")
+    mrs = s.observe_entity("Mrs. Bennet", Span(0, 11))
+    miss = s.observe_entity("Miss Bennet", Span(20, 31))
+    mr = s.observe_entity("Mr. Bennet", Span(40, 50))
+    assert len({s.deref(mrs), s.deref(miss), s.deref(mr)}) == 3

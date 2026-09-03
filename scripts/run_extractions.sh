@@ -13,7 +13,7 @@ run () {  # run <corpus> <model> [extra args...]
   local corpus="$1" model="$2"; shift 2
   local tag="${corpus}-${model}"
   echo "=== $tag ==="
-  $MODAL run dsg/infra/modal_extract.py \
+  $MODAL run --detach dsg/infra/modal_extract.py \
       --corpus "$corpus" --model "$model" "$@" \
       > "$LOG_DIR/extract-$tag.log" 2>&1
   grep -E '^\[dsg\] done|^\[local\] wrote|^\[local\] \{' "$LOG_DIR/extract-$tag.log" || true

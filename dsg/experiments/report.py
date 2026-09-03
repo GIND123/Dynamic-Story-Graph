@@ -81,7 +81,8 @@ def figure_main(records: list[dict], out: Path) -> Path:
         ("conll_f1", "Identity CoNLL F1", "higher is better", False),
         ("mention_acc", "Mention linking accuracy\n(probed in reading order)",
          "higher is better", False),
-        ("violations_per_100w", "Structural violations per 100 windows", "lower is better", True),
+        ("inconsistent_slot_rate", "Self-contradictory slots\n(share of the state)",
+         "lower is better", True),
     ]
     policies = _present(records)
     fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.6))
@@ -341,7 +342,7 @@ def build_report(results_dir: Path, out_dir: Path) -> Path:
         _comparison_table(
             payload.get("comparisons", {}),
             ("conll_f1", "mention_acc", "mention_acc_answered", "speaker_acc_matched",
-             "violations_per_100w", "rollback", "monotone_fraction",
+             "violations_per_100w", "inconsistent_slot_rate", "rollback", "monotone_fraction",
              "fragmentation", "conflation"),
         ),
         "",

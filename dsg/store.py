@@ -275,8 +275,36 @@ class NarrativeState:
             node.commit = CommitLevel.COMMITTED
             self._record(Op.ELABORATE, node.id, "provisional -> committed")
 
-    def merge_entities(self, keep_id: str, drop_id: str, reason: str = "") -> Op:
-        """Fold ``drop`` into ``keep``. Monotone iff ``drop`` was provisional."""
+    def names_are_compatible(self, a: EntityNode, b: EntityNode) -> bool:
+        """Could these two nodes' proper names denote the same person?
+
+        Compatible means one name is a titled or partial form of the other --
+        'Mr. Darcy' and 'Darcy', 'Elizabeth' and 'Elizabeth Bennet'. Two
+        *distinct* established names denoting one person does happen in fiction,
+        but it is a revelation the text makes explicitly, not something a
+        passing mention can assert.
+        """
+        if not (a.proper_names and b.proper_names):
+            return True
+        return any(
+            match_kind(x, y) in (MatchKind.EXACT, MatchKind.TITLED, MatchKind.NAME_SUBSET)
+            for x in a.proper_names
+            for y in b.proper_names
+        )
+
+    def merge_entities(
+        self, keep_id: str, drop_id: str, reason: str = "", revealed: bool = False
+    ) -> Op:
+        """Fold ``drop`` into ``keep``. Monotone iff ``drop`` was provisional.
+
+        A merge is irreversible in practice: once two characters are fused the
+        combined node matches both name sets and attracts further merges, so a
+        single bad link cascades. The guard below is therefore a hard structural
+        constraint rather than a heuristic -- an extractor may propose that an
+        unnamed reference is a named character, but it may not assert that two
+        separately named characters are one person. That claim requires an
+        explicit identity revelation (``revealed``).
+        """
         keep_id, drop_id = self.deref(keep_id), self.deref(drop_id)
         if keep_id == drop_id or keep_id not in self.entities or drop_id not in self.entities:
             return self._record(Op.NOOP, keep_id, "merge no-op")
@@ -284,6 +312,12 @@ class NarrativeState:
             return self._record(Op.NOOP, keep_id, f"merge suppressed by policy: {reason}")
 
         keep, drop = self.entities[keep_id], self.entities[drop_id]
+        if not revealed and not self.names_are_compatible(keep, drop):
+            return self._record(
+                Op.NOOP, keep_id,
+                f"refused merge of separately named characters "
+                f"({keep.canonical} / {drop.canonical}): {reason}",
+            )
         # Keep the node that is already committed, or the earlier one.
         if keep.commit is CommitLevel.PROVISIONAL and drop.commit is CommitLevel.COMMITTED:
             keep, drop = drop, keep

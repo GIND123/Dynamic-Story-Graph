@@ -171,7 +171,8 @@ def build(results_root: Path, out_dir: Path, names: list[str] | None = None) -> 
     figure_length_dependence(runs, figs / "fig7-length-dependence")
 
     metrics = (
-        "violations_per_100w", "conll_f1", "mention_acc", "rollback", "monotone_fraction",
+        "inconsistent_slot_rate", "violations_per_100w", "conll_f1", "mention_acc",
+        "rollback", "monotone_fraction",
     )
     body = [
         "# Cross-run comparison",

@@ -14,8 +14,9 @@ import re
 from dsg.lexicon import is_description, is_proper_name
 
 _TITLE_RE = re.compile(
-    r"^(mr|mrs|miss|ms|dr|sir|lady|lord|master|captain|colonel|major|"
-    r"professor|reverend|madame|mme|monsieur|m|aunt|uncle|st)\.?\s+",
+    r"^(mr|mister|mrs|missis|missus|miss|ms|dr|doctor|sir|lady|lord|master|"
+    r"mistress|captain|capt|colonel|col|major|general|gen|professor|prof|"
+    r"reverend|rev|madame|mme|monsieur|m|aunt|uncle|st|saint)\.?\s+",
     re.IGNORECASE,
 )
 _PUNCT_RE = re.compile(r"[^\w\s']+")
@@ -24,6 +25,48 @@ _WS_RE = re.compile(r"\s+")
 # Kinship/role words that look like names after a title but denote a relation.
 _ROLE_WORDS = frozenset({"father", "mother", "sister", "brother", "aunt", "uncle",
                          "son", "daughter", "wife", "husband", "cousin", "nurse"})
+
+# Titles are *distinguishing*, not decorative. In the fiction this corpus is
+# drawn from, "Mr. Bennet", "Mrs. Bennet" and "Miss Bennet" are three
+# different people who share a surname, so stripping the title before
+# comparing collapses a household into one node. Two surfaces that both carry
+# a title match only when the titles are the same or spelling variants.
+_TITLE_GROUPS: tuple[frozenset[str], ...] = (
+    frozenset({"mr", "mister"}),
+    frozenset({"mrs", "missis", "missus"}),
+    frozenset({"miss", "ms"}),
+    frozenset({"dr", "doctor"}),
+    frozenset({"professor", "prof"}),
+    frozenset({"reverend", "rev"}),
+    frozenset({"captain", "capt"}),
+    frozenset({"colonel", "col"}),
+    frozenset({"major"}),
+    frozenset({"general", "gen"}),
+    frozenset({"sir"}),
+    frozenset({"lady"}),
+    frozenset({"lord"}),
+    frozenset({"master"}),
+    frozenset({"mistress"}),
+    frozenset({"madame", "mme"}),
+    frozenset({"monsieur", "m"}),
+    frozenset({"st", "saint"}),
+    frozenset({"aunt"}),
+    frozenset({"uncle"}),
+)
+
+
+def title_of(surface: str) -> str:
+    """The honorific a surface opens with, normalised, or the empty string."""
+    m = _TITLE_RE.match((surface or "").strip())
+    return m.group(1).lower().rstrip(".") if m else ""
+
+
+def titles_conflict(a: str, b: str) -> bool:
+    """True when both carry a title and those titles denote different people."""
+    ta, tb = title_of(a), title_of(b)
+    if not ta or not tb or ta == tb:
+        return False
+    return not any(ta in group and tb in group for group in _TITLE_GROUPS)
 
 
 class MatchKind:
@@ -59,6 +102,9 @@ def match_kind(a: str, b: str) -> str:
         return MatchKind.NONE
     if na == nb:
         return MatchKind.EXACT
+    if titles_conflict(a, b):
+        # Same surname, different honorific: a household, not a person.
+        return MatchKind.NONE
     ta, tb = tokens(a), tokens(b)
     if not ta or not tb:
         return MatchKind.NONE

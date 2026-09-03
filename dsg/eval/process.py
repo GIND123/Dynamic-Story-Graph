@@ -33,6 +33,9 @@ class ProcessScore:
     superseded_assertions: int = 0
     retracted_assertions: int = 0
     contradiction_density: float = 0.0
+    inconsistent_slot_rate: float = 0.0
+    inconsistent_slots: int = 0
+    total_slots: int = 0
     parse_failures: int = 0
     links_proposed: int = 0
     links_bound: int = 0
@@ -53,6 +56,9 @@ class ProcessScore:
             "superseded": float(self.superseded_assertions),
             "retracted": float(self.retracted_assertions),
             "contradiction_density": self.contradiction_density,
+            "inconsistent_slot_rate": self.inconsistent_slot_rate,
+            "inconsistent_slots": float(self.inconsistent_slots),
+            "total_slots": float(self.total_slots),
             "parse_failures": float(self.parse_failures),
             "links_proposed": float(self.links_proposed),
             "links_bound": float(self.links_bound),
@@ -71,6 +77,9 @@ def score_process(result: RunResult) -> ProcessScore:
     live_nodes = state.live_entities()
     live_assertions = sum(1 for a in state.assertions.values() if a.live)
     windows = max(1, result.windows)
+    slot_rate, bad_slots, all_slots = invariants.inconsistent_slot_rate(
+        state.assertions.values()
+    )
     return ProcessScore(
         windows=result.windows,
         ops_total=ops_total,
@@ -92,6 +101,9 @@ def score_process(result: RunResult) -> ProcessScore:
             1 for a in state.assertions.values() if a.status is Status.RETRACTED
         ),
         contradiction_density=len(state.violations) / max(1, live_assertions),
+        inconsistent_slot_rate=slot_rate,
+        inconsistent_slots=bad_slots,
+        total_slots=all_slots,
         parse_failures=result.parse_failures,
         links_proposed=result.links_proposed,
         links_bound=result.links_bound,

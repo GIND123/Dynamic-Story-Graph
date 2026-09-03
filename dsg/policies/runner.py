@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from dsg.lexicon import is_proper_name
 from dsg.proposals import WindowProposal
-from dsg.schemas import Certainty, Op, Span
+from dsg.schemas import Certainty, EntityNode, Op, Span
 from dsg.store import POLICIES, CandidateAssertion, NarrativeState, PolicyConfig
 
 _CERTAINTY = {
@@ -165,22 +166,38 @@ def run_policy(
 
 
 def _apply_link(state: NarrativeState, link: dict[str, str], span: Span) -> str:
+    """Apply one proposed identity link, subject to the same guard as a merge.
+
+    Binding a new surface onto an existing node *is* an identity claim -- it is
+    a merge whose source node does not exist yet -- so it goes through the same
+    constraints. Two consequences matter. A policy that may not merge does not
+    get identity resolution smuggled in through this path; it simply observes
+    the surface, which creates a separate node. And a proper name is never bound
+    onto a node whose established names it conflicts with, however confidently
+    the extractor asserts it.
+    """
     surface, same_as = link.get("surface", ""), link.get("same_as", "")
     if not surface or not same_as:
         return "skipped"
+    if not state.policy.allow_merge:
+        return "blocked"
     target = state.resolve(same_as)
     if target is None:
         return "unresolved"
+
     source = state.resolve(surface)
     if source is None:
-        # Bind the new surface straight onto the known node: monotone, and the
-        # commonest way a deferred description acquires an identity.
         node = state.entities[state.deref(target)]
-        node.observe(surface, state.index, span, proper=False)
+        if is_proper_name(surface) and node.proper_names:
+            probe = EntityNode(id="__probe__", canonical=surface, proper_names={surface})
+            if not state.names_are_compatible(node, probe):
+                return "blocked"
+        node.observe(surface, state.index, span, proper=is_proper_name(surface))
         state._record(  # noqa: SLF001 - the store owns the log, this is its writer
             Op.ELABORATE, node.id, f"bound '{surface}' to {node.canonical}", payload=surface
         )
         return "bound"
+
     if state.deref(source) != state.deref(target):
         op = state.merge_entities(target, source, reason=f"link '{surface}' -> '{same_as}'")
         return "merged" if op.value.startswith("merge") else "blocked"

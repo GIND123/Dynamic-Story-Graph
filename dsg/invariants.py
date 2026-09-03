@@ -139,6 +139,29 @@ def check(
     return out
 
 
+def inconsistent_slot_rate(
+    assertions: Iterable[Assertion],
+) -> tuple[float, int, int]:
+    """Share of single-valued slots holding two or more live conflicting values.
+
+    The raw I1 count is pairwise and therefore quadratic in how badly a slot has
+    broken: one slot with twenty rival values contributes 190 violations. That
+    is a real signal but an unreadable headline, so this reports the bounded
+    quantity a reader actually wants -- what fraction of the state's slots are
+    self-contradictory -- alongside it.
+    """
+    slots: dict[tuple[str, str], set[str]] = {}
+    for a in assertions:
+        if a.status is not Status.BELIEVED or is_multi_valued(a.predicate):
+            continue
+        key = f"{a.object.strip().lower()}|{a.polarity}"
+        slots.setdefault(a.slot, set()).add(key)
+    if not slots:
+        return 0.0, 0, 0
+    bad = sum(1 for values in slots.values() if len(values) > 1)
+    return bad / len(slots), bad, len(slots)
+
+
 def summarize(violations: Iterable[Violation]) -> dict[str, int]:
     counts = dict.fromkeys(CODES, 0)
     for v in violations:

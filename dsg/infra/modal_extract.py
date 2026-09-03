@@ -11,7 +11,14 @@ lockstep -- step ``t`` submits window ``t`` of every book at once. Each book
 still sees only its own prefix, while vLLM gets a batch as wide as the corpus.
 
     modal run dsg/infra/modal_extract.py --books 2 --max-windows 8   # smoke
-    modal run dsg/infra/modal_extract.py --model qwen7b              # full run
+    modal run --detach dsg/infra/modal_extract.py --model qwen7b     # full run
+
+Always pass ``--detach`` for a full run. Without it, Modal cancels the remote
+function the moment the local client disconnects, and an hour of GPU time is
+billed for nothing. Each run also writes its proposals to the ``dsg-results``
+volume before returning, so a disconnected run can be recovered afterwards:
+
+    modal run dsg/infra/modal_extract.py::fetch --run-id pdnc-qwen7b-w3200
 """
 
 from __future__ import annotations
@@ -221,6 +228,40 @@ def extract_a100(
 _FNS = {"L4": extract_l4, "A10G": extract_a10g, "A100-40GB": extract_a100}
 
 
+@app.function(image=image, volumes={"/results": results}, timeout=600)
+def read_result(run_id: str) -> dict:
+    """Return a completed run's payload from the volume."""
+    path = Path("/results") / f"{run_id}.json"
+    if not path.exists():
+        raise FileNotFoundError(f"no result for run_id '{run_id}' in the volume")
+    return json.loads(path.read_text())
+
+
+def _write_local(result: dict, out_dir: str, run_id: str) -> Path:
+    out_root = Path(out_dir) / run_id
+    out_root.mkdir(parents=True, exist_ok=True)
+    for book_id, windows in result["books"].items():
+        with (out_root / f"{book_id}.jsonl").open("w") as fh:
+            fh.write(json.dumps({"meta": {**result["meta"], "book_id": book_id}}) + "\n")
+            for w in windows:
+                fh.write(json.dumps(w) + "\n")
+    (out_root / "meta.json").write_text(json.dumps(result["meta"], indent=2))
+    return out_root
+
+
+@app.local_entrypoint()
+def fetch(run_id: str, out_dir: str = "artifacts/proposals"):
+    """Pull a finished run's proposals down from the volume.
+
+    Use this when a run completed on Modal but the local client had already
+    disconnected, so nothing was written locally.
+    """
+    result = read_result.remote(run_id)
+    out_root = _write_local(result, out_dir, run_id)
+    print(f"[local] wrote {len(result['books'])} books to {out_root}")
+    print(f"[local] {json.dumps(result['meta'])}")
+
+
 @app.local_entrypoint()
 def main(
     model: str = "qwen7b",
@@ -257,14 +298,6 @@ def main(
         max_tokens=max_tokens, run_id=run_id,
     )
 
-    out_root = Path(out_dir) / run_id
-    out_root.mkdir(parents=True, exist_ok=True)
-    for book_id, windows in result["books"].items():
-        path = out_root / f"{book_id}.jsonl"
-        with path.open("w") as fh:
-            fh.write(json.dumps({"meta": {**result["meta"], "book_id": book_id}}) + "\n")
-            for w in windows:
-                fh.write(json.dumps(w) + "\n")
-    (out_root / "meta.json").write_text(json.dumps(result["meta"], indent=2))
+    out_root = _write_local(result, out_dir, run_id)
     print(f"[local] wrote {len(result['books'])} books to {out_root}")
     print(f"[local] {json.dumps(result['meta'])}")
