@@ -10,6 +10,9 @@ referring expressions.
 **Status.** PDNC at 3B and 1.5B and LitBank at 7B are complete. The PDNC 7B run
 is still extracting; this document is updated when it lands.
 
+Every trend against discourse position is reported with a shuffled-window
+control, because state growth alone produces such trends (§2, F4).
+
 ---
 
 ## 1. The headline
@@ -70,8 +73,33 @@ is wrong." Did not fire; the premise holds decisively.**
 42.3% of `append-only`'s slots are self-contradictory at 3B on full novels.
 
 **F4 — "revision events distribute uniformly over discourse position ⇒ the
-instrument has no signal." Not yet assessed** — this is reported from the
-revision profile once the 7B run completes.
+instrument has no signal." Fired for revision; did not fire for elaboration.**
+
+In narrative order both operations trend strongly with position: elaboration
+falls (Spearman ρ = −0.59, p = 0.007) and revision rises steeply, from 4.6% of
+operations in the first twentieth of a book to 29.8% in the last
+(ρ = +0.82, p = 9×10⁻⁶). Read alone that is a tidy narratological story —
+exposition first, reversal later.
+
+It is mostly an artefact, and only a control shows it. As a book proceeds the
+state holds more assertions, so *any* conflict-driven operation becomes
+mechanically more likely. Permuting the reading order destroys narrative order
+while preserving state growth exactly:
+
+| ordering | elaboration ρ | revision ρ |
+| --- | --- | --- |
+| narrative | **−0.59** (p = 0.007) | **+0.82** (p = 9×10⁻⁶) |
+| shuffled | +0.08 (p = 0.75) | **+0.69** (p = 8×10⁻⁴) |
+
+The revision trend largely **survives** shuffling, so most of it is state
+growth rather than a property of the text; the honest residual is the gap
+between ρ = 0.82 and ρ = 0.69, which this design cannot cleanly separate. The
+elaboration trend **disappears** under shuffling. That one is real: refinement
+of underspecified structure is genuinely front-loaded in narrative order, and
+not explained by how much state has accumulated.
+
+So the instrument has signal, but less than the uncontrolled numbers suggest,
+and in the opposite operation from the one we expected to carry it.
 
 ## 3. What each mechanism actually buys
 

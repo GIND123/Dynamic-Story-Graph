@@ -140,6 +140,41 @@ def compare_groups(
     )
 
 
+def position_trend(
+    profiles: dict[str, dict], policy: str = "dsg-full"
+) -> dict[str, object]:
+    """Do elaboration and revision move with position in the book?
+
+    Reported with a shuffled-window control. As a book proceeds the state holds
+    more assertions, so *any* conflict-driven operation becomes mechanically
+    more likely -- a rising revision rate could be pure state growth rather than
+    a property of the narration. Shuffling the reading order destroys narrative
+    order while preserving state growth exactly, so a trend that survives the
+    shuffle is an artefact and one that disappears is a property of the text.
+    """
+    from scipy import stats
+
+    bins: dict[int, dict[str, list[float]]] = {}
+    for by_policy in profiles.values():
+        for entry in by_policy.get(policy, []):
+            slot = bins.setdefault(entry["bin"], {"elab": [], "rev": []})
+            slot["elab"].append(float(entry["elaboration_rate"]))
+            slot["rev"].append(float(entry["revision_rate"]))
+    if len(bins) < 4:
+        return {}
+    xs = sorted(bins)
+    out: dict[str, object] = {"n_bins": len(xs)}
+    for key, name in (("elab", "elaboration"), ("rev", "revision")):
+        ys = [sum(bins[x][key]) / len(bins[x][key]) for x in xs]
+        rho, p = stats.spearmanr(xs, ys)
+        out[name] = {
+            "rho": float(rho), "p_value": float(p),
+            "first_bin": ys[0], "last_bin": ys[-1],
+            "series": [{"bin": x, "rate": y} for x, y in zip(xs, ys, strict=False)],
+        }
+    return out
+
+
 def analyse(
     results: dict[str, RunResult], novels: dict[str, Novel], policy: str = "dsg-full"
 ) -> dict:

@@ -330,6 +330,34 @@ def _comparison_table(comparisons: dict, metrics: tuple[str, ...]) -> str:
     return "\n".join(lines)
 
 
+def _trend_table(data: dict) -> str:
+    """Elaboration and revision against position, with the shuffled control."""
+    real = data.get("position_trend") or {}
+    shuf = data.get("position_trend_shuffled") or {}
+    if not real:
+        return "_not computed_"
+    lines = [
+        "Spearman correlation between position in the book and the share of "
+        "update operations of each kind. The shuffled row permutes reading "
+        "order, which preserves state growth exactly while destroying narrative "
+        "order: a trend that survives the shuffle is an artefact of the state "
+        "getting larger, one that disappears is a property of the text.",
+        "",
+        "| ordering | operation | rho | p | first bin | last bin |",
+        "|---|---|---|---|---|---|",
+    ]
+    for label, block in (("narrative", real), ("shuffled", shuf)):
+        for name in ("elaboration", "revision"):
+            e = block.get(name)
+            if not e:
+                continue
+            lines.append(
+                f"| {label} | {name} | {e['rho']:+.3f} | {e['p_value']:.2g} | "
+                f"{e['first_bin']:.3f} | {e['last_bin']:.3f} |"
+            )
+    return "\n".join(lines)
+
+
 def _instrument_table(data: dict) -> str:
     rows = data.get("by_narrative_person") or []
     if not rows:
@@ -412,6 +440,10 @@ def build_report(results_dir: Path, out_dir: Path) -> Path:
              "violations_per_100w", "inconsistent_slot_rate", "rollback", "monotone_fraction",
              "fragmentation", "conflation"),
         ),
+        "",
+        "## Where the reader's model is refined versus corrected",
+        "",
+        _trend_table(payload.get("instrument", {})),
         "",
         "## Identity-resolution latency (measurement instrument)",
         "",

@@ -82,6 +82,22 @@ def _prefix_curves(
     return curves
 
 
+def _shuffled_run(proposals: list[WindowProposal], novel: Novel):
+    """Re-run with the reading order permuted: the control for state growth."""
+    import random
+
+    order = list(proposals)
+    random.Random(0).shuffle(order)
+    renumbered = [
+        WindowProposal(
+            index=i, start=p.start, end=p.end, entities=p.entities, links=p.links,
+            facts=p.facts, speech=p.speech, parse_ok=p.parse_ok,
+        )
+        for i, p in enumerate(order)
+    ]
+    return run_policy(renumbered, "dsg-full", causal=False, text_length=len(novel.text))
+
+
 def _lead_character(novel: Novel) -> str:
     """The most-quoted character: the one a reader would most want traced."""
     from collections import Counter
@@ -118,6 +134,7 @@ def run_study(
     example_rows: list[dict] = []
     latency_results: dict[str, object] = {}
     trajectories: dict[str, dict] = {}
+    shuffled_profiles: dict[str, dict] = {}
     curves: dict[str, dict[str, list]] = {}
     profiles: dict[str, dict[str, list]] = {}
     growth: dict[str, dict[str, list]] = {}
@@ -163,6 +180,7 @@ def run_study(
             row["mention_by_decile"] = mentions.by_decile
         if with_curves:
             curves[book_id] = _prefix_curves(proposals, novel, policies)
+        shuffled_profiles[book_id] = {"dsg-full": revision_profile(_shuffled_run(proposals, novel))}
         print(f"[study] {book_id}: {len(policies)} policies done", flush=True)
 
     payload = {
@@ -179,7 +197,11 @@ def run_study(
         "growth": growth,
         "examples": example_rows,
         "trajectories": trajectories,
-        "instrument": instrument.analyse(latency_results, novels),
+        "instrument": {
+            **instrument.analyse(latency_results, novels),
+            "position_trend": instrument.position_trend(profiles),
+            "position_trend_shuffled": instrument.position_trend(shuffled_profiles),
+        },
         "comparisons": compare(records, policies),
     }
     (out_dir / "results.json").write_text(json.dumps(payload, indent=2))
