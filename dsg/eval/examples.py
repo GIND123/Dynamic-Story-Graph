@@ -43,6 +43,12 @@ class Example:
         }
 
 
+def _name(state, value: str) -> str:
+    """Show a person's name rather than the internal node id it resolves to."""
+    node = state.entities.get(value)
+    return node.canonical if node is not None else value
+
+
 def _context(novel: Novel, start: int, end: int, pad: int = 160) -> str:
     lo, hi = max(0, start - pad), min(len(novel.text), end + pad)
     return " ".join(novel.text[lo:hi].split())
@@ -66,10 +72,10 @@ def collect(result: RunResult, novel: Novel, limit: int = 40) -> list[Example]:
                 subject_node.canonical if subject_node else assertion.subject
             )
             example.predicate = assertion.predicate
-            example.new_value = assertion.object
+            example.new_value = _name(state, assertion.object)
             prior = state.assertions.get(record.payload or "")
             if prior is not None:
-                example.old_value = prior.object
+                example.old_value = _name(state, prior.object)
             if assertion.provenance is not None:
                 example.evidence = _context(
                     novel, assertion.provenance.start, assertion.provenance.end, pad=0

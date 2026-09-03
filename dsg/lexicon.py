@@ -219,6 +219,26 @@ PERSON_NOUNS: frozenset[str] = frozenset(
 )
 
 
+# Predicates whose object is drawn from a small closed set. A small model will
+# happily emit "alive = 1800" or "gender = reported"; such a fact carries no
+# information and, worse, generates spurious supersessions when the next junk
+# value arrives. Checked at parse time so every policy sees the same stream.
+CLOSED_RANGE: dict[str, frozenset[str]] = {
+    "alive": frozenset({"true", "false", "yes", "no", "alive", "dead", "living",
+                        "deceased", "killed", "died", "survives"}),
+    "gender": frozenset({"male", "female", "man", "woman", "boy", "girl",
+                         "m", "f", "masculine", "feminine", "non-binary"}),
+}
+
+
+def is_valid_object(predicate: str, obj: str) -> bool:
+    """False when a closed-range predicate is given a value outside its range."""
+    allowed = CLOSED_RANGE.get(predicate)
+    if allowed is None:
+        return True
+    return (obj or "").strip().lower().rstrip(".") in allowed
+
+
 def is_person_description(surface: str) -> bool:
     """True when a description plausibly denotes a person rather than a thing.
 

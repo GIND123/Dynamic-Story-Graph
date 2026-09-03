@@ -341,8 +341,8 @@ def build_report(results_dir: Path, out_dir: Path) -> Path:
         _comparison_table(
             payload.get("comparisons", {}),
             ("conll_f1", "mention_acc", "mention_acc_answered", "speaker_acc_matched",
-             "violations_per_100w", "fragmentation",
-             "monotone_fraction"),
+             "violations_per_100w", "rollback", "monotone_fraction",
+             "fragmentation", "conflation"),
         ),
         "",
         "## Identity-resolution latency (measurement instrument)",

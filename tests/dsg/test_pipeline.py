@@ -187,3 +187,34 @@ def test_identity_questions_are_asked_only_about_people():
     unnamed, names = needs_resolution(proposal, ledger)
     assert unnamed == ["the young man"]
     assert "Mrs. Miller" in names and "Winterbourne" in names
+
+
+def test_cached_proposals_are_filtered_on_load_not_only_at_parse_time():
+    """A stream cached before a schema check existed must still be filtered."""
+    from dsg.proposals import WindowProposal
+
+    raw = {
+        "index": 0, "start": 0, "end": 10,
+        "entities": [{"surface": "Elizabeth", "kind": "name"},
+                     {"surface": "Will you give me a lump of sugar?", "kind": "name"}],
+        "facts": [
+            {"subject": "Elizabeth", "predicate": "alive", "object": "1800",
+             "certainty": "narrated", "evidence": ""},
+            {"subject": "Elizabeth", "predicate": "location", "object": "Kellynch",
+             "certainty": "narrated", "evidence": ""},
+        ],
+        "speech": [], "links": [], "parse_ok": True,
+    }
+    proposal = WindowProposal.from_json(raw)
+    assert [e["surface"] for e in proposal.entities] == ["Elizabeth"]
+    assert [f.object for f in proposal.facts] == ["Kellynch"]
+
+
+def test_closed_range_predicates_reject_values_outside_their_range():
+    from dsg.lexicon import is_valid_object
+
+    assert is_valid_object("alive", "dead")
+    assert not is_valid_object("alive", "1800")
+    assert is_valid_object("gender", "female")
+    assert not is_valid_object("gender", "reported")
+    assert is_valid_object("location", "anything at all")  # open range

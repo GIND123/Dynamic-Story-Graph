@@ -16,7 +16,12 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from dsg.lexicon import is_person_description, is_proper_name
+from dsg.lexicon import (
+    is_person_description,
+    is_proper_name,
+    is_valid_object,
+    normalize_predicate,
+)
 from dsg.matching import classify_surface
 from dsg.schemas import Span, Window
 from dsg.windows import iter_windows
@@ -102,10 +107,25 @@ class WindowProposal:
 
     @classmethod
     def from_json(cls, d: dict) -> WindowProposal:
+        # Schema checks are applied on load as well as at parse time, so a
+        # proposal stream cached before a check existed is filtered exactly as a
+        # fresh one would be -- and identically for every policy replaying it.
         return cls(
-            index=d["index"], start=d["start"], end=d["end"],
-            entities=d.get("entities", []), links=d.get("links", []),
-            facts=[FactProposal(**f) for f in d.get("facts", [])],
+            index=d["index"],
+            start=d["start"],
+            end=d["end"],
+            entities=[
+                e for e in d.get("entities", [])
+                if is_plausible_entity(e.get("surface", ""))
+            ],
+            links=d.get("links", []),
+            facts=[
+                FactProposal(**f)
+                for f in d.get("facts", [])
+                if is_valid_object(
+                    normalize_predicate(f.get("predicate", "")), f.get("object", "")
+                )
+            ],
             speech=[SpeechProposal(**s) for s in d.get("speech", [])],
             parse_ok=d.get("parse_ok", True),
         )
@@ -247,6 +267,8 @@ def parse_proposal(raw: str, window: Window) -> WindowProposal:
             found_any = True
         elif tag == "FACT" and len(cells) >= 4 and cells[1] and cells[2] and cells[3]:
             if not is_plausible_entity(cells[1]):
+                continue
+            if not is_valid_object(normalize_predicate(cells[2]), cells[3]):
                 continue
             certainty = cells[4].lower() if len(cells) > 4 else "narrated"
             if certainty not in ("narrated", "reported", "implied"):
