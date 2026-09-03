@@ -195,13 +195,18 @@ COMPARISON_METRICS = (
 
 # Pairs that answer a specific question, rather than every combination.
 COMPARISON_PAIRS = (
-    ("dsg-full", "append-only"),      # does the calculus help at all?
-    ("dsg-full", "window-only"),      # does persistent state help at all?
-    ("dsg-full", "dsg-merge"),        # does fact-level revision add anything?
-    ("dsg-full", "dsg-eager"),        # does *deferred commitment* add anything?
-    ("dsg-full", "retrospective"),    # what does causality cost?
+    # The ladder, one rung at a time -- each isolates a single mechanism.
+    ("append-only", "window-only"),   # does persistent state help at all?
+    ("dsg-merge", "append-only"),     # what does identity merging buy?
+    ("dsg-eager", "dsg-merge"),       # what does fact-level revision buy?
+    ("dsg-full", "dsg-eager"),        # what does *deferred commitment* buy?
+    ("retrospective", "dsg-full"),    # what does causality cost?
+    # End to end, against the standard incremental pipeline and the floor.
+    ("dsg-full", "append-only"),
+    ("dsg-full", "window-only"),
+    ("dsg-full", "dsg-merge"),
+    ("dsg-full", "retrospective"),
     ("dsg-eager", "append-only"),
-    ("append-only", "window-only"),
 )
 
 
