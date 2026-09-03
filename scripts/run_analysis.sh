@@ -14,9 +14,9 @@ score () {  # score <corpus> <run-dir-name> <out-name>
   $PY -m dsg report --results "artifacts/results/$out" --out "artifacts/report/$out"
 }
 
-# The in-flight runs of 2026-09-03 were named before a fix to run-id ordering
-# and landed in "-w0" directories. Normalise them to the setting actually used
-# so paths match what the extractor writes from now on.
+# Runs extracted before the run-id ordering fix landed in "-w0" directories.
+# Normalise them to the window size actually used, so paths match what the
+# extractor writes now. The extraction itself was unaffected.
 for pair in "pdnc-qwen7b-w0:pdnc-qwen7b-w3200" "litbank-qwen7b-w0:litbank-qwen7b-w1200" \
             "pdnc-qwen3b-w0:pdnc-qwen3b-w3200" "pdnc-qwen1.5b-w0:pdnc-qwen1.5b-w3200" \
             "pdnc-qwen14b-w0:pdnc-qwen14b-w3200"; do
@@ -29,5 +29,8 @@ score litbank litbank-qwen7b-w1200  litbank-qwen7b
 score pdnc    pdnc-qwen3b-w3200     pdnc-qwen3b
 score pdnc    pdnc-qwen1.5b-w3200   pdnc-qwen1.5b
 score pdnc    pdnc-qwen14b-w3200    pdnc-qwen14b
+# Cross-run views: model scale, and whether the gap grows with reading depth.
+$PY -m dsg compare --results-root artifacts/results --out artifacts/report/comparison
+
 echo "analysis complete"
 
