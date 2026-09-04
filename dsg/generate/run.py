@@ -219,6 +219,25 @@ def apply_extraction(run: StoryRun, raw: str, chapter_text: str) -> None:
     run.state.close_step()
 
 
+def replay_extraction(state, chapters, cache, book_id, upto, offset=0) -> int:
+    """Rebuild a state from cached extractions, without touching a GPU.
+
+    This is what makes an interrupted dataset build cheap to resume: the
+    expensive step is the extraction, and it is cached, so recovery replays it
+    on the CPU instead of paying for it twice. Returns the new character offset.
+    """
+    for step in range(min(upto, len(chapters))):
+        text = chapters[step]
+        raw = cache.get(f"{book_id}:{step}", "")
+        window = Window(index=step, start=offset, end=offset + len(text), text=text)
+        proposal = parse_write_extraction(raw, window)
+        state.step(step, window.end)
+        apply_window(state, proposal, Span(window.start, window.end))
+        state.close_step()
+        offset = window.end + 2
+    return offset
+
+
 def _canon_held(run: StoryRun, premise: Premise) -> list[str]:
     """Which planted facts the state actually holds as live beliefs.
 
@@ -290,6 +309,6 @@ __all__ = [
     "ChapterRecord", "POLICY_FOR", "apply_extraction", "chapter_prompts",
     "clean_chapter", "extraction_prompt", "init_runs", "record",
     "state_targets", "summary_targets", "build_summary_prompt", "tuned_targets",
-    "guarded_targets", "check_chapter_against_state",
+    "guarded_targets", "check_chapter_against_state", "replay_extraction",
     "parse_write_extraction", "WRITE_EXTRACT_PROMPT",
 ]

@@ -84,7 +84,11 @@ def build(
     from vllm import LLM, SamplingParams
 
     from dsg.data.gutenberg import load_books
-    from dsg.generate.run import WRITE_EXTRACT_PROMPT, parse_write_extraction
+    from dsg.generate.run import (
+        WRITE_EXTRACT_PROMPT,
+        parse_write_extraction,
+        replay_extraction,
+    )
     from dsg.policies.runner import apply_window
     from dsg.schemas import Span, Window
     from dsg.store import POLICIES, NarrativeState
@@ -146,20 +150,11 @@ def build(
         start_step = int(saved.get("completed_steps", 0))
         print(f"[data] resuming from checkpoint: {len(rows)} rows, "
               f"{start_step} chapters done", flush=True)
-        for step in range(start_step):
-            for plan in plans:
-                if step >= len(plan["chapters"]):
-                    continue
-                text = plan["chapters"][step]
-                key = f"{plan['book'].text_id}:{step}"
-                raw = cache.get(key, "")
-                start = plan["offset"]
-                window = Window(index=step, start=start, end=start + len(text), text=text)
-                proposal = parse_write_extraction(raw, window)
-                plan["state"].step(step, window.end)
-                apply_window(plan["state"], proposal, Span(window.start, window.end))
-                plan["state"].close_step()
-                plan["offset"] = window.end + 2
+        for plan in plans:
+            plan["offset"] = replay_extraction(
+                plan["state"], plan["chapters"], cache,
+                plan["book"].text_id, start_step, plan["offset"],
+            )
 
     def save_checkpoint(completed: int) -> None:
         ckpt_path.write_text(json.dumps({

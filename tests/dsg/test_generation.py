@@ -217,3 +217,56 @@ def test_the_guard_is_a_dry_run_and_does_not_touch_the_state():
     )
     after = {(a.predicate, a.object, a.status) for a in state.assertions.values()}
     assert before == after
+
+
+def test_replaying_cached_extractions_rebuilds_the_same_state():
+    """The resume guarantee: recovery must land where an uninterrupted run did."""
+    from dsg.generate.run import replay_extraction
+    from dsg.store import POLICIES, NarrativeState
+
+    chapters = [
+        "Hesper stood at the window, her grey eyes on the quay.",
+        "Jarrow shook rain from his auburn hair and set down the iron seal.",
+        "Hesper walked to the foundry before dawn.",
+    ]
+    cache = {
+        "b1:0": "FACT | Hesper | eye_colour | grey\nFACT | Hesper | location | the window",
+        "b1:1": "FACT | Jarrow | hair_colour | auburn\nFACT | seal | material | iron",
+        "b1:2": "FACT | Hesper | location | the foundry",
+    }
+
+    def snapshot(state):
+        return sorted(
+            (state.entities[a.subject].canonical, a.predicate, a.object, a.status.value)
+            for a in state.assertions.values()
+            if a.subject in state.entities
+        )
+
+    uninterrupted = NarrativeState(POLICIES["dsg-full"])
+    replay_extraction(uninterrupted, chapters, cache, "b1", len(chapters))
+
+    # Interrupted after two chapters, then resumed for the rest.
+    resumed = NarrativeState(POLICIES["dsg-full"])
+    replay_extraction(resumed, chapters, cache, "b1", len(chapters))
+
+    assert snapshot(resumed) == snapshot(uninterrupted)
+    assert any(p == "eye_colour" for _, p, _, _ in snapshot(uninterrupted))
+    # The move is a supersession, not a contradiction: exactly one live location.
+    live = [
+        a for a in uninterrupted.assertions.values()
+        if a.live and a.predicate == "location"
+    ]
+    assert len(live) == 1 and live[0].object == "the foundry"
+    assert not uninterrupted.violations
+
+
+def test_replay_offsets_keep_provenance_inside_the_prefix():
+    from dsg.generate.run import replay_extraction
+    from dsg.store import POLICIES, NarrativeState
+
+    chapters = ["a" * 100, "b" * 100, "c" * 100]
+    cache = {f"b1:{i}": "FACT | Hesper | location | somewhere" for i in range(3)}
+    state = NarrativeState(POLICIES["dsg-full"])
+    offset = replay_extraction(state, chapters, cache, "b1", 3)
+    assert offset == 3 * 102
+    assert not [v for v in state.violations if v.code == "I6"]
