@@ -13,29 +13,51 @@ import matplotlib.pyplot as plt
 from dsg.experiments.report import CONTEXT, INK, INK_SOFT, _save, _style
 from dsg.generate.score import compare, curves, score_runs, summarize
 
-ORDER = ("none", "last-chapter", "rolling-summary", "full-context",
-         "append-only-state", "dsg-state")
+ORDER = (
+    "base:none",
+    "base:last-chapter",
+    "base:rolling-summary",
+    "base:full-context",
+    "base:append-only-state",
+    "base:dsg-state",
+    "tuned:full-context",
+    "tuned:dsg-state",
+    "tuned:dsg-repair",
+)
 
-FOCAL = "#2a78d6"    # dsg-state -- the system
-FOIL = "#eb6834"     # append-only-state -- the direct ablation
-STRONG = "#1baf7a"   # full-context -- the strong practical baseline
+FOCAL = "#2a78d6"    # the system: state under the full calculus
+FOIL = "#eb6834"     # its ablation: state that cannot be revised
+STRONG = "#1baf7a"   # the strong practical baseline: paste the transcript
 
 COLOR_FOR = {
-    "dsg-state": FOCAL,
-    "append-only-state": FOIL,
-    "full-context": STRONG,
-    "none": CONTEXT,
-    "last-chapter": CONTEXT,
-    "rolling-summary": CONTEXT,
+    "base:none": CONTEXT,
+    "base:last-chapter": CONTEXT,
+    "base:rolling-summary": CONTEXT,
+    "base:full-context": STRONG,
+    "base:append-only-state": FOIL,
+    "base:dsg-state": FOCAL,
+    "tuned:full-context": STRONG,
+    "tuned:dsg-state": FOCAL,
+    "tuned:dsg-repair": FOCAL,
 }
 LABEL = {
-    "none": "no memory",
-    "last-chapter": "last chapter",
-    "rolling-summary": "rolling summary",
-    "full-context": "full context",
-    "append-only-state": "state, no revision",
-    "dsg-state": "DSG state",
+    "base:none": "no memory",
+    "base:last-chapter": "last chapter",
+    "base:rolling-summary": "rolling summary",
+    "base:full-context": "full context",
+    "base:append-only-state": "state, no revision",
+    "base:dsg-state": "DSG state",
+    "tuned:full-context": "tuned + full context",
+    "tuned:dsg-state": "tuned + DSG state",
+    "tuned:dsg-repair": "tuned + DSG + guard",
 }
+# Drawn with a marker and full weight; everything else is context grey.
+EMPHASISED = (
+    "base:full-context", "base:append-only-state", "base:dsg-state",
+    "tuned:full-context", "tuned:dsg-state", "tuned:dsg-repair",
+)
+# Dashed where the backbone is the fine-tuned one, so variant reads off the line.
+TUNED = tuple(c for c in ORDER if c.startswith("tuned:"))
 
 
 def figure_violation_curve(payload: dict, out: Path) -> Path:
@@ -48,16 +70,17 @@ def figure_violation_curve(payload: dict, out: Path) -> Path:
         if not ys:
             continue
         xs = list(range(1, len(ys) + 1))
-        focal = condition in ("dsg-state", "append-only-state", "full-context")
+        focal = condition in EMPHASISED
         ax.plot(
             xs, ys, color=COLOR_FOR[condition],
             linewidth=2.2 if focal else 1.2, alpha=1.0 if focal else 0.55,
             marker="o" if focal else None, markersize=4,
+            linestyle=(0, (5, 2)) if condition in TUNED else "-",
             zorder=3 if focal else 2,
         )
         ax.text(xs[-1] + 0.12, ys[-1], LABEL[condition], fontsize=8, va="center",
                 color=COLOR_FOR[condition] if focal else INK_SOFT)
-    ax.set_xlim(1, len(next(iter(series.values()))) + 3.6)
+    ax.set_xlim(1, len(next(iter(series.values()))) + 6.5)
     ax.set_ylim(bottom=0)
     _style(
         ax,
@@ -126,8 +149,9 @@ def _comparison_table(comparisons: dict) -> str:
 def _examples(payload: dict, limit: int = 12) -> str:
     rows = [
         r for r in payload["records"]
-        if r.get("evidence") and r["condition"] in ("full-context", "rolling-summary",
-                                                    "none", "append-only-state")
+        if r.get("evidence")
+        and r["condition"] in ("base:full-context", "base:rolling-summary",
+                               "base:none", "base:append-only-state")
     ]
     rows.sort(key=lambda r: -r["chapter"])
     if not rows:

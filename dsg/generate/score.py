@@ -121,13 +121,22 @@ def curves(scores: list[RunScore]) -> dict[str, list[float]]:
 
 
 COMPARISONS = (
-    ("dsg-state", "none"),
-    ("dsg-state", "last-chapter"),
-    ("dsg-state", "rolling-summary"),
-    ("dsg-state", "full-context"),
-    ("dsg-state", "append-only-state"),
-    ("full-context", "rolling-summary"),
-    ("rolling-summary", "none"),
+    # Does any memory help at all?
+    ("base:rolling-summary", "base:none"),
+    ("base:full-context", "base:rolling-summary"),
+    # What does a maintained state buy over the practical alternatives?
+    ("base:dsg-state", "base:none"),
+    ("base:dsg-state", "base:rolling-summary"),
+    ("base:dsg-state", "base:full-context"),
+    # Does the state need to be revisable?
+    ("base:dsg-state", "base:append-only-state"),
+    # What does training the writer to use the state buy?
+    ("tuned:dsg-state", "base:dsg-state"),
+    ("tuned:full-context", "base:full-context"),
+    # And the full system against the strongest practical baseline.
+    ("tuned:dsg-state", "tuned:full-context"),
+    ("tuned:dsg-repair", "tuned:dsg-state"),
+    ("tuned:dsg-repair", "base:full-context"),
 )
 
 METRICS = ("violation_rate", "retention", "restatement_rate", "canon_capture",
