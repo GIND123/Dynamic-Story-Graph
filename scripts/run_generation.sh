@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # The generation experiment: can a story get longer without breaking its graph?
 #
-# --detach is mandatory. Without it Modal cancels the remote function the moment
-# the local client disconnects, and an hour of GPU time is billed for nothing.
-# Results are also written to the dsg-results volume, so a run whose client died
-# can be recovered:
+# Deliberately NOT detached. On an unreliable connection, dying with the client
+# is what we want: the GPU stops billing. Every chapter is checkpointed to the
+# dsg-results volume, so re-running resumes rather than restarting, and a
+# finished run can always be pulled down with:
 #     modal run dsg/infra/modal_generate.py::fetch --run-id <run-id>
+#     scripts/modal_control.sh status | stop | fetch
 set -euo pipefail
 cd "$(dirname "$0")/.."
 MODAL=".venv/bin/modal"; PY=".venv/bin/python"
@@ -17,7 +18,7 @@ MODEL="${MODEL:-qwen7b}"
 RUN_ID="gen-${MODEL}-s${STORIES}-c${CHAPTERS}"
 
 echo "=== $RUN_ID ==="
-$MODAL run --detach dsg/infra/modal_generate.py::main \
+$MODAL run dsg/infra/modal_generate.py::main \
     --model "$MODEL" --stories "$STORIES" --chapters "$CHAPTERS" --run-id "$RUN_ID" \
     > "$LOG_DIR/$RUN_ID.log" 2>&1 || {
       echo "client died; attempting recovery from the volume"

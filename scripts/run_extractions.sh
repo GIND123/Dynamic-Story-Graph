@@ -4,6 +4,10 @@
 # needs the GPU again.
 #
 # Rough cost at current Modal rates: ~$3-4 total for all five runs.
+#
+# Not detached, by design: on a flaky connection a dropped client should stop
+# the GPU rather than keep billing. Progress is checkpointed to the
+# dsg-results volume; see scripts/modal_control.sh.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 MODAL=".venv/bin/modal"
@@ -13,7 +17,7 @@ run () {  # run <corpus> <model> [extra args...]
   local corpus="$1" model="$2"; shift 2
   local tag="${corpus}-${model}"
   echo "=== $tag ==="
-  $MODAL run --detach dsg/infra/modal_extract.py::main \
+  $MODAL run dsg/infra/modal_extract.py::main \
       --corpus "$corpus" --model "$model" "$@" \
       > "$LOG_DIR/extract-$tag.log" 2>&1
   grep -E '^\[dsg\] done|^\[local\] wrote|^\[local\] \{' "$LOG_DIR/extract-$tag.log" || true

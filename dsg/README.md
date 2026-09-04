@@ -144,6 +144,31 @@ modal run --detach dsg/infra/modal_generate.py::main --stories 30 --chapters 20
 python -m dsg gen-report --generation artifacts/generation/<run>/generation.json                          --out artifacts/report/generation
 ```
 
+## Running on an unreliable connection
+
+Every GPU job assumes the connection can drop without warning. The design
+follows from that rather than fighting it:
+
+- **Jobs are not detached.** Losing the client kills the container, which stops
+  the billing. `--detach` would keep a GPU running for an hour with nobody
+  listening.
+- **Everything checkpoints as it goes** to the `dsg-results` Modal volume — the
+  dataset build every two chapters (caching each extraction, so a resume
+  replays them on CPU instead of re-billing the GPU), the trainer every
+  `save_every` steps, generation after every chapter.
+- **Re-running resumes.** The same `--run-id` picks the checkpoint up.
+- **Results are mirrored to the Hugging Face Hub** as they are produced, not
+  only at the end: dataset to `dsg-state-continuation`, adapter to
+  `dsg-writer-*`, generation and figures to `dsg-artifacts`. Hub pushes are
+  wrapped, so a network hiccup logs and continues rather than killing a GPU run
+  that is otherwise fine.
+
+```bash
+scripts/modal_control.sh status   # what is running, what is checkpointed
+scripts/modal_control.sh stop     # terminate everything, now
+scripts/modal_control.sh fetch    # pull results down from the volume
+```
+
 ## Corpora
 
 Fetched to `data/`, never redistributed here.
