@@ -18,8 +18,13 @@ BOOKS="${BOOKS:-150}"
 CHAPTERS_TRAIN="${CHAPTERS_TRAIN:-24}"
 STORIES="${STORIES:-30}"
 CHAPTERS_GEN="${CHAPTERS_GEN:-20}"
-MODEL="${MODEL:-qwen7b}"
+# The extractor that builds the dataset can be any size; the *generation*
+# backbone must be the exact model the LoRA was trained on, or the adapter
+# will not load. Base and tuned arms therefore share one set of weights,
+# which is also what makes their comparison clean.
+EXTRACT_MODEL="${EXTRACT_MODEL:-qwen7b}"
 TRAIN_MODEL="${TRAIN_MODEL:-qwen3b}"
+MODEL="${MODEL:-$TRAIN_MODEL}"
 DATA_RUN="${DATA_RUN:-dsg-traindata-v1}"
 TRAIN_RUN="${TRAIN_RUN:-dsg-writer-${TRAIN_MODEL}}"
 GEN_RUN="${GEN_RUN:-gen-${MODEL}-s${STORIES}-c${CHAPTERS_GEN}}"
@@ -33,7 +38,7 @@ if stage data; then
   $SUPERVISE "$LOG/$DATA_RUN.log" '^\[data\] done' \
       $MODAL run dsg/infra/modal_traindata.py::main \
       --books "$BOOKS" --shards 10 --chapters "$CHAPTERS_TRAIN" \
-      --model "$MODEL" --run-id "$DATA_RUN" --checkpoint-every 2
+      --model "$EXTRACT_MODEL" --run-id "$DATA_RUN" --checkpoint-every 2
   grep -E '^\[data\] done|^\[data\] pushed' "$LOG/$DATA_RUN.log" | tail -2
 fi
 

@@ -111,9 +111,25 @@ def _run_generation(
     # stays within-story.
     lora_path = ""
     if lora_repo:
-        from huggingface_hub import snapshot_download
+        import json as _json
+
+        from huggingface_hub import hf_hub_download, snapshot_download
 
         lora_path = snapshot_download(lora_repo)
+        # An adapter only loads onto the base it was trained on. Catch the
+        # mismatch here rather than as an opaque shape error mid-run.
+        try:
+            cfg = _json.loads(
+                Path(hf_hub_download(lora_repo, "adapter_config.json")).read_text()
+            )
+            trained_on = cfg.get("base_model_name_or_path", "")
+            if trained_on and trained_on != model_id:
+                raise RuntimeError(
+                    f"adapter {lora_repo} was trained on {trained_on}, "
+                    f"but generation is running {model_id}"
+                )
+        except FileNotFoundError:
+            print("[gen] adapter has no config to check against", flush=True)
         print(f"[gen] serving adapter {lora_repo}", flush=True)
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
