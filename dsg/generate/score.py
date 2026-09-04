@@ -18,6 +18,22 @@ from dsg.eval.bootstrap import paired_bootstrap
 from dsg.generate.canon import Premise
 
 
+def on_premise(text: str, premise) -> bool:
+    """Does this chapter actually write about the story it was asked for?
+
+    Canon violations are only counted near a mention of their subject, so a
+    model that wanders off the premise entirely scores a perfect violation rate
+    while producing nothing usable. Without this denominator that artefact
+    reads as a win.
+    """
+    import re
+
+    for name in premise.characters:
+        if re.search(rf"(?<!\w){re.escape(name)}(?!\w)", text, re.IGNORECASE):
+            return True
+    return False
+
+
 @dataclass(slots=True)
 class RunScore:
     story_id: str
@@ -30,6 +46,8 @@ class RunScore:
     restated_ever: set[str] = field(default_factory=set)
     cumulative: list[float] = field(default_factory=list)   # per chapter
     per_chapter: list[int] = field(default_factory=list)
+    on_premise_chapters: int = 0
+    n_chapters_seen: int = 0
     prompt_tokens_total: int = 0
     prompt_tokens_last: int = 0
     state_facts_final: int = 0
@@ -61,6 +79,10 @@ class RunScore:
                 sum(self.first_violation.values()) / len(self.first_violation)
                 if self.first_violation else float(self.chapters + 1)
             ),
+            "on_premise": (
+                self.on_premise_chapters / self.n_chapters_seen
+                if self.n_chapters_seen else 0.0
+            ),
             "prompt_tokens_total": float(self.prompt_tokens_total),
             "prompt_tokens_last": float(self.prompt_tokens_last),
             "canon_capture": (
@@ -88,6 +110,9 @@ def score_runs(payload: dict) -> list[RunScore]:
             )
             scores[key] = score
         score.total_chars += rec["chars"]
+        score.n_chapters_seen += 1
+        if rec.get("text") and on_premise(rec["text"], premises[rec["story_id"]]):
+            score.on_premise_chapters += 1
         score.prompt_tokens_total += int(rec.get("prompt_tokens", 0))
         score.prompt_tokens_last = int(rec.get("prompt_tokens", 0))
         for fact_id in rec["violations"]:
@@ -139,7 +164,8 @@ COMPARISONS = (
     ("tuned:dsg-repair", "base:full-context"),
 )
 
-METRICS = ("violation_rate", "retention", "restatement_rate", "canon_capture",
+METRICS = ("violation_rate", "retention", "restatement_rate", "on_premise",
+           "canon_capture",
            "mean_first_violation", "total_chars",
            "prompt_tokens_total", "prompt_tokens_last")
 
@@ -165,7 +191,8 @@ def compare(scores: list[RunScore]) -> dict:
 
 
 def summarize(scores: list[RunScore], order: tuple[str, ...]) -> str:
-    cols = ("violation_rate", "retention", "restatement_rate", "canon_capture",
+    cols = ("on_premise", "violation_rate", "retention", "restatement_rate",
+            "canon_capture",
             "mean_first_violation", "total_chars", "prompt_tokens_last")
     lines = ["| condition | n | " + " | ".join(cols) + " |",
              "|" + "---|" * (len(cols) + 2)]
