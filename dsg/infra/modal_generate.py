@@ -47,6 +47,15 @@ hf_secret = modal.Secret.from_name("hf-token")
 _VOLUMES = {"/root/.cache/huggingface": weights, "/results": results}
 
 
+def _window_at(chapters: list[str], index: int):
+    """The character span chapter ``index`` occupies in the story so far."""
+    from dsg.schemas import Window
+
+    start = sum(len(c) + 2 for c in chapters[:index])
+    text = chapters[index]
+    return Window(index=index, start=start, end=start + len(text), text=text)
+
+
 def _generate_split(llm, prompts, params, use_lora, lora_path):
     """Route each prompt to the base model or the adapter, preserving order.
 
@@ -100,11 +109,14 @@ def _run_generation(
         extraction_prompt,
         guarded_targets,
         init_runs,
+        parse_write_extraction,
         record,
         state_targets,
         summary_targets,
         tuned_targets,
     )
+    from dsg.policies.runner import apply_window
+    from dsg.schemas import Span
 
     # The tuned conditions are served by the same base weights plus a LoRA, so
     # base and tuned answer identical prompts on one GPU and every comparison
@@ -157,6 +169,7 @@ def _run_generation(
           f"= {len(runs)} runs, {chapters} chapters, model {model_id}", flush=True)
 
     records: list[dict] = []
+    extraction_log: dict[str, str] = {}
     repairs_attempted = repairs_accepted = 0
 
     # Generated chapters are expensive and unrecoverable, so they are written to
@@ -165,6 +178,8 @@ def _run_generation(
     ckpt_path = Path("/results") / f"{run_id}-checkpoint.json"
 
     def save_checkpoint(done: int) -> None:
+        # Everything a resume needs: the prose, the rolling summaries, and the
+        # raw extractions, so state is rebuilt on CPU instead of re-billed.
         ckpt_path.write_text(json.dumps({
             "run_id": run_id, "chapters_done": done, "records": records,
             "premises": [p.to_json() for p in premises],
@@ -173,11 +188,45 @@ def _run_generation(
                      "lora_repo": lora_repo, "stories": len(premises)},
             "repairs_attempted": repairs_attempted,
             "repairs_accepted": repairs_accepted,
+            "runs": [
+                {"story_id": r.story_id, "condition": r.condition,
+                 "chapters": r.chapters, "summary": r.summary}
+                for r in runs
+            ],
+            "extractions": extraction_log,
         }))
         results.commit()
 
+    start_chapter = 0
+    if ckpt_path.exists():
+        saved = json.loads(ckpt_path.read_text())
+        if saved.get("meta", {}).get("conditions") == list(conditions):
+            start_chapter = int(saved.get("chapters_done", 0))
+            records.extend(saved.get("records", []))
+            repairs_attempted = int(saved.get("repairs_attempted", 0))
+            repairs_accepted = int(saved.get("repairs_accepted", 0))
+            extraction_log.update(saved.get("extractions", {}))
+            by_key = {(r["story_id"], r["condition"]): r for r in saved.get("runs", [])}
+            for run in runs:
+                prior = by_key.get((run.story_id, run.condition))
+                if not prior:
+                    continue
+                run.chapters = list(prior["chapters"])[:start_chapter]
+                run.summary = prior.get("summary", "")
+                if run.state is not None:
+                    for index in range(len(run.chapters)):
+                        window = _window_at(run.chapters, index)
+                        proposal = parse_write_extraction(
+                            extraction_log.get(f"{run.story_id}|{run.condition}|{index}", ""),
+                            window,
+                        )
+                        run.state.step(index, window.end)
+                        apply_window(run.state, proposal, Span(window.start, window.end))
+                        run.state.close_step()
+            print(f"[gen] resuming after chapter {start_chapter}/{chapters}", flush=True)
+
     t0 = time.time()
-    for chapter in range(1, chapters + 1):
+    for chapter in range(start_chapter + 1, chapters + 1):
         prompts = chapter_prompts(runs, by_id, chapter, chapters, words)
         # What each condition costs to *ask*: the whole point of carrying a
         # digest rather than the transcript is that it does not grow.
@@ -210,6 +259,9 @@ def _run_generation(
             )
             for run, out in zip(stateful, exts, strict=False):
                 extractions[id(run)] = out.outputs[0].text
+                extraction_log[
+                    f"{run.story_id}|{run.condition}|{len(run.chapters) - 1}"
+                ] = out.outputs[0].text
 
         # The guard: a chapter that would contradict an immutable established
         # fact is sent back with the contradiction named, once.
@@ -238,6 +290,9 @@ def _run_generation(
             )
             for run, out in zip(retry_runs, refresh, strict=False):
                 extractions[id(run)] = out.outputs[0].text
+                extraction_log[
+                    f"{run.story_id}|{run.condition}|{len(run.chapters) - 1}"
+                ] = out.outputs[0].text
                 if not check_chapter_against_state(
                     run, extractions[id(run)], run.chapters[-1]
                 ):
