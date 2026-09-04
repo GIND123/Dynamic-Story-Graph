@@ -399,20 +399,22 @@ def main(
     gpu: str = "",
     run_id: str = "",
     lora_repo: str = "",
+    ladder: str = "base",
     out_dir: str = "artifacts/generation",
 ):
     from dsg.generate.canon import build_premises
-    from dsg.generate.conditions import CONDITIONS
+    from dsg.generate.conditions import BASE_LADDER, CONDITIONS
 
     model_id = MODELS.get(model, model)
     gpu_name = gpu or GPU_FOR.get(model, "A10G")
+    conditions = BASE_LADDER if ladder == "base" else CONDITIONS
     run_id = run_id or f"gen-{model}-s{stories}-c{chapters}"
     premises = build_premises(n=stories, n_canon=n_canon, seed=seed)
-    print(f"[local] {len(premises)} stories x {len(CONDITIONS)} conditions x "
+    print(f"[local] {len(premises)} stories x {len(conditions)} conditions x "
           f"{chapters} chapters, model={model_id} gpu={gpu_name}")
 
     payload = _FNS[gpu_name].remote(
-        [p.to_json() for p in premises], model_id, list(CONDITIONS),
+        [p.to_json() for p in premises], model_id, list(conditions),
         chapters, words, max_model_len, run_id, lora_repo,
     )
     print(f"[local] wrote {_write_local(payload, out_dir, run_id)}")
