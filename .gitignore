@@ -11,7 +11,8 @@ venv/
 .DS_Store
 
 # Downloaded corpora and weights (~78 GB). Fetched from source, never committed.
-data/
+# Anchored: an unanchored 'data/' also matches dsg/data/, which is source.
+/data/
 models/
 
 # --- GNSM ---
@@ -30,6 +31,7 @@ gnsm/data/cache/*
 !gnsm/data/processed/.gitkeep
 !gnsm/data/cache/.gitkeep
 artifacts/
-data/
+# Anchored: an unanchored 'data/' also matches dsg/data/, which is source.
+/data/
 .venv/
 *.sqlite
