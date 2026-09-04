@@ -105,6 +105,45 @@ No LLM judge appears in any primary metric.
 - **Length control** — the identical protocol on LitBank's ~2K-token excerpts,
   where premature commitment has little time to hurt.
 
+## Generation: consistency at length
+
+The reading state is only interesting if it constrains writing. `dsg/generate/`
+asks whether a story can get **longer without breaking its own graph**.
+
+The measurement problem is that a generated story has no gold. So the gold is
+planted: each premise fixes canon facts drawn from closed vocabularies whose
+contradictions are enumerable — eye colour, metal, kinship, trade, birthplace —
+which makes a violation a deterministic string test near a mention of the
+subject. A nearby correction ("not gold but silver") does not count. No model
+and no human judgement enters the measurement.
+
+**Canon is supplied in chapter 1 only.** From chapter 2 each condition keeps
+whatever its own memory carries, so the experiment tests memory rather than
+prompt-following.
+
+| Condition | What the writer is given for chapter t |
+| --- | --- |
+| `none` | premise + outline beat |
+| `last-chapter` | + the previous chapter verbatim |
+| `rolling-summary` | + a running summary the model maintains |
+| `full-context` | + every previous chapter, truncated head-and-tail so the opening (where canon was established) survives |
+| `append-only-state` | + a state digest that can never be revised |
+| `dsg-state` | + a state digest under the full revision calculus |
+
+The last pair differs only in whether what the writer is shown may be revised.
+Chapters are read back into state with `apply_window`, the same function the
+novel study uses — a second implementation would make the two settings
+incomparable.
+
+Reported alongside accuracy: **context tokens per chapter**. A digest does not
+grow with the story; a transcript does, which is what makes the comparison to
+`full-context` about scaling rather than only about accuracy.
+
+```bash
+modal run --detach dsg/infra/modal_generate.py::main --stories 30 --chapters 20
+python -m dsg gen-report --generation artifacts/generation/<run>/generation.json                          --out artifacts/report/generation
+```
+
 ## Corpora
 
 Fetched to `data/`, never redistributed here.

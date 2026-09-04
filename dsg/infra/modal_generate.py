@@ -97,6 +97,11 @@ def _run_generation(
     t0 = time.time()
     for chapter in range(1, chapters + 1):
         prompts = chapter_prompts(runs, by_id, chapter, chapters, words)
+        # What each condition costs to *ask*: the whole point of carrying a
+        # digest rather than the transcript is that it does not grow.
+        prompt_sizes = [
+            (len(p), len(tokenizer(p).input_ids)) for p in prompts
+        ]
         outs = llm.generate(chat(prompts), chapter_params, use_tqdm=False)
         for run, out in zip(runs, outs, strict=False):
             run.chapters.append(clean_chapter(out.outputs[0].text))
@@ -121,8 +126,11 @@ def _run_generation(
             for run, out in zip(stateful, exts, strict=False):
                 apply_extraction(run, out.outputs[0].text, run.chapters[-1])
 
-        for run in runs:
-            rec = record(run, by_id[run.story_id], run.chapters[-1], chapter)
+        for run, (p_chars, p_tokens) in zip(runs, prompt_sizes, strict=False):
+            rec = record(
+                run, by_id[run.story_id], run.chapters[-1], chapter,
+                prompt_chars=p_chars, prompt_tokens=p_tokens,
+            )
             payload = rec.to_json()
             payload["text"] = rec.text
             records.append(payload)

@@ -74,7 +74,8 @@ def figure_final_bars(payload: dict, out: Path) -> Path:
     panels = [
         ("violation_rate", "Canon contradicted by the end", "lower is better"),
         ("restatement_rate", "Canon actively restated", "higher is better"),
-        ("total_chars", "Story length (characters)", "control"),
+        ("prompt_tokens_last", "Context tokens at the final chapter",
+         "lower is cheaper"),
     ]
     fig, axes = plt.subplots(1, 3, figsize=(11.5, 3.4))
     present = [c for c in ORDER if any(s.condition == c for s in scores)]
@@ -91,7 +92,8 @@ def figure_final_bars(payload: dict, out: Path) -> Path:
         span = max(vals) if max(vals) else 1.0
         for i, v in enumerate(vals):
             ax.text(v + span * 0.02, i,
-                    f"{v:,.0f}" if metric == "total_chars" else f"{v:.3f}",
+                    f"{v:,.0f}" if metric in ("total_chars", "prompt_tokens_last")
+                    else f"{v:.3f}",
                     va="center", fontsize=8, color=INK)
         ax.set_xlim(0, span * 1.25)
         _style(ax, xlabel=note, title=title)
@@ -105,8 +107,9 @@ def _comparison_table(comparisons: dict) -> str:
              "|---|---|---|---|---|---|---|"]
     for pair, entry in comparisons.items():
         n = int(entry.get("n_stories", 0))
-        for metric in ("violation_rate", "restatement_rate", "mean_first_violation",
-                       "total_chars"):
+        for metric in ("violation_rate", "restatement_rate",
+                       "mean_first_violation", "total_chars",
+                       "prompt_tokens_last"):
             stat = entry.get(metric)
             if not stat:
                 continue

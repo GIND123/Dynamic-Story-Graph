@@ -35,6 +35,8 @@ class ChapterRecord:
     chapter: int
     text: str
     chars: int
+    prompt_chars: int = 0
+    prompt_tokens: int = 0
     violations: list[str] = field(default_factory=list)
     restated: list[str] = field(default_factory=list)
     evidence: dict[str, str] = field(default_factory=dict)
@@ -47,6 +49,8 @@ class ChapterRecord:
         return {
             "story_id": self.story_id, "condition": self.condition,
             "chapter": self.chapter, "chars": self.chars,
+            "prompt_chars": self.prompt_chars,
+            "prompt_tokens": self.prompt_tokens,
             "violations": self.violations, "restated": self.restated,
             "evidence": self.evidence, "state_entities": self.state_entities,
             "state_facts": self.state_facts,
@@ -114,12 +118,16 @@ def apply_extraction(run: StoryRun, raw: str, chapter_text: str) -> None:
     run.state.close_step()
 
 
-def record(run: StoryRun, premise: Premise, text: str, chapter: int) -> ChapterRecord:
+def record(
+    run: StoryRun, premise: Premise, text: str, chapter: int,
+    prompt_chars: int = 0, prompt_tokens: int = 0,
+) -> ChapterRecord:
     report = check_chapter(premise, text, chapter)
     rec = ChapterRecord(
         story_id=run.story_id, condition=run.condition, chapter=chapter,
         text=text, chars=len(text), violations=report.violations,
         restated=report.restated, evidence=report.evidence,
+        prompt_chars=prompt_chars, prompt_tokens=prompt_tokens,
     )
     if run.state is not None:
         rec.state_entities = len(run.state.live_entities())

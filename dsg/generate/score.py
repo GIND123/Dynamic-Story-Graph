@@ -30,6 +30,8 @@ class RunScore:
     restated_ever: set[str] = field(default_factory=set)
     cumulative: list[float] = field(default_factory=list)   # per chapter
     per_chapter: list[int] = field(default_factory=list)
+    prompt_tokens_total: int = 0
+    prompt_tokens_last: int = 0
     state_facts_final: int = 0
     state_entities_final: int = 0
     rollbacks_final: int = 0
@@ -58,6 +60,8 @@ class RunScore:
                 sum(self.first_violation.values()) / len(self.first_violation)
                 if self.first_violation else float(self.chapters + 1)
             ),
+            "prompt_tokens_total": float(self.prompt_tokens_total),
+            "prompt_tokens_last": float(self.prompt_tokens_last),
             "state_facts_final": float(self.state_facts_final),
             "state_entities_final": float(self.state_entities_final),
             "rollbacks_final": float(self.rollbacks_final),
@@ -80,6 +84,8 @@ def score_runs(payload: dict) -> list[RunScore]:
             )
             scores[key] = score
         score.total_chars += rec["chars"]
+        score.prompt_tokens_total += int(rec.get("prompt_tokens", 0))
+        score.prompt_tokens_last = int(rec.get("prompt_tokens", 0))
         for fact_id in rec["violations"]:
             if fact_id not in score.violated:
                 score.first_violation[fact_id] = rec["chapter"]
@@ -120,7 +126,8 @@ COMPARISONS = (
 )
 
 METRICS = ("violation_rate", "retention", "restatement_rate",
-           "mean_first_violation", "total_chars")
+           "mean_first_violation", "total_chars",
+           "prompt_tokens_total", "prompt_tokens_last")
 
 
 def compare(scores: list[RunScore]) -> dict:
@@ -145,7 +152,7 @@ def compare(scores: list[RunScore]) -> dict:
 
 def summarize(scores: list[RunScore], order: tuple[str, ...]) -> str:
     cols = ("violation_rate", "retention", "restatement_rate",
-            "mean_first_violation", "total_chars")
+            "mean_first_violation", "total_chars", "prompt_tokens_last")
     lines = ["| condition | n | " + " | ".join(cols) + " |",
              "|" + "---|" * (len(cols) + 2)]
     for condition in order:
@@ -155,6 +162,9 @@ def summarize(scores: list[RunScore], order: tuple[str, ...]) -> str:
         cells = []
         for c in cols:
             mean = sum(r[c] for r in rows) / len(rows)
-            cells.append(f"{mean:,.0f}" if c == "total_chars" else f"{mean:.3f}")
+            cells.append(
+                f"{mean:,.0f}" if c in ("total_chars", "prompt_tokens_last")
+                else f"{mean:.3f}"
+            )
         lines.append(f"| {condition} | {len(rows)} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
