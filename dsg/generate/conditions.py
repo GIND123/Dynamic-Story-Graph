@@ -28,15 +28,19 @@ MEMORIES = (
     "dsg-repair",       # + the same digest, and the graph may reject a chapter
     "dsg-hybrid",       # + the digest AND the previous chapter
     "dsg-hybrid-repair",# + both, and the graph may reject a chapter
+    "beat-retrieval",   # + only the canon the *next beat* implicates
+    "beat-hybrid",      # + that, and the previous chapter
+    "beat-hybrid-repair",# + both, and the graph may reject a chapter
 )
 
 STATE_MEMORIES = (
     "append-only-state", "dsg-state", "dsg-repair",
     "dsg-hybrid", "dsg-hybrid-repair",
+    "beat-retrieval", "beat-hybrid", "beat-hybrid-repair",
 )
 
 # Memories whose chapter is checked against the graph before it is accepted.
-GUARDED_MEMORIES = ("dsg-repair", "dsg-hybrid-repair")
+GUARDED_MEMORIES = ("dsg-repair", "dsg-hybrid-repair", "beat-hybrid-repair")
 
 # A condition is a (backbone variant, memory) pair, written "variant:memory".
 # Pairing them inside one run keeps every comparison within-story: the effect of
@@ -65,6 +69,19 @@ BASE_LADDER = (
     "base:dsg-state",
     "base:dsg-hybrid",
     "base:dsg-hybrid-repair",
+)
+
+# The retrieval ladder: the untested cell that both this project's evidence
+# and the prior literature point at. `last-chapter` (0.308) is the incumbent
+# every new condition has to beat; `dsg-state` (0.588) is the known-failing
+# serialisation, kept as a negative control.
+RETRIEVAL_LADDER = (
+    "base:none",
+    "base:last-chapter",
+    "base:full-context",
+    "base:beat-retrieval",
+    "base:beat-hybrid",
+    "base:beat-hybrid-repair",
 )
 
 
@@ -139,7 +156,9 @@ def _truncate_head_and_tail(chapters: list[str], budget_chars: int) -> str:
     return head + "\n\n[...]\n\n" + "\n\n".join(reversed(tail))
 
 
-def build_memory(run: StoryRun, budget_chars: int = 24_000) -> str:
+def build_memory(
+    run: StoryRun, budget_chars: int = 24_000, beat: str = ""
+) -> str:
     """The memory block for the next chapter, under this run's condition."""
     if not run.chapters:
         return ""
@@ -155,6 +174,16 @@ def build_memory(run: StoryRun, budget_chars: int = 24_000) -> str:
             "The story so far:\n"
             + _truncate_head_and_tail(run.chapters, budget_chars)
         )
+    if condition in ("beat-retrieval", "beat-hybrid", "beat-hybrid-repair"):
+        # Query the state with the beat rather than serialising all of it. A
+        # beat names two or three people; retrieving only their canon leaves
+        # room for the recent text instead of displacing it.
+        digest = state_memory(
+            run.state.beat_digest(beat) if run.state is not None else ""
+        )
+        if condition == "beat-retrieval" or not run.chapters:
+            return digest
+        return f"{digest}\n\nThe previous chapter:\n{run.chapters[-1]}"
     if condition in ("dsg-hybrid", "dsg-hybrid-repair"):
         # A digest and the recent text are not rivals. Forcing a choice between
         # them is an artefact of the ablation, not something a real writer would
@@ -184,7 +213,7 @@ def build_chapter_prompt(
     return writer_prompt(
         title=premise.title,
         header=header,
-        memory=build_memory(run),
+        memory=build_memory(run, beat=premise.beats[(chapter - 1) % len(premise.beats)]),
         beat=premise.beats[(chapter - 1) % len(premise.beats)],
         chapter=chapter,
         words=words,

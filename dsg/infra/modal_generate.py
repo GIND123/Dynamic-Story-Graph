@@ -403,11 +403,15 @@ def main(
     out_dir: str = "artifacts/generation",
 ):
     from dsg.generate.canon import build_premises
-    from dsg.generate.conditions import BASE_LADDER, CONDITIONS
+    from dsg.generate.conditions import BASE_LADDER, CONDITIONS, RETRIEVAL_LADDER
 
     model_id = MODELS.get(model, model)
     gpu_name = gpu or GPU_FOR.get(model, "A10G")
-    conditions = BASE_LADDER if ladder == "base" else CONDITIONS
+    conditions = {
+        "base": BASE_LADDER,
+        "retrieval": RETRIEVAL_LADDER,
+        "all": CONDITIONS,
+    }.get(ladder, BASE_LADDER)
     run_id = run_id or f"gen-{model}-s{stories}-c{chapters}"
     premises = build_premises(n=stories, n_canon=n_canon, seed=seed)
     print(f"[local] {len(premises)} stories x {len(conditions)} conditions x "

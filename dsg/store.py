@@ -640,11 +640,27 @@ class NarrativeState:
                 rank = 1
             return rank, -a.confidence, a.d_open
 
+        return self._render_facts(nodes, max_facts_per_entity)
+
+    def _render_facts(self, nodes: list[EntityNode], max_facts: int) -> str:
+        """Render a set of nodes with their most durable facts first."""
+        by_subject: dict[str, list[Assertion]] = {}
+        for a in self.assertions.values():
+            if a.live:
+                by_subject.setdefault(a.subject, []).append(a)
+
+        def durability(a: Assertion) -> tuple[int, float, int]:
+            if a.predicate.startswith("other:"):
+                rank = 2
+            elif not is_mutable(a.predicate):
+                rank = 0
+            else:
+                rank = 1
+            return rank, -a.confidence, a.d_open
+
         lines: list[str] = []
         for node in nodes:
-            facts = sorted(by_subject.get(node.id, []), key=durability)[
-                :max_facts_per_entity
-            ]
+            facts = sorted(by_subject.get(node.id, []), key=durability)[:max_facts]
             aliases = sorted(node.surfaces, key=lambda s: -node.surfaces[s])[:3]
             head = node.canonical
             extra = [a for a in aliases if a != node.canonical]
@@ -666,6 +682,38 @@ class NarrativeState:
                 )
             lines.append(f"- {head}: " + "; ".join(rendered))
         return "\n".join(lines) if lines else "(nothing established yet)"
+
+    def beat_digest(
+        self, beat: str, max_entities: int = 4, max_facts_per_entity: int = 8,
+        fallback_entities: int = 2,
+    ) -> str:
+        """Only what the next beat implicates -- an index queried, not a context carried.
+
+        Serialising the whole state crowds the prompt with facts irrelevant to
+        the scene about to be written; this project measured that cost, and the
+        Narrative World Model paper reports the same shape (serialised state
+        0.358 against query-conditioned retrieval 0.898 over the same graph).
+
+        A beat names two or three people. Their canon is a handful of facts.
+        Retrieving only those keeps the slice small enough to sit beside the
+        recent text rather than displace it.
+        """
+        beat_lower = (beat or "").lower()
+        scored: list[tuple[int, int, EntityNode]] = []
+        for node in self.live_entities():
+            hits = sum(
+                1 for surface in node.surfaces
+                if len(surface) > 2 and surface.lower() in beat_lower
+            )
+            scored.append((-hits, -node.mention_count(), node))
+        scored.sort(key=lambda t: (t[0], t[1], t[2].first_seen))
+
+        named = [n for hits, _, n in scored if hits < 0][:max_entities]
+        if not named:
+            # Nothing in the beat resolves: fall back to the most established
+            # characters rather than emitting an empty slice.
+            named = [n for _, _, n in scored][:fallback_entities]
+        return self._render_facts(named, max_facts_per_entity)
 
     def digest(self, max_entities: int = 24) -> str:
         """Bounded, entity-focused state summary -- what the model may see."""

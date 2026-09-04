@@ -168,6 +168,13 @@ COMPARISONS = (
     ("base:dsg-hybrid", "base:full-context"),
     ("base:dsg-hybrid", "base:none"),
     ("base:dsg-hybrid-repair", "base:dsg-hybrid"),
+    # Beat-conditioned retrieval against the incumbent and the failing cell.
+    ("base:beat-retrieval", "base:dsg-state"),
+    ("base:beat-retrieval", "base:none"),
+    ("base:beat-hybrid", "base:last-chapter"),
+    ("base:beat-hybrid", "base:full-context"),
+    ("base:beat-hybrid", "base:beat-retrieval"),
+    ("base:beat-hybrid-repair", "base:beat-hybrid"),
 )
 
 METRICS = ("violation_rate", "retention", "restatement_rate", "on_premise",

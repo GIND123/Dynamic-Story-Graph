@@ -36,6 +36,9 @@ POLICY_FOR = {
     "dsg-repair": "dsg-full",
     "dsg-hybrid": "dsg-full",
     "dsg-hybrid-repair": "dsg-full",
+    "beat-retrieval": "dsg-full",
+    "beat-hybrid": "dsg-full",
+    "beat-hybrid-repair": "dsg-full",
 }
 
 

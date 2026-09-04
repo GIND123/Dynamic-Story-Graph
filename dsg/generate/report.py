@@ -25,6 +25,9 @@ ORDER = (
     "tuned:dsg-repair",
     "base:dsg-hybrid",
     "base:dsg-hybrid-repair",
+    "base:beat-retrieval",
+    "base:beat-hybrid",
+    "base:beat-hybrid-repair",
 )
 
 FOCAL = "#2a78d6"    # the system: state under the full calculus
@@ -41,8 +44,11 @@ COLOR_FOR = {
     "tuned:full-context": STRONG,
     "tuned:dsg-state": FOCAL,
     "tuned:dsg-repair": FOCAL,
-    "base:dsg-hybrid": FOCAL,
-    "base:dsg-hybrid-repair": FOCAL,
+    "base:dsg-hybrid": FOIL,
+    "base:dsg-hybrid-repair": FOIL,
+    "base:beat-retrieval": FOCAL,
+    "base:beat-hybrid": FOCAL,
+    "base:beat-hybrid-repair": FOCAL,
 }
 LABEL = {
     "base:none": "no memory",
@@ -54,14 +60,18 @@ LABEL = {
     "tuned:full-context": "tuned + full context",
     "tuned:dsg-state": "tuned + DSG state",
     "tuned:dsg-repair": "tuned + DSG + guard",
-    "base:dsg-hybrid": "DSG + recent text",
-    "base:dsg-hybrid-repair": "DSG + recent + guard",
+    "base:dsg-hybrid": "digest + recent",
+    "base:dsg-hybrid-repair": "digest + recent + guard",
+    "base:beat-retrieval": "beat retrieval",
+    "base:beat-hybrid": "beat retrieval + recent",
+    "base:beat-hybrid-repair": "beat retrieval + recent + guard",
 }
 # Drawn with a marker and full weight; everything else is context grey.
 EMPHASISED = (
     "base:full-context", "base:append-only-state", "base:dsg-state",
     "tuned:full-context", "tuned:dsg-state", "tuned:dsg-repair",
     "base:dsg-hybrid", "base:dsg-hybrid-repair",
+    "base:beat-retrieval", "base:beat-hybrid", "base:beat-hybrid-repair",
 )
 # Dashed where the backbone is the fine-tuned one, so variant reads off the line.
 TUNED = tuple(c for c in ORDER if c.startswith("tuned:"))
