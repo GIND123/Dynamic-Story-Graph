@@ -10,6 +10,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 MODAL=".venv/bin/modal"; PY=".venv/bin/python"
+SUPERVISE="scripts/supervise.sh"
 LOG="artifacts/logs"; mkdir -p "$LOG"
 set -a; [ -f .env ] && . ./.env; set +a
 
@@ -29,25 +30,28 @@ stage () { [ "$STAGE" = "all" ] || [ "$STAGE" = "$1" ]; }
 
 if stage data; then
   echo "=== 1/4 dataset ($BOOKS novels x $CHAPTERS_TRAIN chapters) ==="
-  $MODAL run dsg/infra/modal_traindata.py::main \
+  $SUPERVISE "$LOG/$DATA_RUN.log" '^\[data\] done' \
+      $MODAL run dsg/infra/modal_traindata.py::main \
       --books "$BOOKS" --shards 10 --chapters "$CHAPTERS_TRAIN" \
-      --model "$MODEL" --run-id "$DATA_RUN" --checkpoint-every 2 \
-      2>&1 | tee "$LOG/$DATA_RUN.log" | grep -E '^\[data\]|^\[local\]|Error'
+      --model "$MODEL" --run-id "$DATA_RUN" --checkpoint-every 2
+  grep -E '^\[data\] done|^\[data\] pushed' "$LOG/$DATA_RUN.log" | tail -2
 fi
 
 if stage train; then
   echo "=== 2/4 train LoRA ($TRAIN_MODEL) ==="
-  $MODAL run dsg/infra/modal_train.py::main \
-      --model "$TRAIN_MODEL" --epochs 2 --run-id "$TRAIN_RUN" --save-every 50 \
-      2>&1 | tee "$LOG/$TRAIN_RUN.log" | grep -E '^\[train\]|^\[local\]|Error'
+  $SUPERVISE "$LOG/$TRAIN_RUN.log" '^\[train\] val loss .* -> ' \
+      $MODAL run dsg/infra/modal_train.py::main \
+      --model "$TRAIN_MODEL" --epochs 2 --run-id "$TRAIN_RUN" --save-every 50
+  grep -E '^\[train\] val loss|^\[train\] pushed' "$LOG/$TRAIN_RUN.log" | tail -2
 fi
 
 if stage generate; then
   echo "=== 3/4 generate ($STORIES stories x $CHAPTERS_GEN chapters) ==="
-  $MODAL run dsg/infra/modal_generate.py::main \
+  $SUPERVISE "$LOG/$GEN_RUN.log" '^\[gen\] done' \
+      $MODAL run dsg/infra/modal_generate.py::main \
       --model "$MODEL" --stories "$STORIES" --chapters "$CHAPTERS_GEN" \
-      --run-id "$GEN_RUN" --lora-repo "$LORA_REPO" \
-      2>&1 | tee "$LOG/$GEN_RUN.log" | grep -E '^\[gen\]|^\[local\]|Error'
+      --run-id "$GEN_RUN" --lora-repo "$LORA_REPO"
+  grep -E '^\[gen\] done|^\[local\] wrote' "$LOG/$GEN_RUN.log" | tail -2
 fi
 
 if stage report; then
