@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from dsg.generate.canon import Premise, check_chapter
 from dsg.generate.conditions import (
     CONDITIONS,
+    GUARDED_MEMORIES,
     STATE_MEMORIES,
     StoryRun,
     build_chapter_prompt,
@@ -29,7 +30,11 @@ from dsg.schemas import Span, Window
 from dsg.store import POLICIES, NarrativeState
 
 # Which reading policy backs each state-carrying condition.
-POLICY_FOR = {"append-only-state": "append-only", "dsg-state": "dsg-full"}
+POLICY_FOR = {
+    "append-only-state": "append-only",
+    "dsg-state": "dsg-full",
+    "dsg-repair": "dsg-full",
+}
 
 
 @dataclass(slots=True)
@@ -94,6 +99,21 @@ def chapter_prompts(
 
 def summary_targets(runs: list[StoryRun]) -> list[StoryRun]:
     return [r for r in runs if memory_of(r.condition) == "rolling-summary"]
+
+
+def guarded_targets(runs: list[StoryRun]) -> list[StoryRun]:
+    """Runs whose chapter must clear the graph before it is accepted."""
+    return [r for r in runs if memory_of(r.condition) in GUARDED_MEMORIES]
+
+
+def check_chapter_against_state(run: StoryRun, raw_extraction: str, chapter_text: str):
+    """Conflicts a freshly written chapter would introduce, without applying it."""
+    from dsg.generate.repair import detect_conflicts
+
+    if run.state is None:
+        return []
+    proposal = parse_write_extraction(raw_extraction, _window_for(run, chapter_text))
+    return detect_conflicts(run.state, proposal)
 
 
 def tuned_targets(runs: list[StoryRun]) -> list[bool]:
@@ -270,5 +290,6 @@ __all__ = [
     "ChapterRecord", "POLICY_FOR", "apply_extraction", "chapter_prompts",
     "clean_chapter", "extraction_prompt", "init_runs", "record",
     "state_targets", "summary_targets", "build_summary_prompt", "tuned_targets",
+    "guarded_targets", "check_chapter_against_state",
     "parse_write_extraction", "WRITE_EXTRACT_PROMPT",
 ]

@@ -86,12 +86,16 @@ def _run_generation(
     from vllm import LLM, SamplingParams
 
     from dsg.generate.canon import Premise
+    from dsg.generate.conditions import variant_of
+    from dsg.generate.repair import repair_instruction
     from dsg.generate.run import (
         apply_extraction,
         build_summary_prompt,
         chapter_prompts,
+        check_chapter_against_state,
         clean_chapter,
         extraction_prompt,
+        guarded_targets,
         init_runs,
         record,
         state_targets,
@@ -134,6 +138,7 @@ def _run_generation(
           f"= {len(runs)} runs, {chapters} chapters, model {model_id}", flush=True)
 
     records: list[dict] = []
+    repairs_attempted = repairs_accepted = 0
     t0 = time.time()
     for chapter in range(1, chapters + 1):
         prompts = chapter_prompts(runs, by_id, chapter, chapters, words)
@@ -160,13 +165,49 @@ def _run_generation(
 
         # Read the new chapter into the state-carrying runs, batched.
         stateful = state_targets(runs)
+        extractions: dict[int, str] = {}
         if stateful:
             exts = llm.generate(
                 chat([extraction_prompt(r, r.chapters[-1]) for r in stateful]),
                 aux_params, use_tqdm=False,
             )
             for run, out in zip(stateful, exts, strict=False):
-                apply_extraction(run, out.outputs[0].text, run.chapters[-1])
+                extractions[id(run)] = out.outputs[0].text
+
+        # The guard: a chapter that would contradict an immutable established
+        # fact is sent back with the contradiction named, once.
+        guarded = [r for r in guarded_targets(runs) if id(r) in extractions]
+        retry_runs, retry_prompts = [], []
+        for run in guarded:
+            conflicts = check_chapter_against_state(
+                run, extractions[id(run)], run.chapters[-1]
+            )
+            if not conflicts:
+                continue
+            index = runs.index(run)
+            retry_runs.append(run)
+            retry_prompts.append(prompts[index] + repair_instruction(conflicts))
+            repairs_attempted += 1
+        if retry_runs:
+            fixed = _generate_split(
+                llm, chat(retry_prompts), chapter_params,
+                [variant_of(r.condition) == "tuned" for r in retry_runs], lora_path,
+            )
+            for run, text in zip(retry_runs, fixed, strict=False):
+                run.chapters[-1] = clean_chapter(text)
+            refresh = llm.generate(
+                chat([extraction_prompt(r, r.chapters[-1]) for r in retry_runs]),
+                aux_params, use_tqdm=False,
+            )
+            for run, out in zip(retry_runs, refresh, strict=False):
+                extractions[id(run)] = out.outputs[0].text
+                if not check_chapter_against_state(
+                    run, extractions[id(run)], run.chapters[-1]
+                ):
+                    repairs_accepted += 1
+
+        for run in stateful:
+            apply_extraction(run, extractions.get(id(run), ""), run.chapters[-1])
 
         for run, (p_chars, p_tokens) in zip(runs, prompt_sizes, strict=False):
             rec = record(
@@ -189,6 +230,8 @@ def _run_generation(
         "meta": {
             "model": model_id, "stories": len(premises), "conditions": list(conditions),
             "chapters": chapters, "words": words, "seconds": round(elapsed, 1),
+            "repairs_attempted": repairs_attempted,
+            "repairs_accepted": repairs_accepted,
             "lora_repo": lora_repo,
         },
         "premises": [p.to_json() for p in premises],

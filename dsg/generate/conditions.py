@@ -25,9 +25,13 @@ MEMORIES = (
     "full-context",     # + every previous chapter, truncated to the window
     "append-only-state",# + a state digest that can never be revised
     "dsg-state",        # + a state digest under the full revision calculus
+    "dsg-repair",       # + the same digest, and the graph may reject a chapter
 )
 
-STATE_MEMORIES = ("append-only-state", "dsg-state")
+STATE_MEMORIES = ("append-only-state", "dsg-state", "dsg-repair")
+
+# Memories whose chapter is checked against the graph before it is accepted.
+GUARDED_MEMORIES = ("dsg-repair",)
 
 # A condition is a (backbone variant, memory) pair, written "variant:memory".
 # Pairing them inside one run keeps every comparison within-story: the effect of
@@ -42,6 +46,7 @@ CONDITIONS = (
     "base:dsg-state",
     "tuned:full-context",
     "tuned:dsg-state",
+    "tuned:dsg-repair",
 )
 
 
