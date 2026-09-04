@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from dsg.generate.canon import Premise
+from dsg.generate.prompt import state_memory, writer_prompt
 from dsg.store import NarrativeState
 
 CONDITIONS = (
@@ -27,20 +28,7 @@ CONDITIONS = (
 
 STATE_CONDITIONS = ("append-only-state", "dsg-state")
 
-CHAPTER_PROMPT = """You are writing one chapter of a novel. Write prose only.
 
-Story: {title}
-Setting: {setting}
-Characters: {characters}
-{canon_block}{memory_block}
-Chapter {chapter} of {total}. What happens in this chapter:
-{beat}
-
-Write chapter {chapter} in about {words} words. Continue the story naturally and
-keep every established detail consistent. Do not summarise, do not use headings,
-do not write anything except the chapter prose.
-
-CHAPTER {chapter}:"""
 
 SUMMARY_PROMPT = """Update the running story summary.
 
@@ -103,17 +91,16 @@ def build_memory(run: StoryRun, budget_chars: int = 24_000) -> str:
     if condition == "none":
         return ""
     if condition == "last-chapter":
-        return f"\nThe previous chapter:\n{run.chapters[-1]}\n"
+        return f"The previous chapter:\n{run.chapters[-1]}"
     if condition == "rolling-summary":
-        return f"\nThe story so far:\n{run.summary}\n"
+        return f"The story so far:\n{run.summary}"
     if condition == "full-context":
-        return f"\nThe story so far:\n{_truncate_head_and_tail(run.chapters, budget_chars)}\n"
-    if condition in STATE_CONDITIONS:
-        digest = run.state.fact_digest() if run.state is not None else ""
         return (
-            "\nEstablished facts you must keep consistent "
-            "(this is the current canon):\n" + digest + "\n"
+            "The story so far:\n"
+            + _truncate_head_and_tail(run.chapters, budget_chars)
         )
+    if condition in STATE_CONDITIONS:
+        return state_memory(run.state.fact_digest() if run.state is not None else "")
     raise ValueError(f"unknown condition {condition!r}")
 
 
@@ -121,23 +108,22 @@ def build_chapter_prompt(
     premise: Premise, run: StoryRun, chapter: int, total: int, words: int = 500
 ) -> str:
     """Canon is supplied for chapter 1 only; after that memory has to carry it."""
-    canon_block = ""
+    header = (
+        f"Setting: {premise.setting}\n"
+        f"Characters: {', '.join(premise.characters)}"
+    )
     if chapter == 1:
-        canon_block = (
-            "\nEstablished details that must hold for the whole novel "
+        header += (
+            "\n\nEstablished details that must hold for the whole novel "
             "(state them naturally in this chapter):\n"
             + premise.canon_block()
-            + "\n"
         )
-    return CHAPTER_PROMPT.format(
+    return writer_prompt(
         title=premise.title,
-        setting=premise.setting,
-        characters=", ".join(premise.characters),
-        canon_block=canon_block,
-        memory_block=build_memory(run),
-        chapter=chapter,
-        total=total,
+        header=header,
+        memory=build_memory(run),
         beat=premise.beats[(chapter - 1) % len(premise.beats)],
+        chapter=chapter,
         words=words,
     )
 
