@@ -45,7 +45,8 @@ SAID | <first few words of a quoted line> | <who said it>
 
 Predicates allowed: location, resides_in, possesses, alive, married_to, engaged_to,
 stance_toward, emotion, occupation, travelling_to, knows, member_of, parent_of,
-child_of, sibling_of, relative_of, identity_of, true_name, gender
+child_of, sibling_of, relative_of, identity_of, true_name, gender, eye_colour,
+hair_colour, material, birthplace
 
 Rules:
 - Use ONLY what this passage says. You have not read the rest of the book.

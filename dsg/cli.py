@@ -62,6 +62,14 @@ def _study(args: argparse.Namespace) -> int:
     return 0
 
 
+def _gen_report(args: argparse.Namespace) -> int:
+    from dsg.generate.report import build_report
+
+    path = build_report(Path(args.generation), Path(args.out))
+    print(f"generation report -> {path}")
+    return 0
+
+
 def _compare(args: argparse.Namespace) -> int:
     from dsg.experiments.compare_runs import build
 
@@ -105,6 +113,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-curves", action="store_true")
     p.add_argument("--corpus", default="pdnc")
     p.set_defaults(func=_study)
+
+    p = sub.add_parser("gen-report", help="score a generation run")
+    p.add_argument("--generation", required=True)
+    p.add_argument("--out", default="artifacts/report/generation")
+    p.set_defaults(func=_gen_report)
 
     p = sub.add_parser("compare", help="cross-corpus and cross-scale comparison")
     p.add_argument("--results-root", default="artifacts/results")

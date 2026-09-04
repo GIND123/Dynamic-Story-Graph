@@ -46,6 +46,9 @@ IMMUTABLE: frozenset[str] = frozenset(
         "gender",
         "species",
         "birthplace",
+        "eye_colour",
+        "hair_colour",
+        "material",
     }
 )
 
@@ -85,6 +88,10 @@ _SYNONYMS: dict[str, str] = {
     "is_really": "identity_of", "same_as": "identity_of", "actually_is": "identity_of",
     "real_name": "true_name", "named": "true_name", "name": "true_name",
     "sex": "gender", "is_a": "occupation",
+    "eyes": "eye_colour", "eye_color": "eye_colour", "eye_colour": "eye_colour",
+    "hair": "hair_colour", "hair_color": "hair_colour", "hair_colour": "hair_colour",
+    "made_of": "material", "metal": "material", "material_of": "material",
+    "composed_of": "material", "built_of": "material",
     "sick": "health", "ill": "health", "healthy": "health",
     "rich": "wealth", "poor": "wealth",
 }

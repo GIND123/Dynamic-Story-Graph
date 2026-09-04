@@ -100,35 +100,11 @@ def run_policy(
         state.step(proposal.index, prefix_end)
         span = Span(proposal.start, proposal.end)
 
-        for entity in proposal.entities:
-            state.observe_entity(entity.get("surface", ""), span=span)
-
-        for link in proposal.links:
-            result.links_proposed += 1
-            outcome = _apply_link(state, link, span)
-            if outcome == "bound":
-                result.links_bound += 1
-            elif outcome == "merged":
-                result.links_merged += 1
-            else:
-                result.links_unresolved += 1
-
-        for fact in proposal.facts:
-            subject = state.observe_entity(fact.subject, span=span)
-            if not subject:
-                continue
-            obj_id = state.resolve(fact.object)
-            state.apply_assertion(
-                CandidateAssertion(
-                    subject=subject,
-                    predicate=fact.predicate,
-                    object=obj_id or fact.object,
-                    certainty=_CERTAINTY.get(fact.certainty, Certainty.NARRATED),
-                    evidence=fact.evidence,
-                    span=span,
-                    confidence=_confidence(fact.certainty),
-                )
-            )
+        counts = apply_window(state, proposal, span)
+        result.links_proposed += counts["links_proposed"]
+        result.links_bound += counts["links_bound"]
+        result.links_merged += counts["links_merged"]
+        result.links_unresolved += counts["links_unresolved"]
 
         for speech in proposal.speech:
             node = state.resolve(speech.speaker)
@@ -163,6 +139,52 @@ def run_policy(
 
         state.close_step()
     return result
+
+
+def apply_window(
+    state: NarrativeState, proposal: WindowProposal, span: Span
+) -> dict[str, int]:
+    """Apply one window's proposals to a state. Shared by reading and writing.
+
+    The generation experiment needs to read a freshly written chapter into the
+    same kind of state, under the same calculus and the same guards, so this is
+    factored out rather than reimplemented -- a second implementation would make
+    the two settings quietly incomparable.
+    """
+    counts = dict.fromkeys(
+        ("links_proposed", "links_bound", "links_merged", "links_unresolved"), 0
+    )
+
+    for entity in proposal.entities:
+        state.observe_entity(entity.get("surface", ""), span=span)
+
+    for link in proposal.links:
+        counts["links_proposed"] += 1
+        outcome = _apply_link(state, link, span)
+        if outcome == "bound":
+            counts["links_bound"] += 1
+        elif outcome == "merged":
+            counts["links_merged"] += 1
+        else:
+            counts["links_unresolved"] += 1
+
+    for fact in proposal.facts:
+        subject = state.observe_entity(fact.subject, span=span)
+        if not subject:
+            continue
+        obj_id = state.resolve(fact.object)
+        state.apply_assertion(
+            CandidateAssertion(
+                subject=subject,
+                predicate=fact.predicate,
+                object=obj_id or fact.object,
+                certainty=_CERTAINTY.get(fact.certainty, Certainty.NARRATED),
+                evidence=fact.evidence,
+                span=span,
+                confidence=_confidence(fact.certainty),
+            )
+        )
+    return counts
 
 
 def _apply_link(state: NarrativeState, link: dict[str, str], span: Span) -> str:

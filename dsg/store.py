@@ -576,6 +576,51 @@ class NarrativeState:
         counts["rollback"] = sum(1 for r in self.log if r.rollback)
         return counts
 
+    def fact_digest(
+        self, max_entities: int = 12, max_facts_per_entity: int = 6
+    ) -> str:
+        """Bounded, believed-only view of the state, for conditioning generation.
+
+        Superseded and retracted assertions are omitted: the point of carrying a
+        revision calculus is that what the writer is shown is what currently
+        holds, not the whole history of what was ever written down. Entities are
+        ordered by how often they have been mentioned, so a bounded digest keeps
+        the cast that matters.
+        """
+        nodes = sorted(
+            self.live_entities(), key=lambda n: (-n.mention_count(), n.first_seen)
+        )[:max_entities]
+        by_subject: dict[str, list[Assertion]] = {}
+        for a in self.assertions.values():
+            if a.live:
+                by_subject.setdefault(a.subject, []).append(a)
+
+        lines: list[str] = []
+        for node in nodes:
+            facts = sorted(
+                by_subject.get(node.id, []), key=lambda a: (-a.confidence, a.d_open)
+            )[:max_facts_per_entity]
+            aliases = sorted(node.surfaces, key=lambda s: -node.surfaces[s])[:3]
+            head = node.canonical
+            if len(aliases) > 1:
+                head += f" (also: {', '.join(a for a in aliases if a != node.canonical)})"
+            if not facts:
+                lines.append(f"- {head}")
+                continue
+            rendered = []
+            for a in facts:
+                obj = (
+                    self.entities[a.object].canonical
+                    if a.object in self.entities
+                    else a.object
+                )
+                rendered.append(
+                    f"{a.predicate.replace('other:', '')}"
+                    f"{'' if a.polarity else ' NOT'} {obj}"
+                )
+            lines.append(f"- {head}: " + "; ".join(rendered))
+        return "\n".join(lines) if lines else "(nothing established yet)"
+
     def digest(self, max_entities: int = 24) -> str:
         """Bounded, entity-focused state summary -- what the model may see."""
         nodes = sorted(
