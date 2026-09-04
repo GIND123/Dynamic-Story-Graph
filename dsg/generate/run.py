@@ -34,6 +34,8 @@ POLICY_FOR = {
     "append-only-state": "append-only",
     "dsg-state": "dsg-full",
     "dsg-repair": "dsg-full",
+    "dsg-hybrid": "dsg-full",
+    "dsg-hybrid-repair": "dsg-full",
 }
 
 

@@ -610,15 +610,17 @@ class NarrativeState:
         return counts
 
     def fact_digest(
-        self, max_entities: int = 12, max_facts_per_entity: int = 6
+        self, max_entities: int = 14, max_facts_per_entity: int = 8
     ) -> str:
         """Bounded, believed-only view of the state, for conditioning generation.
 
-        Superseded and retracted assertions are omitted: the point of carrying a
-        revision calculus is that what the writer is shown is what currently
-        holds, not the whole history of what was ever written down. Entities are
-        ordered by how often they have been mentioned, so a bounded digest keeps
-        the cast that matters.
+        Facts are ordered by **durability**, not confidence. An immutable
+        predicate -- eye colour, material, kinship, birthplace -- is canon: it
+        holds for the whole story and a later chapter contradicting it is a
+        continuity error. A mutable one -- location, emotion -- churns by
+        design. When the digest has to truncate, dropping a transient fact costs
+        nothing and dropping a durable one costs the canon, so durable facts are
+        never crowded out by churn.
         """
         nodes = sorted(
             self.live_entities(), key=lambda n: (-n.mention_count(), n.first_seen)
@@ -628,15 +630,26 @@ class NarrativeState:
             if a.live:
                 by_subject.setdefault(a.subject, []).append(a)
 
+        def durability(a: Assertion) -> tuple[int, float, int]:
+            # 0 = immutable (canon), 1 = mutable, 2 = unrecognised predicate.
+            if a.predicate.startswith("other:"):
+                rank = 2
+            elif not is_mutable(a.predicate):
+                rank = 0
+            else:
+                rank = 1
+            return rank, -a.confidence, a.d_open
+
         lines: list[str] = []
         for node in nodes:
-            facts = sorted(
-                by_subject.get(node.id, []), key=lambda a: (-a.confidence, a.d_open)
-            )[:max_facts_per_entity]
+            facts = sorted(by_subject.get(node.id, []), key=durability)[
+                :max_facts_per_entity
+            ]
             aliases = sorted(node.surfaces, key=lambda s: -node.surfaces[s])[:3]
             head = node.canonical
-            if len(aliases) > 1:
-                head += f" (also: {', '.join(a for a in aliases if a != node.canonical)})"
+            extra = [a for a in aliases if a != node.canonical]
+            if extra:
+                head += f" (also: {', '.join(extra)})"
             if not facts:
                 lines.append(f"- {head}")
                 continue

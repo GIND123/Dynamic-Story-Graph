@@ -26,12 +26,17 @@ MEMORIES = (
     "append-only-state",# + a state digest that can never be revised
     "dsg-state",        # + a state digest under the full revision calculus
     "dsg-repair",       # + the same digest, and the graph may reject a chapter
+    "dsg-hybrid",       # + the digest AND the previous chapter
+    "dsg-hybrid-repair",# + both, and the graph may reject a chapter
 )
 
-STATE_MEMORIES = ("append-only-state", "dsg-state", "dsg-repair")
+STATE_MEMORIES = (
+    "append-only-state", "dsg-state", "dsg-repair",
+    "dsg-hybrid", "dsg-hybrid-repair",
+)
 
 # Memories whose chapter is checked against the graph before it is accepted.
-GUARDED_MEMORIES = ("dsg-repair",)
+GUARDED_MEMORIES = ("dsg-repair", "dsg-hybrid-repair")
 
 # A condition is a (backbone variant, memory) pair, written "variant:memory".
 # Pairing them inside one run keeps every comparison within-story: the effect of
@@ -47,6 +52,19 @@ CONDITIONS = (
     "tuned:full-context",
     "tuned:dsg-state",
     "tuned:dsg-repair",
+)
+
+# The base-only ladder used after the fine-tuned writer degenerated into
+# corpus pastiche: its numbers were not comparable, so it is excluded until
+# retrained. These six isolate what the state is worth against the practical
+# alternatives, at matched premise adherence.
+BASE_LADDER = (
+    "base:none",
+    "base:last-chapter",
+    "base:full-context",
+    "base:dsg-state",
+    "base:dsg-hybrid",
+    "base:dsg-hybrid-repair",
 )
 
 
@@ -137,6 +155,13 @@ def build_memory(run: StoryRun, budget_chars: int = 24_000) -> str:
             "The story so far:\n"
             + _truncate_head_and_tail(run.chapters, budget_chars)
         )
+    if condition in ("dsg-hybrid", "dsg-hybrid-repair"):
+        # A digest and the recent text are not rivals. Forcing a choice between
+        # them is an artefact of the ablation, not something a real writer would
+        # do: the digest carries what must stay true, the previous chapter
+        # carries voice and immediate continuity.
+        digest = state_memory(run.state.fact_digest() if run.state is not None else "")
+        return f"{digest}\n\nThe previous chapter:\n{run.chapters[-1]}"
     if condition in STATE_MEMORIES:
         return state_memory(run.state.fact_digest() if run.state is not None else "")
     raise ValueError(f"unknown condition {condition!r}")

@@ -162,6 +162,12 @@ COMPARISONS = (
     ("tuned:dsg-state", "tuned:full-context"),
     ("tuned:dsg-repair", "tuned:dsg-state"),
     ("tuned:dsg-repair", "base:full-context"),
+    # The hybrid: does a digest plus recent text beat either alone?
+    ("base:dsg-hybrid", "base:dsg-state"),
+    ("base:dsg-hybrid", "base:last-chapter"),
+    ("base:dsg-hybrid", "base:full-context"),
+    ("base:dsg-hybrid", "base:none"),
+    ("base:dsg-hybrid-repair", "base:dsg-hybrid"),
 )
 
 METRICS = ("violation_rate", "retention", "restatement_rate", "on_premise",
