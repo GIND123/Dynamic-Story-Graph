@@ -44,6 +44,35 @@ results = modal.Volume.from_name("dsg-results", create_if_missing=True)
 hf_secret = modal.Secret.from_name("hf-token")
 
 
+_NON_FACTS = ("not specified", "not mentioned", "not stated", "unknown",
+              "not given", "not described", "unclear", "n/a")
+
+
+def clean_state(digest: str) -> str:
+    """Drop non-answers the extractor slipped past the exact-match filter.
+
+    A line saying a property is "not specified in this chapter" carries nothing,
+    and training on it teaches the writer to produce the same non-answer. The
+    parse-time filter matches exact values, so phrasal variants survive; this
+    catches them before they reach the model.
+    """
+    kept = []
+    for line in (digest or "").splitlines():
+        head, _, tail = line.partition(":")
+        if not tail:
+            kept.append(line)
+            continue
+        facts = [
+            f.strip() for f in tail.split(";")
+            if f.strip() and not any(n in f.lower() for n in _NON_FACTS)
+        ]
+        if facts:
+            kept.append(f"{head}: " + "; ".join(facts))
+        elif head.strip().startswith("-"):
+            kept.append(head.rstrip())
+    return "\n".join(kept)
+
+
 def _build_examples(rows: list[dict], tokenizer, max_len: int) -> list[dict]:
     """Tokenise, mask the prompt, keep only what fits."""
     from dsg.generate.prompt import state_memory, writer_prompt
@@ -52,7 +81,7 @@ def _build_examples(rows: list[dict], tokenizer, max_len: int) -> list[dict]:
     for row in rows:
         prompt = writer_prompt(
             title=row.get("title", ""),
-            memory=state_memory(row.get("state", "")),
+            memory=state_memory(clean_state(row.get("state", ""))),
             beat=row.get("beat", ""),
             chapter=int(row.get("chapter", 1)),
             words=max(200, min(900, len(row.get("target", "")) // 6)),
