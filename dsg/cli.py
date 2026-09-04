@@ -62,6 +62,27 @@ def _study(args: argparse.Namespace) -> int:
     return 0
 
 
+def _push(args: argparse.Namespace) -> int:
+    """Mirror local results to the Hub so a lost laptop costs nothing."""
+    from dsg.hub import ARTIFACT_REPO, push_folder
+
+    repo = args.repo or ARTIFACT_REPO
+    pushed = []
+    for raw in args.paths.split(","):
+        path = Path(raw.strip())
+        if not path.exists():
+            print(f"skip {path} (missing)")
+            continue
+        url = push_folder(
+            path, repo, repo_type="model", path_in_repo=path.name,
+            message=f"{args.note}: {path.name}",
+        )
+        pushed.append(f"{path} -> {url}/tree/main/{path.name}")
+    for line in pushed:
+        print(line)
+    return 0 if pushed else 1
+
+
 def _gen_report(args: argparse.Namespace) -> int:
     from dsg.generate.report import build_report
 
@@ -113,6 +134,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-curves", action="store_true")
     p.add_argument("--corpus", default="pdnc")
     p.set_defaults(func=_study)
+
+    p = sub.add_parser("push", help="back up results and figures to the Hub")
+    p.add_argument("--paths", default="artifacts/report,artifacts/results")
+    p.add_argument("--repo", default="")
+    p.add_argument("--note", default="artifact backup")
+    p.set_defaults(func=_push)
 
     p = sub.add_parser("gen-report", help="score a generation run")
     p.add_argument("--generation", required=True)
