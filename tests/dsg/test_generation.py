@@ -270,3 +270,82 @@ def test_replay_offsets_keep_provenance_inside_the_prefix():
     offset = replay_extraction(state, chapters, cache, "b1", 3)
     assert offset == 3 * 102
     assert not [v for v in state.violations if v.code == "I6"]
+
+
+def _fake_checkpoint(runs, chapters_per_run, extraction_log):
+    """A checkpoint payload shaped exactly as the generation loop writes one."""
+    return {
+        "chapters_done": len(next(iter(chapters_per_run.values()))),
+        "runs": [
+            {
+                "story_id": r.story_id,
+                "condition": r.condition,
+                "chapters": chapters_per_run[(r.story_id, r.condition)],
+                "summary": f"summary for {r.condition}",
+            }
+            for r in runs
+        ],
+        "extractions": extraction_log,
+    }
+
+
+def test_generation_resume_restores_prose_summary_and_state():
+    """The gap that cost nine chapters: checkpointing without reading back."""
+    from dsg.generate.canon import build_premises
+    from dsg.generate.run import init_runs, restore_runs
+
+    premise = build_premises(1)[0]
+    runs = init_runs([premise], ("base:dsg-state", "base:rolling-summary"))
+    texts = [
+        "Hesper stood at the window, her grey eyes on the quay.",
+        "Hesper walked to the foundry before dawn.",
+    ]
+    chapters_per_run = {(r.story_id, r.condition): list(texts) for r in runs}
+    log = {
+        f"{premise.story_id}|base:dsg-state|0":
+            "FACT | Hesper | eye_colour | grey\nFACT | Hesper | location | the window",
+        f"{premise.story_id}|base:dsg-state|1":
+            "FACT | Hesper | location | the foundry",
+    }
+    saved = _fake_checkpoint(runs, chapters_per_run, log)
+
+    fresh = init_runs([premise], ("base:dsg-state", "base:rolling-summary"))
+    restored = restore_runs(fresh, saved, 2, log)
+    assert restored == 2
+
+    by_condition = {r.condition: r for r in fresh}
+    assert by_condition["base:dsg-state"].chapters == texts
+    assert by_condition["base:rolling-summary"].summary.startswith("summary for")
+
+    state = by_condition["base:dsg-state"].state
+    live = {(a.predicate, a.object) for a in state.assertions.values() if a.live}
+    assert ("eye_colour", "grey") in live
+    # The move superseded rather than contradicted: one live location.
+    assert ("location", "the foundry") in live
+    assert ("location", "the window") not in live
+    assert not state.violations
+
+
+def test_generation_resume_truncates_to_the_completed_chapters():
+    """A checkpoint written after chapter 1 must not carry chapter 2's prose."""
+    from dsg.generate.canon import build_premises
+    from dsg.generate.run import init_runs, restore_runs
+
+    premise = build_premises(1)[0]
+    runs = init_runs([premise], ("base:dsg-state",))
+    saved = _fake_checkpoint(
+        runs, {(runs[0].story_id, runs[0].condition): ["one", "two", "three"]}, {}
+    )
+    fresh = init_runs([premise], ("base:dsg-state",))
+    restore_runs(fresh, saved, 1, {})
+    assert fresh[0].chapters == ["one"]
+
+
+def test_generation_resume_is_a_noop_without_a_matching_run():
+    from dsg.generate.canon import build_premises
+    from dsg.generate.run import init_runs, restore_runs
+
+    premise = build_premises(1)[0]
+    fresh = init_runs([premise], ("base:dsg-state",))
+    assert restore_runs(fresh, {"runs": []}, 3, {}) == 0
+    assert fresh[0].chapters == []

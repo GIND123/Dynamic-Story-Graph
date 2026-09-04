@@ -101,6 +101,45 @@ def summary_targets(runs: list[StoryRun]) -> list[StoryRun]:
     return [r for r in runs if memory_of(r.condition) == "rolling-summary"]
 
 
+def restore_runs(
+    runs: list[StoryRun],
+    saved: dict,
+    start_chapter: int,
+    extraction_log: dict[str, str],
+) -> int:
+    """Rebuild in-flight runs from a checkpoint. Pure, so it can be tested.
+
+    The lesson this exists for: generation used to checkpoint without being able
+    to read one back, and the gap was only discovered by losing nine chapters of
+    GPU time. Recovery logic that can only be exercised by killing a live run
+    will not be exercised. This takes a saved payload and returns the chapter to
+    resume from, replaying cached extractions on the CPU to rebuild state.
+    """
+    by_key = {(r["story_id"], r["condition"]): r for r in saved.get("runs", [])}
+    restored = 0
+    for run in runs:
+        prior = by_key.get((run.story_id, run.condition))
+        if not prior:
+            continue
+        run.chapters = list(prior.get("chapters", []))[:start_chapter]
+        run.summary = prior.get("summary", "")
+        restored += 1
+        if run.state is None:
+            continue
+        offset = 0
+        for index, text in enumerate(run.chapters):
+            window = Window(
+                index=index, start=offset, end=offset + len(text), text=text
+            )
+            raw = extraction_log.get(f"{run.story_id}|{run.condition}|{index}", "")
+            proposal = parse_write_extraction(raw, window)
+            run.state.step(index, window.end)
+            apply_window(run.state, proposal, Span(window.start, window.end))
+            run.state.close_step()
+            offset = window.end + 2
+    return restored
+
+
 def guarded_targets(runs: list[StoryRun]) -> list[StoryRun]:
     """Runs whose chapter must clear the graph before it is accepted."""
     return [r for r in runs if memory_of(r.condition) in GUARDED_MEMORIES]
@@ -310,5 +349,6 @@ __all__ = [
     "clean_chapter", "extraction_prompt", "init_runs", "record",
     "state_targets", "summary_targets", "build_summary_prompt", "tuned_targets",
     "guarded_targets", "check_chapter_against_state", "replay_extraction",
+    "restore_runs",
     "parse_write_extraction", "WRITE_EXTRACT_PROMPT",
 ]

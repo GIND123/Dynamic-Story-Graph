@@ -109,14 +109,12 @@ def _run_generation(
         extraction_prompt,
         guarded_targets,
         init_runs,
-        parse_write_extraction,
         record,
+        restore_runs,
         state_targets,
         summary_targets,
         tuned_targets,
     )
-    from dsg.policies.runner import apply_window
-    from dsg.schemas import Span
 
     # The tuned conditions are served by the same base weights plus a LoRA, so
     # base and tuned answer identical prompts on one GPU and every comparison
@@ -206,24 +204,9 @@ def _run_generation(
             repairs_attempted = int(saved.get("repairs_attempted", 0))
             repairs_accepted = int(saved.get("repairs_accepted", 0))
             extraction_log.update(saved.get("extractions", {}))
-            by_key = {(r["story_id"], r["condition"]): r for r in saved.get("runs", [])}
-            for run in runs:
-                prior = by_key.get((run.story_id, run.condition))
-                if not prior:
-                    continue
-                run.chapters = list(prior["chapters"])[:start_chapter]
-                run.summary = prior.get("summary", "")
-                if run.state is not None:
-                    for index in range(len(run.chapters)):
-                        window = _window_at(run.chapters, index)
-                        proposal = parse_write_extraction(
-                            extraction_log.get(f"{run.story_id}|{run.condition}|{index}", ""),
-                            window,
-                        )
-                        run.state.step(index, window.end)
-                        apply_window(run.state, proposal, Span(window.start, window.end))
-                        run.state.close_step()
-            print(f"[gen] resuming after chapter {start_chapter}/{chapters}", flush=True)
+            restored = restore_runs(runs, saved, start_chapter, extraction_log)
+            print(f"[gen] resuming after chapter {start_chapter}/{chapters} "
+                  f"({restored} runs restored)", flush=True)
 
     t0 = time.time()
     for chapter in range(start_chapter + 1, chapters + 1):
