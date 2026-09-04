@@ -140,7 +140,93 @@ and the raw count as a companion.
 | Elaboration is front-loaded in narrative order | ρ = −0.59 in narrative order, +0.08 shuffled | `docs/FINDINGS.md` §2 F4 |
 | The revision trend is mostly state growth | ρ = +0.82 narrative vs +0.69 shuffled | ″ |
 
-## 7. What is missing for a top-venue submission
+## 7. The writing system
+
+Reading is half the system. The other half uses the state as a constraint on
+generation, and it is where the project's claim lives: **a story can get longer
+without breaking its own graph.**
+
+### 7.1 Four stages
+
+```
+ Gutenberg fiction ──► state-conditioned dataset ──► LoRA ──► guarded inference
+   215 novels             (state_{<t}, beat_t)       writer      write · read back
+   chapters               -> chapter_t               learns      · ask the graph
+                          built by the calculus      to use it   · rewrite if broken
+```
+
+1. **Corpus.** English Gutenberg filtered to fiction at novel length by
+   catalogue subject, cut at real chapter headings with a paragraph-block
+   fallback (`dsg/data/gutenberg.py`).
+2. **Dataset.** One example is *(the graph state a reader would hold after
+   chapters 1..t-1, a one-line brief for chapter t) → chapter t*. The state is
+   built causally, by the same calculus the reading study measured, so the model
+   is trained on exactly the object it is conditioned on at inference
+   (`dsg/infra/modal_traindata.py`).
+3. **Training.** LoRA with the prompt masked and the split taken **by book**, so
+   no novel appears on both sides (`dsg/infra/modal_train.py`).
+4. **Guarded inference.** Write the chapter, read it back, put every fact it
+   proposes to the state as a dry run, and reject the chapter if it would break
+   an established immutable fact (`dsg/generate/repair.py`).
+
+### 7.2 The guard
+
+The guard is the part that makes "without breaking the graph" a mechanism
+rather than a hope. After a chapter is written it is read back and each
+proposed fact is classified by `classify_only` — the *same* classifier the
+update path uses, so the guard cannot drift from the calculus it guards.
+
+A proposal that would force a `REVISE` on an **immutable** predicate is, by the
+calculus's own definition, not the world changing but the text contradicting
+what it already established: eye colour, material, kinship and birthplace do
+not change within a story. That is the rejection signal. A `SUPERSEDE` on a
+mutable predicate — a character moving, a mood shifting — passes untouched,
+because that is the story advancing.
+
+The chapter goes back once with the contradiction named ("already established
+as eye colour grey, but this chapter says blue"). Attempts and acceptances are
+counted separately, so the guard's hit rate is reported rather than folded into
+the headline.
+
+### 7.3 One prompt
+
+Training and every inference condition share `writer_prompt`
+(`dsg/generate/prompt.py`). If they disagreed on the shape of the ask, a
+fine-tuned writer would be evaluated out of distribution and the comparison
+would measure formatting drift rather than method.
+
+### 7.4 The evaluation
+
+Generated stories have no gold, so the gold is planted: each premise fixes
+canon facts from closed vocabularies whose contradictions are enumerable, and a
+violation is a deterministic string test near a mention of its subject. Canon
+is stated in chapter 1 only, so the experiment tests memory rather than
+prompt-following.
+
+Conditions are **(backbone variant × memory)** pairs served from one vLLM
+instance via `LoRARequest`, so base and tuned answer identical prompts within
+the same story. The memory effect reads down a variant, the training effect
+across variants at the same memory, neither confounding the other.
+
+| | none | last-chapter | rolling-summary | full-context | append-only-state | dsg-state | dsg-repair |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **base** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| **tuned** | | | | ✓ | ✓ | ✓ | ✓ |
+
+Reported next to accuracy: **context tokens per chapter**. A digest does not
+grow with the story and a transcript does, which is what makes the comparison
+against `full-context` a question of scaling rather than only of accuracy.
+
+### 7.5 Operating on an unreliable connection
+
+Jobs are deliberately **not** detached: losing the client kills the container
+and stops the billing. Every stage checkpoints as it goes — the dataset build
+caches each extraction so a resume replays it on CPU rather than re-billing the
+GPU, the trainer writes the adapter every `save_every` steps, generation
+checkpoints after every chapter — and everything is mirrored to the Hugging
+Face Hub. `scripts/modal_control.sh` gives status, stop and fetch.
+
+## 8. What is missing for a top-venue submission
 
 Ordered by how likely a reviewer is to demand it.
 
