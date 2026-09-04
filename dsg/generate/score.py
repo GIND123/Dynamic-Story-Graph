@@ -34,6 +34,7 @@ class RunScore:
     prompt_tokens_last: int = 0
     state_facts_final: int = 0
     state_entities_final: int = 0
+    canon_in_state_final: int = 0
     rollbacks_final: int = 0
 
     @property
@@ -62,6 +63,9 @@ class RunScore:
             ),
             "prompt_tokens_total": float(self.prompt_tokens_total),
             "prompt_tokens_last": float(self.prompt_tokens_last),
+            "canon_capture": (
+                self.canon_in_state_final / self.n_canon if self.n_canon else 0.0
+            ),
             "state_facts_final": float(self.state_facts_final),
             "state_entities_final": float(self.state_entities_final),
             "rollbacks_final": float(self.rollbacks_final),
@@ -96,6 +100,7 @@ def score_runs(payload: dict) -> list[RunScore]:
             len(score.violated) / score.n_canon if score.n_canon else 0.0
         )
         score.state_facts_final = rec.get("state_facts", 0)
+        score.canon_in_state_final = len(rec.get("canon_in_state", []))
         score.state_entities_final = rec.get("state_entities", 0)
         score.rollbacks_final = rec.get("rollbacks", 0)
     return list(scores.values())
@@ -125,7 +130,7 @@ COMPARISONS = (
     ("rolling-summary", "none"),
 )
 
-METRICS = ("violation_rate", "retention", "restatement_rate",
+METRICS = ("violation_rate", "retention", "restatement_rate", "canon_capture",
            "mean_first_violation", "total_chars",
            "prompt_tokens_total", "prompt_tokens_last")
 
@@ -151,7 +156,7 @@ def compare(scores: list[RunScore]) -> dict:
 
 
 def summarize(scores: list[RunScore], order: tuple[str, ...]) -> str:
-    cols = ("violation_rate", "retention", "restatement_rate",
+    cols = ("violation_rate", "retention", "restatement_rate", "canon_capture",
             "mean_first_violation", "total_chars", "prompt_tokens_last")
     lines = ["| condition | n | " + " | ".join(cols) + " |",
              "|" + "---|" * (len(cols) + 2)]

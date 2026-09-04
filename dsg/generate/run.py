@@ -19,8 +19,10 @@ from dsg.generate.conditions import (
     build_chapter_prompt,
     build_summary_prompt,
 )
+from dsg.lexicon import is_valid_object, normalize_predicate
+from dsg.matching import classify_surface
 from dsg.policies.runner import apply_window
-from dsg.proposals import build_prompt, parse_proposal
+from dsg.proposals import FactProposal, WindowProposal, is_plausible_entity
 from dsg.schemas import Span, Window
 from dsg.store import POLICIES, NarrativeState
 
@@ -44,6 +46,7 @@ class ChapterRecord:
     state_facts: int = 0
     state_violations: int = 0
     rollbacks: int = 0
+    canon_in_state: list[str] = field(default_factory=list)
 
     def to_json(self) -> dict:
         return {
@@ -55,6 +58,7 @@ class ChapterRecord:
             "evidence": self.evidence, "state_entities": self.state_entities,
             "state_facts": self.state_facts,
             "state_violations": self.state_violations, "rollbacks": self.rollbacks,
+            "canon_in_state": self.canon_in_state,
         }
 
 
@@ -93,29 +97,125 @@ def state_targets(runs: list[StoryRun]) -> list[StoryRun]:
     return [r for r in runs if r.condition in STATE_CONDITIONS]
 
 
-def extraction_prompt(run: StoryRun, chapter_text: str) -> str:
-    """Read the newly written chapter with the same extractor used for novels."""
+# The novel-reading prompt asks for four things at once (mentions, identity
+# links, facts, speech) because a novel needs all four. Reading back a chapter
+# just written needs one: what this chapter establishes. A smaller ask is
+# answered far more reliably -- the general prompt made a 3B put attributes in
+# the entity slot and invent a place name. Both state-carrying conditions use
+# this identically, so it does not favour either; the extractor is part of the
+# method, exactly as keeping the transcript is the method for full-context.
+WRITE_EXTRACT_PROMPT = """Read this chapter and list what it establishes about each named
+character and object.
+
+Output one line per fact, in exactly this form, and nothing else:
+
+FACT | <name exactly as written> | <property> | <value>
+
+Properties you may use:
+eye_colour, hair_colour, occupation, material, birthplace, resides_in, location,
+alive, married_to, parent_of, child_of, sibling_of, possesses, knows, member_of,
+stance_toward, emotion
+
+Rules:
+- Only what THIS chapter states. Do not guess and do not carry anything over.
+- Use the name exactly as it appears in the chapter.
+- Include physical objects too, not only people: what an object is made of, who
+  holds it, where it is.
+- Do not give the same value to two different names unless the chapter says so
+  of each of them separately.
+- Keep values short: one or two words where possible.
+- At most 16 lines.
+
+Chapter:
+<<<TEXT>>>
+{chapter}
+<<<END>>>
+
+FACTS:"""
+
+
+def _window_for(run: StoryRun, chapter_text: str) -> Window:
     start = sum(len(c) + 2 for c in run.chapters[:-1])
-    window = Window(
+    return Window(
         index=len(run.chapters) - 1, start=start,
         end=start + len(chapter_text), text=chapter_text,
     )
-    digest = run.state.digest() if run.state is not None else ""
-    return build_prompt(window, "", digest or "(none yet)")
+
+
+def extraction_prompt(run: StoryRun, chapter_text: str) -> str:
+    return WRITE_EXTRACT_PROMPT.format(chapter=chapter_text)
+
+
+def parse_write_extraction(raw: str, window: Window) -> WindowProposal:
+    """Parse the four-field FACT lines into the same proposal type."""
+    out = WindowProposal(index=window.index, start=window.start, end=window.end)
+    seen: set[str] = set()
+    for line in (raw or "").splitlines():
+        cells = [c.strip().strip("*-` ") for c in line.split("|")]
+        if len(cells) < 4 or cells[0].upper().lstrip("- ").strip() != "FACT":
+            continue
+        subject, predicate, value = cells[1], cells[2], cells[3]
+        if not (subject and predicate and value):
+            continue
+        if not is_plausible_entity(subject):
+            continue
+        if not is_valid_object(normalize_predicate(predicate), value):
+            continue
+        key = f"{subject}|{predicate}|{value}".lower()
+        if key in seen or len(out.facts) >= 14:
+            continue
+        seen.add(key)
+        if subject.lower() not in {e["surface"].lower() for e in out.entities}:
+            out.entities.append(
+                {"surface": subject, "kind": classify_surface(subject)}
+            )
+        out.facts.append(
+            FactProposal(subject=subject, predicate=predicate, object=value,
+                         certainty="narrated", evidence="")
+        )
+    out.parse_ok = bool(out.facts)
+    return out
 
 
 def apply_extraction(run: StoryRun, raw: str, chapter_text: str) -> None:
     if run.state is None:
         return
-    start = sum(len(c) + 2 for c in run.chapters[:-1])
-    window = Window(
-        index=len(run.chapters) - 1, start=start,
-        end=start + len(chapter_text), text=chapter_text,
-    )
-    proposal = parse_proposal(raw, window)
+    window = _window_for(run, chapter_text)
+    proposal = parse_write_extraction(raw, window)
     run.state.step(window.index, window.end)
     apply_window(run.state, proposal, Span(window.start, window.end))
     run.state.close_step()
+
+
+def _canon_held(run: StoryRun, premise: Premise) -> list[str]:
+    """Which planted facts the state actually holds as live beliefs.
+
+    The diagnostic that explains any result on the state conditions: a digest
+    can only protect a fact it captured. Extraction is the ceiling on the
+    method, and this makes the ceiling visible rather than leaving a null to be
+    misread as the representation failing.
+    """
+    if run.state is None:
+        return []
+    held: list[str] = []
+    live: set[tuple[str, str]] = set()
+    for a in run.state.assertions.values():
+        if not a.live:
+            continue
+        node = run.state.entities.get(a.subject)
+        if node is None:
+            continue
+        for surface in node.surfaces:
+            live.add((surface.strip().lower(), a.object.strip().lower()))
+    for fact in premise.canon:
+        subject = fact.subject.strip().lower()
+        for held_subject, value in live:
+            if held_subject != subject:
+                continue
+            if fact.value.lower() in value or value in fact.value.lower():
+                held.append(fact.fact_id)
+                break
+    return held
 
 
 def record(
@@ -130,6 +230,7 @@ def record(
         prompt_chars=prompt_chars, prompt_tokens=prompt_tokens,
     )
     if run.state is not None:
+        rec.canon_in_state = _canon_held(run, premise)
         rec.state_entities = len(run.state.live_entities())
         rec.state_facts = sum(1 for a in run.state.assertions.values() if a.live)
         rec.state_violations = len(run.state.violations)
@@ -157,4 +258,5 @@ __all__ = [
     "ChapterRecord", "POLICY_FOR", "apply_extraction", "chapter_prompts",
     "clean_chapter", "extraction_prompt", "init_runs", "record",
     "state_targets", "summary_targets", "build_summary_prompt",
+    "parse_write_extraction", "WRITE_EXTRACT_PROMPT",
 ]
