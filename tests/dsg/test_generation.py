@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from dsg.generate.canon import CanonFact, build_premises, check_chapter
+from dsg.generate.canon import CanonFact, build_premises
 from dsg.generate.conditions import (
     CONDITIONS,
     StoryRun,
     build_chapter_prompt,
     build_memory,
+    memory_of,
+    split_condition,
+    variant_of,
 )
-from dsg.generate.run import POLICY_FOR, clean_chapter, init_runs
+from dsg.generate.run import clean_chapter, init_runs
 from dsg.generate.score import score_runs
 
 
@@ -64,7 +67,7 @@ def test_premises_are_deterministic_and_carry_the_requested_canon():
 
 def test_canon_is_given_in_chapter_one_and_withheld_afterwards():
     premise = build_premises(1)[0]
-    run = StoryRun(story_id=premise.story_id, condition="none")
+    run = StoryRun(story_id=premise.story_id, condition="base:none")
     first = build_chapter_prompt(premise, run, 1, 8)
     assert premise.canon[0].statement in first
 
@@ -73,34 +76,48 @@ def test_canon_is_given_in_chapter_one_and_withheld_afterwards():
     assert premise.canon[0].statement not in later, "memory, not prompt-following"
 
 
-def test_each_condition_carries_a_different_memory():
+def test_each_memory_kind_carries_something_different():
     premise = build_premises(1)[0]
     memories = {}
     for condition in CONDITIONS:
-        run = StoryRun(story_id=premise.story_id, condition=condition,
-                       chapters=["chapter one text"], summary="a summary")
-        if condition in POLICY_FOR:
-            run.state = init_runs([premise], (condition,))[0].state
-        memories[condition] = build_memory(run)
+        run = init_runs([premise], (condition,))[0]
+        run.chapters = ["chapter one text"]
+        run.summary = "a summary"
+        memories[memory_of(condition)] = build_memory(run)
     assert memories["none"] == ""
     assert "chapter one text" in memories["last-chapter"]
     assert "a summary" in memories["rolling-summary"]
     assert "chapter one text" in memories["full-context"]
-    for condition in ("append-only-state", "dsg-state"):
-        assert "canon" in memories[condition].lower()
+    for memory in ("append-only-state", "dsg-state"):
+        assert "canon" in memories[memory].lower()
 
 
 def test_state_conditions_use_the_intended_policies():
     premise = build_premises(1)[0]
     runs = {r.condition: r for r in init_runs([premise])}
-    assert runs["append-only-state"].state.policy.name == "append-only"
-    assert runs["dsg-state"].state.policy.name == "dsg-full"
-    assert runs["none"].state is None
+    assert runs["base:append-only-state"].state.policy.name == "append-only"
+    assert runs["base:dsg-state"].state.policy.name == "dsg-full"
+    assert runs["tuned:dsg-state"].state.policy.name == "dsg-full"
+    assert runs["base:none"].state is None
+
+
+def test_conditions_pair_a_backbone_variant_with_a_memory():
+    """Training and memory must be separable: both variants at the same memory."""
+    assert variant_of("tuned:dsg-state") == "tuned"
+    assert memory_of("tuned:dsg-state") == "dsg-state"
+    assert split_condition("base:none") == ("base", "none")
+    # A bare memory name still parses, so older run files stay readable.
+    assert split_condition("dsg-state") == ("base", "dsg-state")
+    memories = {memory_of(c) for c in CONDITIONS}
+    for variant in ("base", "tuned"):
+        assert f"{variant}:dsg-state" in CONDITIONS
+        assert f"{variant}:full-context" in CONDITIONS
+    assert "none" in memories
 
 
 def test_full_context_truncation_keeps_the_opening():
     """The canon is established in chapter 1, so a fair baseline keeps it."""
-    run = StoryRun(story_id="s", condition="full-context",
+    run = StoryRun(story_id="s", condition="base:full-context",
                    chapters=["OPENING " + "x" * 4000] + ["y" * 4000 for _ in range(9)])
     memory = build_memory(run, budget_chars=6000)
     assert "OPENING" in memory
@@ -116,7 +133,7 @@ def test_scoring_is_monotone_and_uses_first_violation():
     premise = build_premises(1)[0]
     fact = premise.canon[0]
     payload = {
-        "meta": {"chapters": 3, "stories": 1, "conditions": ["none"]},
+        "meta": {"chapters": 3, "stories": 1, "conditions": ["base:none"]},
         "premises": [premise.to_json()],
         "records": [
             {"story_id": premise.story_id, "condition": "none", "chapter": 1,

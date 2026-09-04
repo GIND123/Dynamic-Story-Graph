@@ -14,10 +14,12 @@ from dataclasses import dataclass, field
 from dsg.generate.canon import Premise, check_chapter
 from dsg.generate.conditions import (
     CONDITIONS,
-    STATE_CONDITIONS,
+    STATE_MEMORIES,
     StoryRun,
     build_chapter_prompt,
     build_summary_prompt,
+    memory_of,
+    variant_of,
 )
 from dsg.lexicon import is_valid_object, normalize_predicate
 from dsg.matching import classify_surface
@@ -68,9 +70,10 @@ def init_runs(
     runs: list[StoryRun] = []
     for premise in premises:
         for condition in conditions:
+            memory = memory_of(condition)
             state = (
-                NarrativeState(POLICIES[POLICY_FOR[condition]])
-                if condition in STATE_CONDITIONS
+                NarrativeState(POLICIES[POLICY_FOR[memory]])
+                if memory in STATE_MEMORIES
                 else None
             )
             runs.append(
@@ -90,11 +93,16 @@ def chapter_prompts(
 
 
 def summary_targets(runs: list[StoryRun]) -> list[StoryRun]:
-    return [r for r in runs if r.condition == "rolling-summary"]
+    return [r for r in runs if memory_of(r.condition) == "rolling-summary"]
+
+
+def tuned_targets(runs: list[StoryRun]) -> list[bool]:
+    """Which runs should be served by the fine-tuned adapter."""
+    return [variant_of(r.condition) == "tuned" for r in runs]
 
 
 def state_targets(runs: list[StoryRun]) -> list[StoryRun]:
-    return [r for r in runs if r.condition in STATE_CONDITIONS]
+    return [r for r in runs if memory_of(r.condition) in STATE_MEMORIES]
 
 
 # The novel-reading prompt asks for four things at once (mentions, identity
@@ -257,6 +265,6 @@ def clean_chapter(raw: str) -> str:
 __all__ = [
     "ChapterRecord", "POLICY_FOR", "apply_extraction", "chapter_prompts",
     "clean_chapter", "extraction_prompt", "init_runs", "record",
-    "state_targets", "summary_targets", "build_summary_prompt",
+    "state_targets", "summary_targets", "build_summary_prompt", "tuned_targets",
     "parse_write_extraction", "WRITE_EXTRACT_PROMPT",
 ]

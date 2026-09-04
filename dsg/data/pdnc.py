@@ -150,10 +150,10 @@ def _parse_mentions(row: dict[str, str]) -> list[GoldMention]:
     except (ValueError, SyntaxError):
         return []
     out: list[GoldMention] = []
-    for sub_t, sub_s, sub_e in zip(texts, spans, entities):
+    for sub_t, sub_s, sub_e in zip(texts, spans, entities, strict=False):
         if not (isinstance(sub_t, list) and isinstance(sub_s, list) and isinstance(sub_e, list)):
             continue
-        for text, span, entity in zip(sub_t, sub_s, sub_e):
+        for text, span, entity in zip(sub_t, sub_s, sub_e, strict=False):
             if not (isinstance(span, (list, tuple)) and len(span) == 2):
                 continue
             # An expression annotated with several referents is genuinely

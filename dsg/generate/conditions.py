@@ -17,7 +17,8 @@ from dsg.generate.canon import Premise
 from dsg.generate.prompt import state_memory, writer_prompt
 from dsg.store import NarrativeState
 
-CONDITIONS = (
+# Memory kinds: what the writer is given about everything before this chapter.
+MEMORIES = (
     "none",             # premise + beat only: the floor
     "last-chapter",     # + the previous chapter verbatim
     "rolling-summary",  # + a running summary the model maintains
@@ -26,7 +27,39 @@ CONDITIONS = (
     "dsg-state",        # + a state digest under the full revision calculus
 )
 
-STATE_CONDITIONS = ("append-only-state", "dsg-state")
+STATE_MEMORIES = ("append-only-state", "dsg-state")
+
+# A condition is a (backbone variant, memory) pair, written "variant:memory".
+# Pairing them inside one run keeps every comparison within-story: the effect of
+# memory is read down a variant, the effect of training across variants at the
+# same memory.
+CONDITIONS = (
+    "base:none",
+    "base:last-chapter",
+    "base:rolling-summary",
+    "base:full-context",
+    "base:append-only-state",
+    "base:dsg-state",
+    "tuned:full-context",
+    "tuned:dsg-state",
+)
+
+
+def split_condition(condition: str) -> tuple[str, str]:
+    variant, _, memory = condition.partition(":")
+    return (variant, memory) if memory else ("base", variant)
+
+
+def memory_of(condition: str) -> str:
+    return split_condition(condition)[1]
+
+
+def variant_of(condition: str) -> str:
+    return split_condition(condition)[0]
+
+
+# Backwards-compatible alias used by the state-policy map.
+STATE_CONDITIONS = STATE_MEMORIES
 
 
 
@@ -87,7 +120,7 @@ def build_memory(run: StoryRun, budget_chars: int = 24_000) -> str:
     """The memory block for the next chapter, under this run's condition."""
     if not run.chapters:
         return ""
-    condition = run.condition
+    condition = memory_of(run.condition)
     if condition == "none":
         return ""
     if condition == "last-chapter":
@@ -99,7 +132,7 @@ def build_memory(run: StoryRun, budget_chars: int = 24_000) -> str:
             "The story so far:\n"
             + _truncate_head_and_tail(run.chapters, budget_chars)
         )
-    if condition in STATE_CONDITIONS:
+    if condition in STATE_MEMORIES:
         return state_memory(run.state.fact_digest() if run.state is not None else "")
     raise ValueError(f"unknown condition {condition!r}")
 

@@ -46,6 +46,33 @@ results = modal.Volume.from_name("dsg-results", create_if_missing=True)
 _VOLUMES = {"/root/.cache/huggingface": weights, "/results": results}
 
 
+def _generate_split(llm, prompts, params, use_lora, lora_path):
+    """Route each prompt to the base model or the adapter, preserving order.
+
+    With no adapter available the tuned arm is served by the base weights; the
+    run metadata records ``lora_repo``, so a result produced that way cannot be
+    mistaken for a base-versus-tuned comparison.
+    """
+    from vllm.lora.request import LoRARequest
+
+    texts: list[str] = [""] * len(prompts)
+    request = LoRARequest("dsg-writer", 1, lora_path) if lora_path else None
+    groups = {
+        False: [i for i, flag in enumerate(use_lora) if not flag],
+        True: [i for i, flag in enumerate(use_lora) if flag],
+    }
+    for tuned, idx in groups.items():
+        if not idx:
+            continue
+        outs = llm.generate(
+            [prompts[i] for i in idx], params, use_tqdm=False,
+            lora_request=request if tuned else None,
+        )
+        for i, out in zip(idx, outs, strict=False):
+            texts[i] = out.outputs[0].text
+    return texts
+
+
 def _run_generation(
     premise_dicts: list[dict],
     model_id: str,
@@ -53,6 +80,7 @@ def _run_generation(
     chapters: int,
     words: int,
     max_model_len: int,
+    lora_repo: str = "",
 ) -> dict:
     from transformers import AutoTokenizer
     from vllm import LLM, SamplingParams
@@ -68,12 +96,24 @@ def _run_generation(
         record,
         state_targets,
         summary_targets,
+        tuned_targets,
     )
+
+    # The tuned conditions are served by the same base weights plus a LoRA, so
+    # base and tuned answer identical prompts on one GPU and every comparison
+    # stays within-story.
+    lora_path = ""
+    if lora_repo:
+        from huggingface_hub import snapshot_download
+
+        lora_path = snapshot_download(lora_repo)
+        print(f"[gen] serving adapter {lora_repo}", flush=True)
 
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     llm = LLM(
         model=model_id, max_model_len=max_model_len,
         gpu_memory_utilization=0.90, disable_log_stats=True,
+        enable_lora=bool(lora_path), max_lora_rank=64,
     )
     chapter_params = SamplingParams(temperature=0.8, top_p=0.95, max_tokens=900, seed=0)
     aux_params = SamplingParams(temperature=0.0, max_tokens=420)
@@ -102,9 +142,11 @@ def _run_generation(
         prompt_sizes = [
             (len(p), len(tokenizer(p).input_ids)) for p in prompts
         ]
-        outs = llm.generate(chat(prompts), chapter_params, use_tqdm=False)
-        for run, out in zip(runs, outs, strict=False):
-            run.chapters.append(clean_chapter(out.outputs[0].text))
+        outs = _generate_split(
+            llm, chat(prompts), chapter_params, tuned_targets(runs), lora_path
+        )
+        for run, text in zip(runs, outs, strict=False):
+            run.chapters.append(clean_chapter(text))
 
         # Rolling summaries, batched.
         targets = summary_targets(runs)
@@ -147,15 +189,18 @@ def _run_generation(
         "meta": {
             "model": model_id, "stories": len(premises), "conditions": list(conditions),
             "chapters": chapters, "words": words, "seconds": round(elapsed, 1),
+            "lora_repo": lora_repo,
         },
         "premises": [p.to_json() for p in premises],
         "records": records,
     }
 
 
-def _entry(premise_dicts, model_id, conditions, chapters, words, max_model_len, run_id):
+def _entry(premise_dicts, model_id, conditions, chapters, words, max_model_len,
+           run_id, lora_repo=""):
     payload = _run_generation(
-        premise_dicts, model_id, tuple(conditions), chapters, words, max_model_len
+        premise_dicts, model_id, tuple(conditions), chapters, words,
+        max_model_len, lora_repo,
     )
     out = Path("/results") / f"{run_id}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -166,23 +211,26 @@ def _entry(premise_dicts, model_id, conditions, chapters, words, max_model_len, 
 
 @app.function(image=image, gpu="A10G", timeout=60 * 60 * 5, volumes=_VOLUMES)
 def generate_a10g(premise_dicts: list[dict], model_id: str, conditions: list[str],
-                  chapters: int, words: int, max_model_len: int, run_id: str) -> dict:
+                  chapters: int, words: int, max_model_len: int, run_id: str,
+                  lora_repo: str = "") -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id)
+                  max_model_len, run_id, lora_repo)
 
 
 @app.function(image=image, gpu="L4", timeout=60 * 60 * 5, volumes=_VOLUMES)
 def generate_l4(premise_dicts: list[dict], model_id: str, conditions: list[str],
-                chapters: int, words: int, max_model_len: int, run_id: str) -> dict:
+                chapters: int, words: int, max_model_len: int, run_id: str,
+                lora_repo: str = "") -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id)
+                  max_model_len, run_id, lora_repo)
 
 
 @app.function(image=image, gpu="A100-40GB", timeout=60 * 60 * 5, volumes=_VOLUMES)
 def generate_a100(premise_dicts: list[dict], model_id: str, conditions: list[str],
-                  chapters: int, words: int, max_model_len: int, run_id: str) -> dict:
+                  chapters: int, words: int, max_model_len: int, run_id: str,
+                  lora_repo: str = "") -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id)
+                  max_model_len, run_id, lora_repo)
 
 
 _FNS = {"A10G": generate_a10g, "L4": generate_l4, "A100-40GB": generate_a100}
@@ -220,6 +268,7 @@ def main(
     seed: int = 0,
     gpu: str = "",
     run_id: str = "",
+    lora_repo: str = "",
     out_dir: str = "artifacts/generation",
 ):
     from dsg.generate.canon import build_premises
@@ -234,7 +283,7 @@ def main(
 
     payload = _FNS[gpu_name].remote(
         [p.to_json() for p in premises], model_id, list(CONDITIONS),
-        chapters, words, max_model_len, run_id,
+        chapters, words, max_model_len, run_id, lora_repo,
     )
     print(f"[local] wrote {_write_local(payload, out_dir, run_id)}")
     print(f"[local] {json.dumps(payload['meta'])}")
