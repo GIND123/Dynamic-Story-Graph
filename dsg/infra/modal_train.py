@@ -91,6 +91,7 @@ def train(
     val_books: int = 12,
     run_id: str = "dsg-writer-qwen3b",
     push: bool = True,
+    save_every: int = 50,
 ) -> dict:
     import torch
     from huggingface_hub import hf_hub_download
@@ -99,12 +100,14 @@ def train(
         AutoModelForCausalLM,
         AutoTokenizer,
         Trainer,
+        TrainerCallback,
         TrainingArguments,
     )
 
     from dsg.hub import DATASET_REPO, MODEL_REPO
 
     dataset_repo = dataset_repo or DATASET_REPO
+    hub_repo = f"{MODEL_REPO}-{run_id.split('-')[-1]}"
     path = hf_hub_download(dataset_repo, "train.jsonl", repo_type="dataset")
     rows = [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
     print(f"[train] {len(rows)} rows from {dataset_repo}", flush=True)
@@ -158,19 +161,50 @@ def train(
     peft_model.print_trainable_parameters()
 
     out_dir = Path("/results") / run_id
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    class Checkpoint(TrainerCallback):
+        """Persist the adapter as training proceeds, not only at the end.
+
+        The connection this runs over is unreliable, and losing the client kills
+        the container. Writing the adapter to the volume every ``save_every``
+        steps -- and mirroring it to the Hub -- means an interrupted run costs
+        the steps since the last save rather than the whole run.
+        """
+
+        def on_save(self, args, state, control, **kw):  # noqa: D102
+            peft_model.save_pretrained(str(out_dir))
+            (out_dir / "progress.json").write_text(json.dumps({
+                "global_step": state.global_step,
+                "epoch": state.epoch,
+                "log_history": state.log_history[-20:],
+            }, indent=2))
+            results.commit()
+            print(f"[train] checkpoint at step {state.global_step}", flush=True)
+            if push:
+                try:
+                    from dsg.hub import push_folder
+
+                    push_folder(out_dir, hub_repo, repo_type="model",
+                                message=f"{run_id} step {state.global_step}")
+                except Exception as exc:
+                    print(f"[train] hub push failed ({exc}); volume copy is safe",
+                          flush=True)
+
     args = TrainingArguments(
         output_dir=str(out_dir), num_train_epochs=epochs,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         gradient_accumulation_steps=grad_accum,
         learning_rate=lr, lr_scheduler_type="cosine", warmup_ratio=0.03,
-        logging_steps=10, eval_strategy="steps", eval_steps=50,
-        save_strategy="no", bf16=True, report_to=[],
+        logging_steps=10, eval_strategy="steps", eval_steps=save_every,
+        save_strategy="steps", save_steps=save_every, save_total_limit=1,
+        bf16=True, report_to=[],
         gradient_checkpointing=True, remove_unused_columns=False,
     )
     trainer = Trainer(
         model=peft_model, args=args, train_dataset=train_ds,
-        eval_dataset=val_ds, data_collator=collate,
+        eval_dataset=val_ds, data_collator=collate, callbacks=[Checkpoint()],
     )
     t0 = time.time()
     baseline = trainer.evaluate()
@@ -201,8 +235,8 @@ def train(
     if push:
         from dsg.hub import push_folder
 
-        url = push_folder(out_dir, f"{MODEL_REPO}-{run_id.split('-')[-1]}",
-                          repo_type="model", message=f"{run_id}: {meta}")
+        url = push_folder(out_dir, hub_repo, repo_type="model",
+                          message=f"{run_id}: final, val {meta['val_loss_after']}")
         print(f"[train] pushed -> {url}", flush=True)
         meta["hub_url"] = url
     return meta
@@ -213,12 +247,13 @@ def main(
     model: str = "qwen3b", epochs: float = 2.0, lr: float = 1e-4, rank: int = 16,
     max_len: int = 2048, batch_size: int = 2, grad_accum: int = 8,
     val_books: int = 12, run_id: str = "", push: bool = True,
+    save_every: int = 50,
 ):
     run_id = run_id or f"dsg-writer-{model}"
     meta = train.remote(
         model_id=MODELS.get(model, model), epochs=epochs, lr=lr, rank=rank,
         max_len=max_len, batch_size=batch_size, grad_accum=grad_accum,
-        val_books=val_books, run_id=run_id, push=push,
+        val_books=val_books, run_id=run_id, push=push, save_every=save_every,
     )
     meta.pop("held_out_books", None)
     print(f"[local] {json.dumps(meta, indent=2)}")

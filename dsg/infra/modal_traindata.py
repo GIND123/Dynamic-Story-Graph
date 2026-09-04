@@ -41,6 +41,18 @@ weights = modal.Volume.from_name("dsg-weights", create_if_missing=True)
 results = modal.Volume.from_name("dsg-results", create_if_missing=True)
 hf_secret = modal.Secret.from_name("hf-token")
 
+def _push_partial(rows: list[dict], run_id: str, done: int, total: int) -> None:
+    """Mirror progress to the Hub as it is made, not only at the end."""
+    try:
+        from dsg.hub import DATASET_REPO, push_jsonl
+
+        push_jsonl(rows, DATASET_REPO, "train.jsonl",
+                   message=f"{run_id}: {len(rows)} rows, chapter {done}/{total}")
+    except Exception as exc:  # never let a Hub hiccup kill a GPU run
+        print(f"[data] hub push failed ({exc}); checkpoint is safe on the volume",
+              flush=True)
+
+
 BEAT_PROMPT = """Here is a chapter from a novel.
 
 <<<CHAPTER>>>
@@ -66,6 +78,7 @@ def build(
     model_id: str = "Qwen/Qwen2.5-7B-Instruct",
     run_id: str = "dsg-traindata",
     push: bool = True,
+    checkpoint_every: int = 2,
 ) -> dict:
     from transformers import AutoTokenizer
     from vllm import LLM, SamplingParams
@@ -117,9 +130,46 @@ def build(
             for p in prompts
         ]
 
+    # --- resume ---------------------------------------------------------
+    # Every extraction is cached, so a run that dies mid-way is replayed on the
+    # CPU rather than re-billed on the GPU. This matters more than it looks:
+    # the failure mode being defended against is a dropped connection, which
+    # kills the client, which kills the container.
+    ckpt_path = Path("/results") / f"{run_id}-checkpoint.json"
     rows: list[dict] = []
+    cache: dict[str, str] = {}
+    start_step = 0
+    if ckpt_path.exists():
+        saved = json.loads(ckpt_path.read_text())
+        rows = saved.get("rows", [])
+        cache = saved.get("extractions", {})
+        start_step = int(saved.get("completed_steps", 0))
+        print(f"[data] resuming from checkpoint: {len(rows)} rows, "
+              f"{start_step} chapters done", flush=True)
+        for step in range(start_step):
+            for plan in plans:
+                if step >= len(plan["chapters"]):
+                    continue
+                text = plan["chapters"][step]
+                key = f"{plan['book'].text_id}:{step}"
+                raw = cache.get(key, "")
+                start = plan["offset"]
+                window = Window(index=step, start=start, end=start + len(text), text=text)
+                proposal = parse_write_extraction(raw, window)
+                plan["state"].step(step, window.end)
+                apply_window(plan["state"], proposal, Span(window.start, window.end))
+                plan["state"].close_step()
+                plan["offset"] = window.end + 2
+
+    def save_checkpoint(completed: int) -> None:
+        ckpt_path.write_text(json.dumps({
+            "rows": rows, "extractions": cache, "completed_steps": completed,
+            "run_id": run_id, "model": model_id,
+        }))
+        results.commit()
+
     t0 = time.time()
-    for step in range(depth):
+    for step in range(start_step, depth):
         active = [p for p in plans if step < len(p["chapters"])]
         texts = [p["chapters"][step] for p in active]
 
@@ -146,6 +196,7 @@ def build(
             extract_params, use_tqdm=False,
         )
         for plan, text, ext in zip(active, texts, exts, strict=False):
+            cache[f"{plan['book'].text_id}:{step}"] = ext.outputs[0].text
             start = plan["offset"]
             window = Window(index=step, start=start, end=start + len(text), text=text)
             proposal = parse_write_extraction(ext.outputs[0].text, window)
@@ -154,10 +205,13 @@ def build(
             plan["state"].close_step()
             plan["offset"] = window.end + 2
 
-        if step % 4 == 0 or step == depth - 1:
+        if (step + 1) % checkpoint_every == 0 or step == depth - 1:
+            save_checkpoint(step + 1)
+            if push:
+                _push_partial(rows, run_id, step + 1, depth)
             rate = len(rows) / max(1e-9, time.time() - t0)
             print(f"[data] chapter {step + 1}/{depth} books={len(active)} "
-                  f"rows={len(rows)} {rate:.1f} row/s", flush=True)
+                  f"rows={len(rows)} {rate:.1f} row/s (checkpointed)", flush=True)
 
     elapsed = time.time() - t0
     meta = {
@@ -186,10 +240,12 @@ def build(
 def main(
     books: int = 200, shards: int = 8, chapters: int = 32,
     model: str = "qwen7b", run_id: str = "dsg-traindata", push: bool = True,
+    checkpoint_every: int = 2,
 ):
     meta = build.remote(
         n_books=books, shards=shards, max_chapters=chapters,
         model_id=MODELS.get(model, model), run_id=run_id, push=push,
+        checkpoint_every=checkpoint_every,
     )
     meta.pop("books", None)
     print(f"[local] {json.dumps(meta, indent=2)}")

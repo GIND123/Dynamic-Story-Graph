@@ -43,6 +43,7 @@ image = (
 
 weights = modal.Volume.from_name("dsg-weights", create_if_missing=True)
 results = modal.Volume.from_name("dsg-results", create_if_missing=True)
+hf_secret = modal.Secret.from_name("hf-token")
 _VOLUMES = {"/root/.cache/huggingface": weights, "/results": results}
 
 
@@ -81,6 +82,8 @@ def _run_generation(
     words: int,
     max_model_len: int,
     lora_repo: str = "",
+    run_id: str = "gen",
+    checkpoint_every: int = 1,
 ) -> dict:
     from transformers import AutoTokenizer
     from vllm import LLM, SamplingParams
@@ -139,6 +142,24 @@ def _run_generation(
 
     records: list[dict] = []
     repairs_attempted = repairs_accepted = 0
+
+    # Generated chapters are expensive and unrecoverable, so they are written to
+    # the volume after every chapter. Losing the connection then costs one
+    # chapter, not the run.
+    ckpt_path = Path("/results") / f"{run_id}-checkpoint.json"
+
+    def save_checkpoint(done: int) -> None:
+        ckpt_path.write_text(json.dumps({
+            "run_id": run_id, "chapters_done": done, "records": records,
+            "premises": [p.to_json() for p in premises],
+            "meta": {"model": model_id, "conditions": list(conditions),
+                     "chapters": chapters, "words": words,
+                     "lora_repo": lora_repo, "stories": len(premises)},
+            "repairs_attempted": repairs_attempted,
+            "repairs_accepted": repairs_accepted,
+        }))
+        results.commit()
+
     t0 = time.time()
     for chapter in range(1, chapters + 1):
         prompts = chapter_prompts(runs, by_id, chapter, chapters, words)
@@ -218,6 +239,8 @@ def _run_generation(
             payload["text"] = rec.text
             records.append(payload)
 
+        if chapter % checkpoint_every == 0 or chapter == chapters:
+            save_checkpoint(chapter)
         done = sum(len(r.chapters) for r in runs)
         rate = done / max(1e-9, time.time() - t0)
         print(f"[gen] chapter {chapter}/{chapters} runs={len(runs)} "
@@ -243,16 +266,24 @@ def _entry(premise_dicts, model_id, conditions, chapters, words, max_model_len,
            run_id, lora_repo=""):
     payload = _run_generation(
         premise_dicts, model_id, tuple(conditions), chapters, words,
-        max_model_len, lora_repo,
+        max_model_len, lora_repo, run_id,
     )
     out = Path("/results") / f"{run_id}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload))
     results.commit()
+    try:
+        from dsg.hub import ARTIFACT_REPO, push_file
+
+        push_file(out, ARTIFACT_REPO, f"generation/{run_id}.json",
+                  repo_type="model", message=f"{run_id} generation")
+    except Exception as exc:
+        print(f"[gen] hub push failed ({exc}); volume copy is safe", flush=True)
     return payload
 
 
-@app.function(image=image, gpu="A10G", timeout=60 * 60 * 5, volumes=_VOLUMES)
+@app.function(image=image, gpu="A10G", timeout=60 * 60 * 5, volumes=_VOLUMES,
+              secrets=[hf_secret])
 def generate_a10g(premise_dicts: list[dict], model_id: str, conditions: list[str],
                   chapters: int, words: int, max_model_len: int, run_id: str,
                   lora_repo: str = "") -> dict:
@@ -260,7 +291,8 @@ def generate_a10g(premise_dicts: list[dict], model_id: str, conditions: list[str
                   max_model_len, run_id, lora_repo)
 
 
-@app.function(image=image, gpu="L4", timeout=60 * 60 * 5, volumes=_VOLUMES)
+@app.function(image=image, gpu="L4", timeout=60 * 60 * 5, volumes=_VOLUMES,
+              secrets=[hf_secret])
 def generate_l4(premise_dicts: list[dict], model_id: str, conditions: list[str],
                 chapters: int, words: int, max_model_len: int, run_id: str,
                 lora_repo: str = "") -> dict:
@@ -268,7 +300,8 @@ def generate_l4(premise_dicts: list[dict], model_id: str, conditions: list[str],
                   max_model_len, run_id, lora_repo)
 
 
-@app.function(image=image, gpu="A100-40GB", timeout=60 * 60 * 5, volumes=_VOLUMES)
+@app.function(image=image, gpu="A100-40GB", timeout=60 * 60 * 5, volumes=_VOLUMES,
+              secrets=[hf_secret])
 def generate_a100(premise_dicts: list[dict], model_id: str, conditions: list[str],
                   chapters: int, words: int, max_model_len: int, run_id: str,
                   lora_repo: str = "") -> dict:
