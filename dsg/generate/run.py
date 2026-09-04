@@ -21,7 +21,7 @@ from dsg.generate.conditions import (
     memory_of,
     variant_of,
 )
-from dsg.lexicon import is_valid_object, normalize_predicate
+from dsg.lexicon import is_underspecified, is_valid_object, normalize_predicate
 from dsg.matching import classify_surface
 from dsg.policies.runner import apply_window
 from dsg.proposals import FactProposal, WindowProposal, is_plausible_entity
@@ -126,6 +126,8 @@ stance_toward, emotion
 
 Rules:
 - Only what THIS chapter states. Do not guess and do not carry anything over.
+- If a property is not given in the chapter, LEAVE THE LINE OUT. Never write
+  "not specified", "unknown" or similar -- omit it instead.
 - Use the name exactly as it appears in the chapter.
 - Include physical objects too, not only people: what an object is made of, who
   holds it, where it is.
@@ -168,6 +170,8 @@ def parse_write_extraction(raw: str, window: Window) -> WindowProposal:
         if not is_plausible_entity(subject):
             continue
         if not is_valid_object(normalize_predicate(predicate), value):
+            continue
+        if is_underspecified(value):
             continue
         key = f"{subject}|{predicate}|{value}".lower()
         if key in seen or len(out.facts) >= 14:

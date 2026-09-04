@@ -428,6 +428,39 @@ class NarrativeState:
             f"(needed {op.value}, policy {self.policy.name})",
         )
 
+    def classify_only(self, cand: CandidateAssertion) -> tuple[Op, Assertion | None]:
+        """What would happen if this were applied, without applying it.
+
+        Generation needs to ask the state a question before committing to text:
+        would this sentence contradict something already established? A dry run
+        keeps the guard honest -- the check uses the same classifier as the
+        update, so the loop cannot drift away from the calculus it is guarding.
+        """
+        predicate = normalize_predicate(cand.predicate)
+        subject = self.deref(cand.subject)
+        obj = self.deref(cand.object) if cand.object in self.entities else cand.object
+        if not subject:
+            return Op.NOOP, None
+        existing = self.live_on_slot(subject, predicate)
+        for a in existing:
+            if (
+                a.object.strip().lower() == str(obj).strip().lower()
+                and a.polarity == cand.polarity
+            ):
+                return Op.NOOP, a
+        conflicts = [
+            a
+            for a in existing
+            if not is_multi_valued(predicate)
+            or a.object.strip().lower() == str(obj).strip().lower()
+        ]
+        conflicts = [
+            a for a in conflicts if not (a.object == obj and a.polarity == cand.polarity)
+        ]
+        if not conflicts:
+            return Op.ASSERT, None
+        return self._classify(conflicts[0], str(obj), cand, predicate), conflicts[0]
+
     def _classify(
         self, existing: Assertion, obj: str, cand: CandidateAssertion, predicate: str
     ) -> Op:

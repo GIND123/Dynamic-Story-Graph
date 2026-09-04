@@ -121,6 +121,12 @@ UNDERSPECIFIED_OBJECTS: frozenset[str] = frozenset(
         "", "?", "unknown", "unspecified", "someone", "somebody", "something",
         "somewhere", "a place", "a man", "a woman", "a person", "a stranger",
         "the stranger", "a house", "a room", "elsewhere", "n/a", "none", "null",
+        # A model asked for a property it cannot fill will say so rather than
+        # omit the line. Such a "fact" carries nothing, crowds the digest, and
+        # would teach a writer trained on it to produce the same non-answer.
+        "not specified", "not mentioned", "not stated", "not given",
+        "not described", "not applicable", "unclear", "undefined", "-",
+        "no", "n/a.", "not known", "unnamed",
     }
 )
 

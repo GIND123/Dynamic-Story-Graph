@@ -152,3 +152,68 @@ def test_scoring_is_monotone_and_uses_first_violation():
     assert score.first_violation[fact.fact_id] == 2
     assert score.violated == {fact.fact_id}
     assert score.total_chars == 300
+
+
+def test_null_valued_facts_never_enter_the_state():
+    """A model asked for a property it cannot fill says so; that is not a fact."""
+    from dsg.generate.run import parse_write_extraction
+    from dsg.schemas import Window
+
+    raw = (
+        "FACT | Mrs. Darling | eye_colour | not specified\n"
+        "FACT | Mrs. Darling | hair_colour | unknown\n"
+        "FACT | Mrs. Darling | birthplace | N/A\n"
+        "FACT | Mr. Darling | occupation | clerk\n"
+        "FACT | Mrs. Darling | location | home\n"
+    )
+    proposal = parse_write_extraction(raw, Window(0, 0, 10, "x"))
+    assert [(f.subject, f.object) for f in proposal.facts] == [
+        ("Mr. Darling", "clerk"),
+        ("Mrs. Darling", "home"),
+    ]
+
+
+def test_the_guard_fires_on_immutable_clashes_only():
+    from dsg.generate.repair import detect_conflicts, repair_instruction
+    from dsg.proposals import FactProposal, WindowProposal
+    from dsg.schemas import Span
+    from dsg.store import POLICIES, CandidateAssertion, NarrativeState
+
+    state = NarrativeState(POLICIES["dsg-full"])
+    state.step(0, 10_000)
+    node = state.observe_entity("Hesper", Span(0, 6))
+    state.observe_entity("Hesper", Span(9, 15))
+    state.apply_assertion(CandidateAssertion(node, "eyes", "grey"))
+    state.apply_assertion(CandidateAssertion(node, "location", "the harbour"))
+
+    proposal = WindowProposal(
+        1, 0, 10,
+        facts=[
+            FactProposal("Hesper", "eye_colour", "blue"),      # continuity error
+            FactProposal("Hesper", "location", "the foundry"),  # the world moved
+        ],
+    )
+    conflicts = detect_conflicts(state, proposal)
+    assert [c.predicate for c in conflicts] == ["eye_colour"]
+    assert "grey" in conflicts[0].describe() and "blue" in conflicts[0].describe()
+    assert "canon" in repair_instruction(conflicts).lower()
+
+
+def test_the_guard_is_a_dry_run_and_does_not_touch_the_state():
+    from dsg.generate.repair import detect_conflicts
+    from dsg.proposals import FactProposal, WindowProposal
+    from dsg.schemas import Span
+    from dsg.store import POLICIES, CandidateAssertion, NarrativeState
+
+    state = NarrativeState(POLICIES["dsg-full"])
+    state.step(0, 10_000)
+    node = state.observe_entity("Hesper", Span(0, 6))
+    state.apply_assertion(CandidateAssertion(node, "eyes", "grey"))
+    before = {(a.predicate, a.object, a.status) for a in state.assertions.values()}
+
+    detect_conflicts(
+        state,
+        WindowProposal(1, 0, 10, facts=[FactProposal("Hesper", "eye_colour", "blue")]),
+    )
+    after = {(a.predicate, a.object, a.status) for a in state.assertions.values()}
+    assert before == after
