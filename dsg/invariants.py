@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from dsg.lexicon import ONE_WAY_FALSE, is_multi_valued
+from dsg.lexicon import ONE_WAY_FALSE, compatible, is_multi_valued
 from dsg.matching import MatchKind, match_kind
 from dsg.schemas import Assertion, EntityNode, Status, Violation
 
@@ -52,6 +52,9 @@ def check(
             for b in group[i + 1 :]:
                 same = a.object.strip().lower() == b.object.strip().lower()
                 if same and a.polarity == b.polarity:
+                    continue
+                # A more precise restatement is not a rival value.
+                if a.polarity == b.polarity and compatible(a.object, b.object):
                     continue
                 if _intervals_overlap(a, b):
                     out.append(
@@ -150,15 +153,27 @@ def inconsistent_slot_rate(
     quantity a reader actually wants -- what fraction of the state's slots are
     self-contradictory -- alongside it.
     """
-    slots: dict[tuple[str, str], set[str]] = {}
+    slots: dict[tuple[str, str], list[Assertion]] = {}
     for a in assertions:
         if a.status is not Status.BELIEVED or is_multi_valued(a.predicate):
             continue
-        key = f"{a.object.strip().lower()}|{a.polarity}"
-        slots.setdefault(a.slot, set()).add(key)
+        slots.setdefault(a.slot, []).append(a)
     if not slots:
         return 0.0, 0, 0
-    bad = sum(1 for values in slots.values() if len(values) > 1)
+
+    def conflicted(group: list[Assertion]) -> bool:
+        for i, a in enumerate(group):
+            for b in group[i + 1 :]:
+                if a.polarity != b.polarity:
+                    return True
+                if a.object.strip().lower() == b.object.strip().lower():
+                    continue
+                if compatible(a.object, b.object):
+                    continue
+                return True
+        return False
+
+    bad = sum(1 for group in slots.values() if conflicted(group))
     return bad / len(slots), bad, len(slots)
 
 

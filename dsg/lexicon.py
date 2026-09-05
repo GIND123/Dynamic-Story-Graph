@@ -54,8 +54,15 @@ IMMUTABLE: frozenset[str] = frozenset(
 
 # Predicates that admit many simultaneous values (no slot conflict on a new
 # object; only a polarity flip on the *same* object is a conflict).
+# Predicates that admit many simultaneous values. "occupation" belongs here:
+# a character is legitimately wife, mother and breadwinner at once, and
+# counting those as rivals was manufacturing contradictions in professionally
+# edited novels.
 MULTI_VALUED: frozenset[str] = frozenset(
-    {"knows", "possesses", "sibling_of", "relative_of", "member_of", "stance_toward"}
+    {
+        "knows", "possesses", "sibling_of", "relative_of", "member_of",
+        "stance_toward", "occupation",
+    }
 )
 
 CANONICAL: frozenset[str] = MUTABLE | IMMUTABLE
@@ -189,14 +196,28 @@ def is_underspecified(value: str | None) -> bool:
 
 
 def refines(earlier: str, later: str) -> bool:
-    """True when ``later`` specifies what ``earlier`` left open."""
+    """True when ``later`` specifies what ``earlier`` left open.
+
+    Includes plain specification: "dog" -> "Newfoundland dog" names the same
+    thing more precisely and is not a contradiction. Extraction returns the same
+    fact at different granularities all the time, and treating those as rival
+    values is the single largest source of false contradictions.
+    """
     before, after = earlier.strip().lower(), later.strip().lower()
     if not before or before == after:
         return False
     if is_underspecified(before):
         return True
+    before_tokens, after_tokens = set(before.split()), set(after.split())
+    if before_tokens and before_tokens < after_tokens:
+        return True
     head = before.split()[-1] if before.split() else ""
     return head in _GENERIC_HEADS and head in after and len(after) > len(before)
+
+
+def compatible(a: str, b: str) -> bool:
+    """Two values that name the same thing at different precision."""
+    return refines(a, b) or refines(b, a)
 
 
 def is_description(surface: str) -> bool:

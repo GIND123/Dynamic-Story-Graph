@@ -1,187 +1,174 @@
-# A methodology for dynamic narrative state in long-form generation
+# Structured narrative state: what it can and cannot do
 
-What the evidence supports, what it rules out, and the one design the evidence
-points at that has not yet been tested.
+A methodology built from what the evidence survived, not from what was hoped
+for. Everything below rests on 28 human-annotated novels, 215 public-domain
+novels, and 16,200 machine-generated chapters, with no LLM in any metric.
 
 ---
 
-## 1. The situation, stated honestly
+## 1. The thesis
 
-Two things are established here, on 9,000 generated chapters and 28 annotated
-novels:
+> A revision-aware narrative state is a **representational** result, not a
+> conditioning signal and not a text-level instrument. It keeps a maintained
+> state coherent; it does not help a model write, and its contradiction count
+> does not measure a text.
 
-**Established positive.** A revision-aware narrative state, maintained under an
-explicit update calculus, holds **0.000** self-contradictory slots against
-**0.370–0.423** for an append-only store — replicated at 1.5B, 3B and 7B,
-scored against human annotation, with no LLM in the metric.
+Three claims, each with its scope stated, and three pre-registered negatives
+that bound them. The negatives are load-bearing: they are what make the
+positive claim narrow enough to be true.
 
-**Established negative.** Serialising that state into the writer's prompt does
-not help generation. Alone it is *worse than no memory at all* (+0.083
-violation rate, CI excludes zero); added to recent text it still loses to
-simply pasting the previous chapter (+0.071, CI excludes zero).
+## 2. C1 — The revision calculus (positive, well evidenced)
 
-The negative is not an isolated accident. It **independently replicates a known
-result**: the Narrative World Model paper's own ablation found that serialising
-current state scored 0.358 while *query-conditioned retrieval over the same
-state* scored 0.898. Their "State Memory" condition is, structurally, exactly
-our `dsg-state`. We reproduced their failure mode without having tested their
-success mode.
+**Claim.** Given a fixed stream of extracted assertions, a store equipped with
+an explicit update calculus holds **0.000** self-contradictory slots, against
+**0.370–0.423** for an append-only store — at 1.5B, 3B and 7B extractors, over
+28 novels.
 
-That is the opening.
+**Method.** Three update types that append-only pipelines conflate:
 
-## 2. The claim worth making
+| operation | fires when | effect |
+| --- | --- | --- |
+| `ELABORATE` | later text specifies what earlier text left open | refined in place; nothing retracted |
+| `SUPERSEDE` | the **story world** changed | validity interval closed; kept as history |
+| `REVISE` | the **reader** was wrong; it was never true | retracted, and so is anything derived from it |
 
-> **A narrative state is not a context to carry. It is an index to query and a
-> constraint to check.**
+The `SUPERSEDE`/`REVISE` split is the operational form of a narratological
+distinction — an event in the story versus a disclosure in the telling — and is
+decided by an inspectable lexicon (predicate mutability, evidential source,
+revelation markers), never by a model. Seven structural invariants are checked
+after every reading step, including prefix causality: no assertion may cite text
+the reader has not reached.
 
-Three consequences, each an independent contribution:
+**Scope, stated precisely.** This is a claim about *representations given
+identical input*, established by holding extraction constant and varying only
+the update policy. It is **not** a claim that the resulting state is a faithful
+model of the text (see §5).
 
-### C1 — The state as a measurement instrument (proven)
+**Controls.** Every policy replays a byte-identical cached proposal stream, so
+differences are attributable to the representation rather than to extractor
+variance. Each rung of the ladder adds exactly one mechanism, so each is priced
+separately: identity merging, fact revision, deferred commitment, and the cost
+of causality against a non-causal oracle.
 
-The calculus already does something no LLM judge can: it decides, from an
-inspectable lexicon rather than a model's opinion, whether two assertions
-conflict — and distinguishes *the world changed* (`SUPERSEDE`) from *the text
-contradicted itself* (`REVISE`). Immutable predicates cannot change within a
-story, so a `REVISE` on one **is** a continuity error, by definition rather
-than by judgement.
+## 3. C2 — A benchmark needing no annotation and no judge (positive)
 
-This yields a consistency metric for *any* long text, generated or written,
-that needs no annotation and no judge. That is the contribution the evidence
-most strongly supports, and it is a measurement contribution rather than a
-leaderboard one.
+**Problem.** Generated stories have no gold. Human judgement is expensive; an
+LLM judge is the thing being avoided.
 
-### C2 — Beat-conditioned retrieval — **TESTED, AND IT FAILS**
+**Method.** Plant the gold. Each premise fixes canon facts drawn from closed
+vocabularies whose contradictions are enumerable — eye colour, metal, kinship,
+trade, birthplace. A violation becomes a deterministic string test near a
+mention of its subject, with a nearby correction ("not gold but silver")
+correctly not counted. Canon is stated in chapter 1 and withheld afterwards, so
+the benchmark tests memory rather than prompt-following.
 
-Instead of serialising the whole state, retrieve only what the *next beat*
-implicates: the entities it names, their immutable canon, and their current
-mutable state. Everything else is withheld.
+**The metric that makes it trustworthy.** `on_premise` — does the chapter write
+about the story it was asked for. Violations are only counted near a mention of
+their subject, so a model that stops writing about the premise scores a perfect
+violation rate while producing nothing usable. This is not hypothetical: a
+fine-tuned writer here scored **0.054** against **0.367** for the base model, an
+apparent 7× win, purely by degenerating into pastiche of its training corpus.
+`on_premise` exposed it (1.000 against 0.765–0.812, with canon restatement
+0.84 against 0.09) and the arm was excluded.
 
-The prediction was that querying the state would succeed where serialising it
-failed. It did not. Beat-conditioned retrieval scores **0.571** — worse than
-giving the writer *no memory at all* (0.487; Δ +0.083, CI [+0.038, +0.125],
-losing on 17 of 30 stories) and statistically indistinguishable from the
-serialised digest it was meant to fix (0.588).
+**Why this is the durable contribution.** It is gold by construction, so unlike
+§5 it does not depend on extraction quality at all.
 
-Retrieval plus the previous chapter (0.317) is indistinguishable from the
-previous chapter alone (0.312; Δ +0.004, CI spans zero, 8–7). The graph
-contributes nothing a writer needs.
+## 4. C3 — State conditioning does not help generation (negative, well powered)
 
-**This kills the conditioning line, and it does so cleanly.** Pre-registered
-falsifier 1 fired: the failure is the state, not its serialisation.
-
-The decisive detail is that it is **not** an extraction ceiling. In this run the
-state held **0.492** of the planted canon — half of it, correctly, at the moment
-of writing — and conditioning on it still added nothing. Fixing extraction would
-not have rescued this.
-
-### C3 — A benchmark with no annotation and no judge
-
-Planted canon drawn from closed vocabularies makes a continuity violation a
-deterministic string test near a mention of its subject. Paired with
-`on_premise` — does the chapter write about the story it was asked for — it
-resists the failure mode that nearly produced a false positive here: a
-degenerate model scored a 7× "improvement" purely by ceasing to mention the
-characters.
-
-The corpus is synthetic by necessity (controlled gold), which is the honest
-limitation; the *method* transfers to any premise with checkable attributes.
-
-## 3. Experimental design
-
-One backbone, one GPU, conditions paired within story so every comparison is
-like-for-like.
-
-| condition | memory given for chapter *t* |
-| --- | --- |
-| `none` | premise + beat |
-| `previous-chapter` | + the previous chapter (**the incumbent to beat: 0.308**) |
-| `full-transcript` | + everything so far, truncated (0.329) |
-| `state-digest` | + the serialised state (0.588 — the known-failing cell) |
-| `digest + previous` | + both (0.379) |
-| **`beat-retrieval`** | **+ only the canon of entities the beat implicates** |
-| **`beat-retrieval + previous`** | **+ that, and the previous chapter** |
-| **`… + guard`** | **+ the graph may reject and demand a rewrite** |
-
-**Primary metric.** Cumulative canon violation by chapter — monotone, since
-continuity once broken stays broken.
-**Guard metrics.** `on_premise` (a condition that stops writing about the story
-cannot be credited), `restatement_rate`, `canon_capture`.
-**Cost metric.** Prompt tokens per chapter, which is where a retrieved slice
-should dominate a growing transcript.
-**Statistics.** Paired bootstrap over stories, effect sizes with intervals, no
-reliance on p-values at n=30.
-
-### Pre-registered falsifiers
-
-1. `beat-retrieval` ≈ `state-digest` → the failure is the *state*, not its
-   serialisation, and the conditioning line is finished.
-2. `beat-retrieval + previous` ≤ `previous-chapter` → the graph adds nothing a
-   writer needs; report it and stop.
-3. The guard remains null → detection is too sparse to control generation, and
-   extraction is the only remaining lever.
-4. Any condition wins while `on_premise` falls → an artefact, not a result.
-
-## 3a. Outcome: four conditioning designs, three runs, 12,600 chapters
+Four designs, three runs, 12,600 chapters, 30 stories, paired within story.
 
 | memory | violations ↓ | tokens | verdict |
 | --- | --- | --- | --- |
 | none | 0.487 | 112 | floor |
-| previous chapter | 0.312 | 1,017 | **strong, cheap incumbent** |
-| full transcript | 0.254 | 5,362 | best, at 5× the context |
-| serialised digest | 0.588 | 357 | worse than nothing |
-| digest + previous | 0.379 | 1,194 | loses to previous alone |
-| beat retrieval | 0.571 | 212 | worse than nothing |
-| beat retrieval + previous | 0.317 | 1,098 | ties previous alone |
+| previous chapter | 0.312 | 1,017 | strong, cheap |
+| full transcript | 0.254 | 5,362 | best, 5× the context |
+| serialised state digest | 0.588 | 357 | **worse than nothing** |
+| digest + previous chapter | 0.379 | 1,194 | loses to previous alone |
+| beat-conditioned retrieval | 0.571 | 212 | **worse than nothing** |
+| retrieval + previous chapter | 0.317 | 1,098 | ties previous alone |
 | + graph guard | 0.317 | 1,095 | no effect (ns) |
 
-Every design that puts narrative state into the writer's prompt either loses to
-a baseline or ties one that is cheaper. The guard never moves a number. The
-conclusion is not "needs more work" — it is that this is the wrong use of the
-object.
+Serialised state is worse than no memory (+0.083, CI [+0.025, +0.142]).
+Beat-conditioned retrieval — the design the prior literature predicts should
+win — is also worse than no memory (+0.083, CI [+0.038, +0.125]) and
+indistinguishable from the serialisation it was meant to fix. Retrieval plus
+recent text ties recent text alone (+0.004, ns). The guard never moves a number.
 
-## 4. The binding constraint, named
+**This is not an extraction ceiling.** The state held **0.492** of the planted
+canon at the moment of writing and conditioning on it still added nothing.
 
-Extraction. Capture by canon type at chapter 20:
+**It replicates a published negative.** The Narrative World Model paper's own
+ablation reports serialised current state at 0.358 against query-conditioned
+retrieval at 0.898. Our `state-digest` is structurally their `State Memory`. We
+reproduce their failure with a 3B open model — and, unlike them, find that
+their success condition does not transfer.
 
-| type | captured |
-| --- | --- |
-| eye colour | 0.50 |
-| trade | 0.38 |
-| hair | 0.33 |
-| birthplace | 0.23 |
-| **object material** | **0.12** |
+## 5. C4 — The contradiction count does not measure a text (negative, and it
+constrains C1)
 
-The extractor is character-centric and largely ignores objects, so half the
-planted canon never enters the state. No amount of work on the calculus
-recovers that. If C2 fails, this is the only honest place left to work, and it
-is a smaller, better-posed problem than anything downstream.
+We tested our own instrument's external validity and it failed. That test is
+reported because it bounds what C1 may claim.
 
-## 5. Why this is publishable either way
+**Design.** 215 published novels and 30 generated stories, first 20 chapters
+each, read with the *same* extraction prompt, reconciler and policy. If the
+contradiction rate measures textual consistency, professionally edited novels
+should score far below machine-generated ones.
 
-The branch resolved to the second one, and it resolved cleanly:
+**Result.** They do not separate: AUC **0.394**, 95% CI [0.259, 0.534] — the
+interval spans chance. Published novels score **0.238**, which is not credible
+as a rate of genuine self-contradiction in edited prose.
 
-> **A maintained narrative state is a measurement instrument, not a
-> conditioning signal.**
+**Diagnosis.** The flagged "contradictions" in real novels are extraction
+artefacts. In *Peter Pan*: `Mrs. Darling.occupation: [wife, mother]` — both
+true; `Nana.material: [Newfoundland dog, dog]` — the same thing at different
+precision; `Wendy.resides_in: [14, nursery]` — a house number and a room.
 
-That is a defensible finding rather than a consolation. It rests on four
-conditioning designs across three runs and 12,600 generated chapters, each
-falsifier stated before the run; on a diagnosis that rules out the obvious
-escape (capture was 0.492 and it still did not help); and on an independent
-replication of a published negative — the Narrative World Model's serialised
-`State Memory` condition — obtained with a 3B open model instead of a frontier
-API.
+**Correction applied.** `occupation` is genuinely multi-valued and was
+reclassified; refinement detection was broadened so a more precise restatement
+is not counted as a rival value. This lowered both populations (human
+0.267→0.238) and still did not separate them. **Residual extraction noise
+dominates the absolute level.**
 
-What survives, and what a submission should be built on:
+**What this licenses and forbids.** C1 stands: it is a controlled comparison of
+policies on identical input, and that comparison is unaffected by a shared noise
+floor. What is *forbidden* is reporting the contradiction rate as a measure of
+how consistent a text is. We do not.
 
-- **C1, the measurement instrument.** 0.000 self-contradictory slots against
-  0.370–0.423, at three model sizes, scored against human annotation with no
-  LLM in the metric.
-- **C3, the benchmark.** Planted canon plus premise adherence, no annotation and
-  no judge, already demonstrated to catch a degenerate model that scored a
-  spurious 7× win by ceasing to write about the story.
-- **The negative itself**, which is worth reporting because the field is
-  actively building state-conditioned writers and this is evidence, with
-  intervals, that the obvious version does not work.
+## 6. Design principles worth stating
 
-What is *not* supported, and should not be claimed: that a dynamic story graph
-improves long-form generation. It does not, in any form tested here.
+1. **Hold extraction constant.** Every policy comparison replays a
+   byte-identical cached stream, so representation and extractor never confound.
+2. **Gold by construction beats gold by judgement.** The planted-canon benchmark
+   needs no annotation and no model, which is why it survived when the
+   extraction-dependent metric did not.
+3. **Every headline metric needs a denominator that can expose its artefact.**
+   `on_premise` for violation rate; the human-vs-machine test for the
+   contradiction rate. One caught a 7× false positive; the other invalidated a
+   claim we wanted to make.
+4. **Pre-register the falsifiers.** Four were stated before the generation runs;
+   three fired, and are reported as such.
+5. **Price causality.** A non-causal oracle given the same extraction bounds
+   what reading forward costs, separately from what the method buys.
+
+## 7. Honest positioning
+
+This is a paper about the limits of a popular idea, with one solid positive
+result and a reusable benchmark. It is not a system paper claiming better story
+generation, because the evidence does not support one.
+
+The field is actively building state-conditioned writers. Evidence with
+intervals that four such designs fail — plus a metric that catches the
+degenerate-model artefact which makes them look like they work, plus a
+demonstration that the obvious consistency metric measures its own extractor —
+is a contribution of the kind that saves other people months.
+
+## 8. What would extend it
+
+1. **Mention-level identity gold** (BookCoref) to replace the alias-set proxy.
+2. **Validate the `SUPERSEDE`/`REVISE` decision itself** against a few hundred
+   hand-annotated conflict pairs. It is the conceptual centre and the least
+   evaluated part.
+3. **A second model family**, to show the negatives are not Qwen-specific.
+4. **Human validation of the planted-canon metric** — do readers agree a flagged
+   violation reads as a continuity error?

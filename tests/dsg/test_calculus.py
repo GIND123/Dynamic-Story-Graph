@@ -57,11 +57,12 @@ def test_immutable_predicate_conflict_is_a_revision():
 def test_revelation_marker_promotes_supersede_to_revise():
     s = state()
     e = s.observe_entity("Pip", Span(0, 3))
-    s.apply_assertion(CandidateAssertion(e, "occupation", "blacksmith", evidence="a blacksmith"))
+    # location is single-valued and mutable, so it would normally supersede.
+    s.apply_assertion(CandidateAssertion(e, "location", "the forge", evidence="at the forge"))
     s.step(3, 10_000)
     op = s.apply_assertion(
         CandidateAssertion(
-            e, "occupation", "gentleman", evidence="in fact he had never been a smith"
+            e, "location", "London", evidence="in fact he had never left London"
         )
     )
     assert op is Op.REVISE, "an explicit correction is not a world change"
@@ -74,13 +75,13 @@ def test_reported_belief_yields_to_narration():
     e = s.observe_entity("Pip", Span(0, 3))
     s.apply_assertion(
         CandidateAssertion(
-            e, "occupation", "clerk", certainty=Certainty.REPORTED, evidence="he claimed"
+            e, "location", "Cairo", certainty=Certainty.REPORTED, evidence="he claimed"
         )
     )
     s.step(4, 10_000)
     op = s.apply_assertion(
         CandidateAssertion(
-            e, "occupation", "thief", certainty=Certainty.NARRATED, evidence="he was"
+            e, "location", "Marseille", certainty=Certainty.NARRATED, evidence="he was"
         )
     )
     assert op is Op.REVISE
@@ -176,6 +177,12 @@ def test_append_only_cannot_elaborate_and_so_holds_both_values():
     )
     assert op is Op.ASSERT
     assert sum(1 for a in s.assertions.values() if a.live) == 2
+
+    # 'a house' and 'Satis House' name the same place at different precision, so
+    # holding both is untidy but not a contradiction. An incompatible pair is.
+    assert not [v for v in s.close_step() if v.code == "I1"]
+    s.step(2, 10_000)
+    s.apply_assertion(CandidateAssertion(e, "location", "London", evidence="went to London"))
     assert any(v.code == "I1" for v in s.close_step())
 
 
