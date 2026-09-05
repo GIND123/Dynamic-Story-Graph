@@ -4,13 +4,13 @@ Research workspace for long-context consistent story generation.
 
 ## Projects
 
-- [`dsg/`](dsg/) — **Dynamic Story Graph**: revision-aware, prefix-causal
-  narrative state. Builds the reader's model of a novel *as the novel is read*,
-  with an explicit calculus separating monotone elaboration, story-world change,
-  and correction of a mistaken reader belief. Scored against human annotation on
-  28 novels. Start at [`dsg/README.md`](dsg/README.md); the plan is in
-  [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) and the formal specification
-  in [`docs/METHOD.md`](docs/METHOD.md).
+- [`dsg/`](dsg/) **Dynamic Story Graph**: a revision aware, prefix causal
+  narrative state for book length fiction, and a study of what such a state is
+  good for. One positive result (the calculus keeps a maintained state
+  coherent), three negatives that bound it (state conditioning does not help
+  generation, and the contradiction count does not measure a text). Full write
+  up with all tables and figures: [`dsg/README.md`](dsg/README.md). Methodology:
+  [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
 - [`gnsm/`](gnsm/) — Grounded Narrative State Model: symbolic extraction,
   learned narrative state, supervised transitions, conditioned generation, and
   deterministic consistency verification.
