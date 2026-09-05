@@ -50,20 +50,29 @@ that needs no annotation and no judge. That is the contribution the evidence
 most strongly supports, and it is a measurement contribution rather than a
 leaderboard one.
 
-### C2 — Beat-conditioned retrieval (untested; prior work predicts it wins)
+### C2 — Beat-conditioned retrieval — **TESTED, AND IT FAILS**
 
 Instead of serialising the whole state, retrieve only what the *next beat*
 implicates: the entities it names, their immutable canon, and their current
 mutable state. Everything else is withheld.
 
-Why this should work where serialisation failed:
-- A serialised digest crowds the prompt with facts irrelevant to the scene
-  being written, and our own data shows the cost is real — the digest carries a
-  third of the canon while occupying the space that recent text would use.
-- A beat mentions two or three characters. Their canon is perhaps ten facts.
-  That fits in ~80 tokens against the digest's ~360 and the transcript's ~5,400.
-- It is the one cell of the design space that both this project's evidence and
-  the prior literature point at, and that neither has run.
+The prediction was that querying the state would succeed where serialising it
+failed. It did not. Beat-conditioned retrieval scores **0.571** — worse than
+giving the writer *no memory at all* (0.487; Δ +0.083, CI [+0.038, +0.125],
+losing on 17 of 30 stories) and statistically indistinguishable from the
+serialised digest it was meant to fix (0.588).
+
+Retrieval plus the previous chapter (0.317) is indistinguishable from the
+previous chapter alone (0.312; Δ +0.004, CI spans zero, 8–7). The graph
+contributes nothing a writer needs.
+
+**This kills the conditioning line, and it does so cleanly.** Pre-registered
+falsifier 1 fired: the failure is the state, not its serialisation.
+
+The decisive detail is that it is **not** an extraction ceiling. In this run the
+state held **0.492** of the planted canon — half of it, correctly, at the moment
+of writing — and conditioning on it still added nothing. Fixing extraction would
+not have rescued this.
 
 ### C3 — A benchmark with no annotation and no judge
 
@@ -112,6 +121,24 @@ reliance on p-values at n=30.
    extraction is the only remaining lever.
 4. Any condition wins while `on_premise` falls → an artefact, not a result.
 
+## 3a. Outcome: four conditioning designs, three runs, 12,600 chapters
+
+| memory | violations ↓ | tokens | verdict |
+| --- | --- | --- | --- |
+| none | 0.487 | 112 | floor |
+| previous chapter | 0.312 | 1,017 | **strong, cheap incumbent** |
+| full transcript | 0.254 | 5,362 | best, at 5× the context |
+| serialised digest | 0.588 | 357 | worse than nothing |
+| digest + previous | 0.379 | 1,194 | loses to previous alone |
+| beat retrieval | 0.571 | 212 | worse than nothing |
+| beat retrieval + previous | 0.317 | 1,098 | ties previous alone |
+| + graph guard | 0.317 | 1,095 | no effect (ns) |
+
+Every design that puts narrative state into the writer's prompt either loses to
+a baseline or ties one that is cheaper. The guard never moves a number. The
+conclusion is not "needs more work" — it is that this is the wrong use of the
+object.
+
 ## 4. The binding constraint, named
 
 Extraction. Capture by canon type at chapter 20:
@@ -131,15 +158,30 @@ is a smaller, better-posed problem than anything downstream.
 
 ## 5. Why this is publishable either way
 
-If beat-retrieval wins, the finding is that **narrative state must be queried,
-not carried** — replicating a frontier-model result with a 3B open model, under
-a strict prefix-causal constraint, with no LLM judge anywhere.
+The branch resolved to the second one, and it resolved cleanly:
 
-If it loses, the finding is that **maintained narrative state is a measurement
-instrument, not a conditioning signal** — with a clean negative across three
-conditioning designs, a diagnosed cause, and a reusable no-annotation benchmark
-that catches the degenerate-model artefact.
+> **A maintained narrative state is a measurement instrument, not a
+> conditioning signal.**
 
-The measurement contribution (C1) and the benchmark (C3) hold in both branches.
-That is the part of this work that does not depend on a result going our way,
-and it is the part I would build a submission around.
+That is a defensible finding rather than a consolation. It rests on four
+conditioning designs across three runs and 12,600 generated chapters, each
+falsifier stated before the run; on a diagnosis that rules out the obvious
+escape (capture was 0.492 and it still did not help); and on an independent
+replication of a published negative — the Narrative World Model's serialised
+`State Memory` condition — obtained with a 3B open model instead of a frontier
+API.
+
+What survives, and what a submission should be built on:
+
+- **C1, the measurement instrument.** 0.000 self-contradictory slots against
+  0.370–0.423, at three model sizes, scored against human annotation with no
+  LLM in the metric.
+- **C3, the benchmark.** Planted canon plus premise adherence, no annotation and
+  no judge, already demonstrated to catch a degenerate model that scored a
+  spurious 7× win by ceasing to write about the story.
+- **The negative itself**, which is worth reporting because the field is
+  actively building state-conditioned writers and this is evidence, with
+  intervals, that the obvious version does not work.
+
+What is *not* supported, and should not be claimed: that a dynamic story graph
+improves long-form generation. It does not, in any form tested here.
