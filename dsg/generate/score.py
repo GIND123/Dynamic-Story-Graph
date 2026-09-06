@@ -175,6 +175,12 @@ COMPARISONS = (
     ("base:beat-hybrid", "base:full-context"),
     ("base:beat-hybrid", "base:beat-retrieval"),
     ("base:beat-hybrid-repair", "base:beat-hybrid"),
+    # Test time selection. The random arm isolates the graph from the
+    # extra sampling: both draw four candidates at the same budget.
+    ("base:last-chapter@bo4-graph", "base:last-chapter"),
+    ("base:last-chapter@bo4-random", "base:last-chapter"),
+    ("base:last-chapter@bo4-graph", "base:last-chapter@bo4-random"),
+    ("base:last-chapter@bo4-graph", "base:full-context"),
 )
 
 METRICS = ("violation_rate", "retention", "restatement_rate", "on_premise",

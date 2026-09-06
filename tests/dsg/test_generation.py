@@ -349,3 +349,64 @@ def test_generation_resume_is_a_noop_without_a_matching_run():
     fresh = init_runs([premise], ("base:dsg-state",))
     assert restore_runs(fresh, {"runs": []}, 3, {}) == 0
     assert fresh[0].chapters == []
+
+
+def test_graph_selection_prefers_the_consistent_candidate():
+    """The core claim: ranking is a relative comparison, so noise cancels."""
+    from dsg.generate.select import choose
+    from dsg.schemas import Span
+    from dsg.store import POLICIES, CandidateAssertion, NarrativeState
+
+    state = NarrativeState(POLICIES["dsg-full"])
+    state.step(0, 10_000)
+    node = state.observe_entity("Hesper", Span(0, 6))
+    state.observe_entity("Hesper", Span(9, 15))
+    state.apply_assertion(CandidateAssertion(node, "eyes", "grey"))
+
+    candidates = ["consistent chapter", "contradicting chapter", "neutral chapter"]
+    extractions = [
+        "FACT | Hesper | eye_colour | grey",       # agrees
+        "FACT | Hesper | eye_colour | blue",       # contradicts established canon
+        "FACT | Hesper | location | the quay",     # says nothing about eyes
+    ]
+    pick, scores = choose(state, candidates, extractions, 0, "graph")
+    assert pick != 1, "the contradicting candidate must never be chosen"
+    assert scores[1].conflicts == 1
+    assert scores[0].conflicts == 0 and scores[2].conflicts == 0
+
+
+def test_graph_selection_does_not_mutate_the_state():
+    from dsg.generate.select import choose
+    from dsg.schemas import Span
+    from dsg.store import POLICIES, CandidateAssertion, NarrativeState
+
+    state = NarrativeState(POLICIES["dsg-full"])
+    state.step(0, 10_000)
+    node = state.observe_entity("Hesper", Span(0, 6))
+    state.apply_assertion(CandidateAssertion(node, "eyes", "grey"))
+    before = {(a.predicate, a.object, a.status) for a in state.assertions.values()}
+    choose(state, ["a", "b"], ["FACT | Hesper | eye_colour | blue", ""], 0, "graph")
+    assert {(a.predicate, a.object, a.status) for a in state.assertions.values()} == before
+
+
+def test_random_selection_is_the_control_and_ignores_the_graph():
+    """The control must not consult the graph, or it is not a control."""
+    from dsg.generate.select import choose
+    from dsg.store import POLICIES, NarrativeState
+
+    state = NarrativeState(POLICIES["dsg-full"])
+    state.step(0, 10_000)
+    picks = {
+        choose(state, ["a", "b", "c", "d"], [""] * 4, 0, "random", seed=s)[0]
+        for s in range(40)
+    }
+    assert len(picks) > 1, "a control that always picks the same index is not random"
+
+
+def test_single_candidate_short_circuits():
+    from dsg.generate.select import choose
+    from dsg.store import POLICIES, NarrativeState
+
+    state = NarrativeState(POLICIES["dsg-full"])
+    pick, scores = choose(state, ["only"], [""], 0, "graph")
+    assert pick == 0 and scores == []

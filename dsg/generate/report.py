@@ -28,6 +28,8 @@ ORDER = (
     "base:beat-retrieval",
     "base:beat-hybrid",
     "base:beat-hybrid-repair",
+    "base:last-chapter@bo4-random",
+    "base:last-chapter@bo4-graph",
 )
 
 FOCAL = "#2a78d6"    # the system: state under the full calculus
@@ -49,6 +51,8 @@ COLOR_FOR = {
     "base:beat-retrieval": FOCAL,
     "base:beat-hybrid": FOCAL,
     "base:beat-hybrid-repair": FOCAL,
+    "base:last-chapter@bo4-random": FOIL,
+    "base:last-chapter@bo4-graph": FOCAL,
 }
 LABEL = {
     "base:none": "no memory",
@@ -65,6 +69,8 @@ LABEL = {
     "base:beat-retrieval": "beat retrieval",
     "base:beat-hybrid": "beat retrieval + recent",
     "base:beat-hybrid-repair": "beat retrieval + recent + guard",
+    "base:last-chapter@bo4-random": "4 samples, chosen blind",
+    "base:last-chapter@bo4-graph": "4 samples, ranked by graph",
 }
 # Drawn with a marker and full weight; everything else is context grey.
 EMPHASISED = (
@@ -72,6 +78,7 @@ EMPHASISED = (
     "tuned:full-context", "tuned:dsg-state", "tuned:dsg-repair",
     "base:dsg-hybrid", "base:dsg-hybrid-repair",
     "base:beat-retrieval", "base:beat-hybrid", "base:beat-hybrid-repair",
+    "base:last-chapter@bo4-random", "base:last-chapter@bo4-graph",
 )
 # Dashed where the backbone is the fine-tuned one, so variant reads off the line.
 TUNED = tuple(c for c in ORDER if c.startswith("tuned:"))

@@ -75,6 +75,16 @@ BASE_LADDER = (
 # and the prior literature point at. `last-chapter` (0.308) is the incumbent
 # every new condition has to beat; `dsg-state` (0.588) is the known-failing
 # serialisation, kept as a negative control.
+# Test time selection: draw k candidates for the same chapter and let the graph
+# rank them. The random arm is the control that separates "the graph helped"
+# from "four samples helped"; both draw the same k at the same budget.
+SELECTION_LADDER = (
+    "base:last-chapter",                  # incumbent, one sample
+    "base:last-chapter@bo4-random",       # same budget, chosen blind
+    "base:last-chapter@bo4-graph",        # same budget, ranked by the graph
+    "base:full-context",                  # strong baseline, five times the context
+)
+
 RETRIEVAL_LADDER = (
     "base:none",
     "base:last-chapter",
@@ -85,8 +95,26 @@ RETRIEVAL_LADDER = (
 )
 
 
+def parse_selection(condition: str) -> tuple[int, str]:
+    """How many candidates to draw for this condition, and how to pick one.
+
+    Encoded as ``variant:memory@k-strategy``; a plain condition means one
+    candidate taken as written.
+    """
+    if "@" not in condition:
+        return 1, "first"
+    _, _, spec = condition.partition("@")
+    k_text, _, strategy = spec.partition("-")
+    try:
+        k = max(1, int(k_text.lstrip("bo") or 1))
+    except ValueError:
+        k = 1
+    return k, (strategy or "first")
+
+
 def split_condition(condition: str) -> tuple[str, str]:
-    variant, _, memory = condition.partition(":")
+    base = condition.split("@", 1)[0]
+    variant, _, memory = base.partition(":")
     return (variant, memory) if memory else ("base", variant)
 
 

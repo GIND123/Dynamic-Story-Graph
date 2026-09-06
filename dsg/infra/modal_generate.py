@@ -56,6 +56,63 @@ def _window_at(chapters: list[str], index: int):
     return Window(index=index, start=start, end=start + len(text), text=text)
 
 
+def _shadow_state(run):
+    """A state kept only to rank candidates, for conditions that carry none.
+
+    The selection arms condition on recent text, not on a digest, so they have
+    no state of their own. Ranking still needs one, so a shadow is maintained
+    alongside and never shown to the writer. It reads exactly what was written.
+    """
+    from dsg.store import POLICIES, NarrativeState
+
+    return NarrativeState(POLICIES["dsg-full"])
+
+
+def _advance_shadow(state, run, raw: str) -> None:
+    """Fold the accepted chapter into the ranking state, using its extraction."""
+    from dsg.generate.run import parse_write_extraction
+    from dsg.policies.runner import apply_window
+    from dsg.schemas import Span, Window
+
+    index = len(run.chapters) - 1
+    text = run.chapters[index]
+    start = sum(len(c) + 2 for c in run.chapters[:index])
+    window = Window(index=index, start=start, end=start + len(text), text=text)
+    proposal = parse_write_extraction(raw, window)
+    state.step(index, window.end)
+    apply_window(state, proposal, Span(window.start, window.end))
+    state.close_step()
+
+
+def _generate_candidates(llm, prompts, runs, chapter, lora_path, max_tokens):
+    """Draw k candidates per run, grouped so vLLM returns them in one pass."""
+    from vllm import SamplingParams
+    from vllm.lora.request import LoRARequest
+
+    from dsg.generate.conditions import parse_selection, variant_of
+
+    groups: dict[tuple[bool, int], list[int]] = {}
+    for i, run in enumerate(runs):
+        k, _ = parse_selection(run.condition)
+        groups.setdefault((variant_of(run.condition) == "tuned", k), []).append(i)
+
+    out: dict[int, list[str]] = {}
+    request = LoRARequest("dsg-writer", 1, lora_path) if lora_path else None
+    for (tuned, k), idx in groups.items():
+        params = SamplingParams(
+            temperature=0.8, top_p=0.95, max_tokens=max_tokens, n=k, seed=chapter
+        )
+        results = llm.generate(
+            [prompts[i] for i in idx], params, use_tqdm=False,
+            lora_request=request if tuned else None,
+        )
+        for i, res in zip(idx, results, strict=False):
+            out[i] = [c.text for c in res.outputs]
+    from dsg.generate.run import clean_chapter
+
+    return {i: [clean_chapter(t) for t in texts] for i, texts in out.items()}
+
+
 def _generate_split(llm, prompts, params, use_lora, lora_path):
     """Route each prompt to the base model or the adapter, preserving order.
 
@@ -98,9 +155,10 @@ def _run_generation(
     from vllm import LLM, SamplingParams
 
     from dsg.generate.canon import Premise
-    from dsg.generate.conditions import variant_of
+    from dsg.generate.conditions import parse_selection, variant_of
     from dsg.generate.repair import repair_instruction
     from dsg.generate.run import (
+        WRITE_EXTRACT_PROMPT,
         apply_extraction,
         build_summary_prompt,
         chapter_prompts,
@@ -113,8 +171,8 @@ def _run_generation(
         restore_runs,
         state_targets,
         summary_targets,
-        tuned_targets,
     )
+    from dsg.generate.select import choose
 
     # The tuned conditions are served by the same base weights plus a LoRA, so
     # base and tuned answer identical prompts on one GPU and every comparison
@@ -168,6 +226,8 @@ def _run_generation(
 
     records: list[dict] = []
     extraction_log: dict[str, str] = {}
+    selection_log: list[dict] = []
+    shadow_states: dict[int, object] = {}
     repairs_attempted = repairs_accepted = 0
 
     # Generated chapters are expensive and unrecoverable, so they are written to
@@ -216,11 +276,55 @@ def _run_generation(
         prompt_sizes = [
             (len(p), len(tokenizer(p).input_ids)) for p in prompts
         ]
-        outs = _generate_split(
-            llm, chat(prompts), chapter_params, tuned_targets(runs), lora_path
+        candidates = _generate_candidates(
+            llm, chat(prompts), runs, chapter, lora_path, max_tokens=900
         )
-        for run, text in zip(runs, outs, strict=False):
-            run.chapters.append(clean_chapter(text))
+
+        # Where a condition draws more than one candidate, read each into a
+        # throwaway copy of the state and let the graph rank them. Every
+        # candidate is scored by the same extractor against the same prior
+        # state, so extraction noise is common to all of them and cancels in the
+        # ordering.
+        pending = [(i, r) for i, r in enumerate(runs) if len(candidates[i]) > 1]
+        chosen_raw: dict[int, str] = {}
+        if pending:
+            probe_prompts, probe_index = [], []
+            for i, run in pending:
+                start = sum(len(c) + 2 for c in run.chapters)
+                for text in candidates[i]:
+                    probe_prompts.append(
+                        WRITE_EXTRACT_PROMPT.format(chapter=text[:6000])
+                    )
+                    probe_index.append((i, start))
+            probes = llm.generate(chat(probe_prompts), aux_params, use_tqdm=False)
+            by_run: dict[int, list[str]] = {}
+            for (i, _start), out in zip(probe_index, probes, strict=False):
+                by_run.setdefault(i, []).append(out.outputs[0].text)
+            for i, run in pending:
+                _, strategy = parse_selection(run.condition)
+                start = sum(len(c) + 2 for c in run.chapters)
+                scorer = run.state
+                if scorer is None:
+                    scorer = _shadow_state(run)
+                    shadow_states[i] = scorer
+                pick, scores = choose(
+                    scorer, candidates[i], by_run.get(i, []), start, strategy,
+                    seed=chapter,
+                )
+                chosen_raw[i] = by_run.get(i, [""])[pick] if by_run.get(i) else ""
+                candidates[i] = [candidates[i][pick]]
+                if scores:
+                    selection_log.append({
+                        "story_id": run.story_id, "condition": run.condition,
+                        "chapter": chapter, "picked": pick,
+                        "conflicts": [sc.conflicts for sc in scores],
+                    })
+
+        for i, run in enumerate(runs):
+            run.chapters.append(candidates[i][0])
+            shadow = shadow_states.get(i)
+            if shadow is not None:
+                _advance_shadow(shadow, run, chosen_raw.get(i, ""))
 
         # Rolling summaries, batched.
         targets = summary_targets(runs)
@@ -403,13 +507,19 @@ def main(
     out_dir: str = "artifacts/generation",
 ):
     from dsg.generate.canon import build_premises
-    from dsg.generate.conditions import BASE_LADDER, CONDITIONS, RETRIEVAL_LADDER
+    from dsg.generate.conditions import (
+        BASE_LADDER,
+        CONDITIONS,
+        RETRIEVAL_LADDER,
+        SELECTION_LADDER,
+    )
 
     model_id = MODELS.get(model, model)
     gpu_name = gpu or GPU_FOR.get(model, "A10G")
     conditions = {
         "base": BASE_LADDER,
         "retrieval": RETRIEVAL_LADDER,
+        "selection": SELECTION_LADDER,
         "all": CONDITIONS,
     }.get(ladder, BASE_LADDER)
     run_id = run_id or f"gen-{model}-s{stories}-c{chapters}"
