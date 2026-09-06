@@ -41,7 +41,7 @@ questions.
 | question | answer | evidence |
 |---|---|---|
 | Can a maintained state stay coherent as a book proceeds? | Yes, and the update rules are what make it so | 28 novels, 3 extractor sizes |
-| Does that state help a model write a long story? | No, in four separate designs | 12,600 generated chapters |
+| Does that state help a model write a long story? | No, in five separate designs | 18,600 generated chapters |
 | Does its contradiction count measure how consistent a text is? | No, it measures the extractor | 215 novels vs 30 stories |
 
 The second and third answers are negative. They are reported because they bound
@@ -116,19 +116,21 @@ accuracy, and the write up says so.
 
 ## 4. Result two: writing with a state
 
-Four ways of putting the state into a writer's prompt, three runs, 12,600
-chapters, 30 stories, conditions paired within story.
+Five ways of using the graph at generation time, four runs, 18,600 chapters,
+30 stories, conditions paired within story.
 
-| memory given to the writer | violations | prompt tokens | verdict |
+Five ways of using the graph at generation time were tested. None helps.
+
+| use of the graph | violations | prompt tokens | verdict |
 |---|---|---|---|
-| none | 0.487 | 112 | floor |
-| previous chapter | 0.312 | 1,017 | strong and cheap |
-| full transcript | **0.254** | 5,362 | best, at five times the context |
-| serialised state digest | 0.588 | 357 | worse than nothing |
-| digest plus previous chapter | 0.379 | 1,194 | loses to previous chapter alone |
-| beat conditioned retrieval | 0.571 | 212 | worse than nothing |
-| retrieval plus previous chapter | 0.317 | 1,098 | ties previous chapter alone |
-| plus the graph guard | 0.317 | 1,095 | no effect |
+| none, no memory at all | 0.487 | 112 | floor |
+| previous chapter, no graph | 0.312 to 0.354 | 1,017 | memory baseline |
+| full transcript, no graph | 0.254 to 0.400 | 5,362 | memory baseline, unstable |
+| carried: serialised state digest | 0.588 | 357 | worse than nothing |
+| carried plus recent text | 0.379 | 1,194 | loses to recent text alone |
+| queried: beat conditioned retrieval | 0.571 | 212 | worse than nothing |
+| queried plus recent text | 0.317 | 1,098 | ties recent text alone |
+| used to rank four candidates | 0.300 | 1,017 | ties choosing blind |
 
 Paired bootstrap over stories, 95 percent intervals.
 
@@ -138,6 +140,14 @@ Paired bootstrap over stories, 95 percent intervals.
 | beat retrieval minus none | +0.083 | [+0.038, +0.125] | yes |
 | retrieval plus previous minus previous alone | +0.004 | [-0.042, +0.050] | no |
 | guard minus no guard | +0.000 | [-0.033, +0.038] | no |
+| **graph ranking minus choosing blind** | **+0.004** | [-0.058, +0.063] | **no** |
+
+The last row is the one the project's own negatives predicted should succeed.
+Absolute contradiction counts are extractor dominated, relative comparisons on
+identical input are sound, and ranking candidates for one chapter position is
+the relative case. It still does not work, and the blind arm is what shows it:
+without that control the result reads as a 0.054 gain that in fact belongs to
+drawing four samples.
 
 ![Canon violation over chapters](../docs/figures/fig3-canon-violation.png)
 
@@ -155,9 +165,14 @@ Our serialised digest is structurally their State Memory condition. We reproduce
 their failure with a 3B open model, and find that their success condition does
 not transfer.
 
-**More context is not better.** The previous chapter alone at 1,017 tokens beats
-the whole transcript at 5,362 in one run and comes close in another. Recency,
-not volume, is what protects continuity.
+**One baseline ordering is not established, and an earlier claim here is
+withdrawn.** Across three runs the full transcript condition moves from 0.254 to
+0.400, a spread of 0.146 that is larger than almost every effect in this
+project. Its ranking against the previous chapter is unresolved at this sample
+size. What survives the variance is that no memory is clearly worst, and that
+every graph design lands at or below the memory baselines rather than above
+them. Conditions whose prompt grows without bound need several seeds before
+effects below roughly 0.15 are reported.
 
 ### A false positive caught
 
