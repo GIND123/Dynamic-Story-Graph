@@ -70,7 +70,7 @@ def _generate(payload: dict, model_id: str, max_tokens: int) -> dict:
         download_dir="/weights/hf",
         dtype="auto",
         gpu_memory_utilization=0.90,
-        max_model_len=4096,
+        max_model_len=8192,
         enforce_eager=False,
     )
     # Greedy: attribution is a single-label decision, and sampling noise would
@@ -140,6 +140,12 @@ def main(
         build_prompt,
         load_novels,
     )
+    from dsg.eval.attribution_state import (
+        DEFAULT_PROPOSALS,
+        EMPTY,
+        build_snapshots,
+        snapshot_for,
+    )
 
     model_id = MODELS.get(model, model)
     conds = tuple(c.strip() for c in conditions.split(",") if c.strip()) or ALL_CONDITIONS
@@ -164,11 +170,32 @@ def main(
             prev[q.start] = last
             last = q.speaker
 
+        # state-causal replays the cached proposal stream to rebuild what the
+        # reader knew. Without this the condition degenerates to an empty block
+        # and the experiment silently measures nothing.
+        snaps = []
+        if "state-causal" in conds:
+            path = DEFAULT_PROPOSALS / f"{nd.name}.jsonl"
+            if path.exists():
+                snaps = build_snapshots(path)
+            else:
+                raise SystemExit(
+                    f"state-causal requested but no cached proposals for {nd.name} "
+                    f"at {path}. Fetch them first:\n"
+                    "  huggingface-cli download GOVINDFROM/dsg-artifacts "
+                    "--include 'proposals/pdnc-qwen7b-w3200/*' --local-dir artifacts"
+                )
+
         prompts, keys = [], []
         for cond in conds:
             for q in quotes:
                 prompts.append(
-                    build_prompt(nd, q, cond, window=window, recent=prev.get(q.start))
+                    build_prompt(
+                        nd, q, cond,
+                        window=window,
+                        recent=prev.get(q.start),
+                        snapshot=snapshot_for(snaps, q.start) if snaps else EMPTY,
+                    )
                 )
                 keys.append([cond, q.quote_id, q.speaker, q.quote_type])
         payloads.append({"novel": nd.name, "prompts": prompts, "keys": keys})

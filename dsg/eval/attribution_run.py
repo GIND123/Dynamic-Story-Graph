@@ -39,6 +39,13 @@ from dsg.eval.attribution import (
     quoted_only,
     score_attribution,
 )
+from dsg.eval.attribution_state import (
+    DEFAULT_PROPOSALS,
+    EMPTY,
+    Snapshot,
+    build_snapshots,
+    snapshot_for,
+)
 from dsg.eval.causal_audit import DEFAULT_ROOT, alias_sets, quote_spans
 
 CAUSAL_CONDITIONS = ("prior", "recency", "text-causal", "state-causal")
@@ -110,7 +117,13 @@ def _candidate_block(candidates: list[str]) -> str:
 
 
 def build_prompt(
-    novel: NovelData, quote: Quote, condition: str, *, window: int, recent: str | None
+    novel: NovelData,
+    quote: Quote,
+    condition: str,
+    *,
+    window: int,
+    recent: str | None,
+    snapshot: Snapshot = EMPTY,
 ) -> str:
     """Assemble one prompt. Causal conditions are verified before returning."""
     ctx = CausalContext(novel.text, quote.start, quote.end, quote.spans)
@@ -137,7 +150,13 @@ def build_prompt(
         ctx.verify_evidence(evidence, label=label)
         body = f"Text leading up to the line:\n...{evidence}"
         if condition == "state-causal":
-            body += f"\n\nMost recent speaker: {recent or 'unknown'}.\n"
+            # The state block is DERIVED text, not a slice of the novel, so the
+            # substring whitelist cannot vouch for it. Its causality rests on
+            # provenance instead: the snapshot must not reach past the quote.
+            snapshot.assert_causal(quote.start, label=label)
+            rendered = snapshot.render()
+            if rendered:
+                body += f"\n\nThe reader's notes at this point:\n{rendered}\n"
         return head + body + ask
     if condition == "oracle-noncausal":
         # The published protocol: a window centred on the quote. Deliberately NOT
@@ -194,6 +213,7 @@ def run(
     window: int,
     limit_per_novel: int | None,
     seed: int,
+    proposals: Path | None = None,
 ) -> dict:
     rng = random.Random(seed)
     per_novel: dict[str, dict[str, dict]] = {}
@@ -214,12 +234,23 @@ def run(
             prev_by_start[q.start] = last
             last = q.speaker
 
+        snaps: list[Snapshot] = []
+        if "state-causal" in conditions:
+            path = (proposals or DEFAULT_PROPOSALS) / f"{nd.name}.jsonl"
+            if path.exists():
+                snaps = build_snapshots(path)
+            else:
+                print(f"  !! no cached proposals for {nd.name}; state-causal = empty")
+
         per_novel[nd.name] = {}
         for cond in conditions:
             preds, golds, types = [], [], []
             for q in quotes:
                 prompt = build_prompt(
-                    nd, q, cond, window=window, recent=prev_by_start.get(q.start)
+                    nd, q, cond,
+                    window=window,
+                    recent=prev_by_start.get(q.start),
+                    snapshot=snapshot_for(snaps, q.start) if snaps else EMPTY,
                 )
                 if cond in ("text-causal", "state-causal"):
                     try:
@@ -262,6 +293,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--model", default="mlx-community/Qwen2.5-7B-Instruct-4bit")
     ap.add_argument("--conditions", default=",".join(ALL_CONDITIONS))
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--proposals", type=Path, default=DEFAULT_PROPOSALS,
+                    help="cached proposal stream that state-causal replays")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
 
@@ -276,6 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     result = run(
         novels, conds, get_backend(args.backend, args.model),
         window=args.window, limit_per_novel=args.limit, seed=args.seed,
+        proposals=args.proposals,
     )
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
