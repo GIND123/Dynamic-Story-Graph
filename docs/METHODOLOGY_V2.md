@@ -154,10 +154,19 @@ Mandatory guards:
   (matches the literature protocol, comparable to 90.6) and *system candidates*
   (derived from causal state, harder, honest). Never mix them in one table.
 - **G3 — memorization covariate.** Qwen and Llama have read these public-domain
-  novels. Per novel, compute name-cloze accuracy from `gpt4_books` and correlate
-  it with attribution accuracy. Michel et al. ran this exact check and found
-  memorization did not explain their gain; if our correlation is significant,
-  the result is contaminated and must be reported as such.
+  novels. Per novel, run name cloze *with our own model over PDNC* and correlate
+  it with attribution accuracy (Spearman, permutation test). Michel et al. ran
+  this exact check and found memorization did not explain their gain; if our
+  correlation is significant and positive, the result is contaminated and must be
+  reported as such. **Not** taken from `gpt4_books`: those numbers are ChatGPT's,
+  and the corpora only align for 16 of 28 novels with at least one wrong match
+  (`Emma` fuzzy-matches a book about Emma McChesney).
+- **G6 — derived text needs provenance, not substrings.** The state digest is
+  written by the extractor, so no substring check can vouch for it. Each snapshot
+  carries the window index and character offset it was taken at, and is rejected
+  if its coverage reaches past the quote. The window *containing* the quote is
+  always excluded, because its proposals were extracted from the whole window
+  including post-quote text; state therefore lags by up to one window.
 - **G4 — book-level splits only.** If anything is ever tuned, split by novel,
   never by quote. Quote-level splits leak a book's cast across the boundary.
 - **G5 — no LLM judge.** Scoring is exact match against PDNC gold speaker after
@@ -264,6 +273,25 @@ E1 and E2 falsifiers are stated in §2.5 and §3 **of this document, before eith
 run**, and this document is committed before any E1/E2 artifact exists.
 
 ---
+
+## 7a. What the corpus actually required `[measured]`
+
+Three defects surfaced only by running the guards against real PDNC. Each would
+have silently inflated a causal number, and none is visible in the corpus
+documentation.
+
+| defect | scale | consequence if unguarded |
+|---|---|---|
+| split quotes annotated as several spans | 10,734 / 37,131 (**28.9%**) | the interjected `," said Elizabeth, "` is handed to the model as part of "the quote" |
+| speech tags shorter than a shingle | every explicit tag (~20 chars vs 40) | a shingle-based leak check sees nothing and passes |
+| spans not in document order | 5 / 37,131 (0.01%) | `spans[0][0] > spans[-1][1]`, so the quote's range inverts |
+
+The first two inflate accuracy; the third crashes. The lesson worth a paragraph
+in the paper is that PDNC's span annotation is messier than its reputation, and a
+published causal-attribution number needs this scaffolding to be trustworthy.
+
+Effective N after dropping quotes whose gold speaker has no resolvable alias:
+**35,083** of 37,131 quotes, 28 novels.
 
 ## 8. Claims that remain forbidden
 
