@@ -138,14 +138,23 @@ def build_prompt(
         "You are reading a novel and must identify who speaks a line of dialogue.\n"
         f"Characters in this novel:\n{cands}\n\n"
     )
-    ask = (
-        f'\nThe next line of dialogue is:\n"{quote.text.strip()}"\n\n'
-        "Reply with the speaker's name exactly as it appears in the character "
-        "list above, and nothing else.\nSpeaker:"
-    )
+    def ask_for(where: str) -> str:
+        return (
+            f'\nThe line of dialogue {where}:\n"{quote.text.strip()}"\n\n'
+            "Reply with the speaker's name exactly as it appears in the character "
+            "list above, and nothing else.\nSpeaker:"
+        )
+
+    # Causal conditions end exactly at the quote, so "comes next" is literally
+    # true. The oracle's context brackets the quote, so the same wording would
+    # be false there and the model would have to guess which line is meant --
+    # a prompt artefact that would depress the oracle and could manufacture a
+    # "causality is free" result. Each condition gets the wording that matches
+    # what it was actually shown.
+    ask = ask_for("that comes next")
 
     if condition == "prior":
-        return head + ask
+        return head + ask_for("below")
     if condition == "recency":
         hint = f"\nThe most recent speaker before this line was: {recent or 'unknown'}.\n"
         return head + hint + ask
@@ -174,9 +183,18 @@ def build_prompt(
     if condition == "oracle-noncausal":
         # The published protocol: a window centred on the quote. Deliberately NOT
         # verified -- reading forward is exactly what this condition measures.
+        # The target is marked inline, because the context brackets it and the
+        # model would otherwise have to infer which line is being asked about.
         lo = max(0, quote.start - window)
         hi = min(len(novel.text), quote.end + window)
-        return head + f"Surrounding text:\n...{novel.text[lo:hi]}..." + ask
+        ctx = novel.text[lo:hi]
+        first = quote.spans[0] if quote.spans else (quote.start, quote.end)
+        seg = novel.text[first[0]:first[1]]
+        if seg and seg in ctx:
+            ctx = ctx.replace(seg, f">>>{seg}<<<", 1)
+        return head + f"Surrounding text (target marked >>>...<<<):\n...{ctx}..." + ask_for(
+            "marked >>>...<<< above"
+        )
     raise ValueError(f"unknown condition: {condition}")
 
 

@@ -248,3 +248,72 @@ class TestScoring:
         assert score.accuracy == 0.0
         assert score.accuracy_non_explicit == 0.0
         assert score.as_dict()["n"] == 0.0
+
+
+class TestPromptFairness:
+    """Each condition must be asked a question that matches what it was shown.
+
+    The causal conditions end exactly at the quote, so "the line that comes
+    next" is literally true. The oracle's context brackets the quote, so the
+    same wording is false there and the model has to guess which line is meant.
+    That is a prompt artefact, not a property of causality, and it would depress
+    the oracle and could manufacture a "causality is free" result.
+    """
+
+    def _novel(self):
+        from dsg.eval.attribution_run import NovelData, Quote
+
+        text = (
+            "Elizabeth waited by the window. "
+            '"I have been expecting you," she said. '
+            "The clock struck four and nobody moved."
+        )
+        start = text.index('"I have been')
+        end = text.index('," she') + 2
+        q = Quote(
+            novel="T", quote_id="q1", start=start, end=end,
+            text=text[start:end], speaker="Elizabeth",
+            quote_type="Explicit", spans=((start, end),),
+        )
+        nd = NovelData("T", text, [q], {"Elizabeth": {"Elizabeth"}}, ["Elizabeth", "Jane"])
+        return nd, q
+
+    def test_causal_conditions_say_the_line_comes_next(self) -> None:
+        from dsg.eval.attribution_run import build_prompt
+
+        nd, q = self._novel()
+        p = build_prompt(nd, q, "text-causal", window=40, recent=None)
+        assert "comes next" in p
+        assert ">>>" not in p
+
+    def test_the_oracle_marks_the_target_in_its_context(self) -> None:
+        from dsg.eval.attribution_run import build_prompt
+
+        nd, q = self._novel()
+        p = build_prompt(nd, q, "oracle-noncausal", window=60, recent=None)
+        body = p.split("Surrounding text", 1)[1].split("The line of dialogue", 1)[0]
+        assert ">>>" in body and "<<<" in body
+
+    def test_the_oracle_asks_about_the_marked_line_not_the_next_one(self) -> None:
+        from dsg.eval.attribution_run import build_prompt
+
+        nd, q = self._novel()
+        p = build_prompt(nd, q, "oracle-noncausal", window=60, recent=None)
+        assert "marked >>>...<<< above" in p
+        assert "comes next" not in p
+
+    def test_the_oracle_still_sees_text_after_the_quote(self) -> None:
+        """It is the control that prices causality, so it must read forward."""
+        from dsg.eval.attribution_run import build_prompt
+
+        nd, q = self._novel()
+        p = build_prompt(nd, q, "oracle-noncausal", window=60, recent=None)
+        assert "clock struck four" in p
+
+    def test_causal_conditions_never_see_text_after_the_quote(self) -> None:
+        from dsg.eval.attribution_run import build_prompt
+
+        nd, q = self._novel()
+        for cond in ("text-causal", "state-causal", "state-retrieval"):
+            p = build_prompt(nd, q, cond, window=200, recent=None)
+            assert "clock struck four" not in p, cond
