@@ -112,8 +112,18 @@ evidence changes.
 | 1 | `recency` | last attributed speaker before `s` | trivial dialogue alternation |
 | 2 | `text-causal` | `text[s-W:s]` only | what raw prefix text gives |
 | 3 | `state-causal` | `text[s-W:s]` + serialised DSG state at `s` | **the state's contribution** |
-| 4 | `state-retrieval` | `text[s-W:s]` + state entries for in-scope candidates | conditioning vs dumping |
-| 5 | `oracle-noncausal` | `text[s-W:s+W]` | reproduces the published protocol; **prices causality** |
+| 4 | `state-shuffled` | `text[s-W:s]` + a state block from 12 windows earlier | **length/format placebo** |
+| 5 | `state-retrieval` | `text[s-W:s]` + state entries for in-scope candidates | conditioning vs dumping |
+| 6 | `oracle-noncausal` | `text[s-W:s+W]`, target marked | reproduces the published protocol; **prices causality** |
+
+Condition 4 is the control the first run lacked. Adding state also adds ~1,400
+characters between the recent text and the question, so `state-causal` vs
+`text-causal` confounds content with prompt length. The placebo is a *real*
+state block from the same book taken twelve windows earlier -- same shape,
+matched to 0.2% on length, describing the wrong moment, and still causal because
+an earlier snapshot covers strictly less text. **`state-causal` −
+`state-shuffled` is the contrast that isolates content.** Same control logic as
+the blind best-of-4 arm that dissolved a 0.054 generation gain.
 
 Condition 5 is the control that makes the whole thing interpretable: it runs the
 literature's own setting with our model and prompt, so the gap between 5 and 3
@@ -181,6 +191,45 @@ overall, explicit, and non-explicit accuracy separately, because the causal
 constraint bites almost entirely on the explicit slice (§2.3).
 
 ---
+
+## 2.8 Run 1 result `[measured]` — 28 novels, 35,083 quotes/condition
+
+Qwen2.5-7B-Instruct, 1,200-char window, greedy, gold candidate lists (regime
+G2a). Paired bootstrap over novels, 10,000 resamples.
+
+| condition | overall | explicit | non-explicit |
+|---|---|---|---|
+| `prior` | 0.139 | 0.144 | 0.138 |
+| `recency` | 0.165 | 0.165 | 0.171 |
+| `text-causal` | **0.523** | 0.497 | 0.537 |
+| `state-causal` | 0.450 | 0.424 | 0.464 |
+| `oracle-noncausal`† | 0.696 | 0.850 | 0.644 |
+
+† superseded: this run's oracle was asked about "the next line" while its
+context brackets the quote. Fixed to mark the target inline; rerun pending.
+
+| comparison | Δ | 95% CI | excludes 0 |
+|---|---|---|---|
+| `state-causal` − `text-causal` | **−0.0730** | [−0.0919, −0.0555] | **yes** |
+| `text-causal` − `recency` | +0.3579 | [+0.3253, +0.3887] | yes |
+| `recency` − `prior` | +0.0257 | [+0.0098, +0.0419] | yes |
+| `oracle` − `state-causal` | +0.2466 | [+0.2239, +0.2702] | yes |
+
+**Three readings, and what each still needs.**
+
+1. *The causality price is 0.173* (0.523 → 0.696), and it is concentrated
+   exactly where §2.3 predicted: explicit quotes lose 0.353 while non-explicit
+   lose 0.107. The mechanism matches the measurement, which is the strongest
+   internal check available here.
+2. *The state hurts, −0.073, interval excluding zero.* **Not yet interpretable**
+   without `state-shuffled`: adding state also adds 1,400 characters, so this
+   may price the block rather than its contents.
+3. *G3 is flagged.* ρ = +0.411, permutation p = 0.030. But mean cloze is 0.054 —
+   the model can barely recall these books — and `text-causal` correlates
+   equally (ρ = 0.403). Equal correlation with and without state points at
+   **book tractability**, not memorization: famous, small-cast novels are easier
+   to cloze *and* easier to attribute. Reported as a complication, not
+   explained away, and it wants a difficulty control.
 
 ## 3. E2 — the long-horizon generation test
 
