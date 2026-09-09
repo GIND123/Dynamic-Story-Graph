@@ -48,7 +48,13 @@ from dsg.eval.attribution_state import (
 )
 from dsg.eval.causal_audit import DEFAULT_ROOT, alias_sets, quote_spans
 
-CAUSAL_CONDITIONS = ("prior", "recency", "text-causal", "state-causal")
+CAUSAL_CONDITIONS = (
+    "prior",
+    "recency",
+    "text-causal",
+    "state-causal",
+    "state-retrieval",
+)
 ALL_CONDITIONS = (*CAUSAL_CONDITIONS, "oracle-noncausal")
 
 
@@ -144,11 +150,18 @@ def build_prompt(
         hint = f"\nThe most recent speaker before this line was: {recent or 'unknown'}.\n"
         return head + hint + ask
     label = f"{novel.name}:{quote.quote_id}"
-    if condition in ("text-causal", "state-causal"):
+    if condition in ("text-causal", "state-causal", "state-retrieval"):
         evidence = ctx.tail(window)
         # Sound guard: prove the evidence came from a sanctioned slice.
         ctx.verify_evidence(evidence, label=label)
         body = f"Text leading up to the line:\n...{evidence}"
+        if condition == "state-retrieval":
+            # Query-conditioned: surface only the state lines the recent text
+            # implicates, instead of dumping the store. Same provenance rule.
+            snapshot.assert_causal(quote.start, label=label)
+            rendered = snapshot.render_retrieved(evidence)
+            if rendered:
+                body += f"\n\nThe reader's notes, filtered to this scene:\n{rendered}\n"
         if condition == "state-causal":
             # The state block is DERIVED text, not a slice of the novel, so the
             # substring whitelist cannot vouch for it. Its causality rests on
@@ -235,7 +248,7 @@ def run(
             last = q.speaker
 
         snaps: list[Snapshot] = []
-        if "state-causal" in conditions:
+        if {"state-causal", "state-retrieval"} & set(conditions):
             path = (proposals or DEFAULT_PROPOSALS) / f"{nd.name}.jsonl"
             if path.exists():
                 snaps = build_snapshots(path)
@@ -252,7 +265,7 @@ def run(
                     recent=prev_by_start.get(q.start),
                     snapshot=snapshot_for(snaps, q.start) if snaps else EMPTY,
                 )
-                if cond in ("text-causal", "state-causal"):
+                if cond in ("text-causal", "state-causal", "state-retrieval"):
                     try:
                         CausalContext(
                             nd.text, q.start, q.end, q.spans

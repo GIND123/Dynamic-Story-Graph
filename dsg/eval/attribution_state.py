@@ -64,6 +64,64 @@ class Snapshot:
             parts.append(f"Most recent speakers, oldest first: {recent}")
         return "\n\n".join(parts)
 
+    def render_retrieved(self, query: str, max_speakers: int = 4, max_lines: int = 6) -> str:
+        """Only the state lines the query implicates, rather than the whole store.
+
+        The dump-versus-query contrast. The Narrative World Model paper reports
+        serialised current state at 0.358 against query-conditioned retrieval at
+        0.898 on its own QA task, and attributes the gap to *delivery*: their
+        serialised state overflows the reader's budget and is truncated to a
+        positional prefix, discarding ~95% of the store. Our digest is small
+        enough that nothing is truncated, so this condition isolates conditioning
+        from truncation -- if retrieval still beats the dump here, the mechanism
+        is ranking rather than budget.
+
+        The query is the recent prefix text. A state line is retrieved when a
+        character it describes is named there, which is the causal analogue of
+        "who could plausibly be speaking".
+        """
+        ql = (query or "").lower()
+
+        def keep(line: str) -> bool:
+            """Does the query name this line's character, under any of its aliases?
+
+            fact_digest writes "- Tony Last (also: Tony, Mr Last): child_of ...",
+            while digest writes "- Tony Last (aka Tony, ...)". Both forms are
+            parsed, because getting this wrong silently retrieves nothing and the
+            condition would look like a null result rather than a bug.
+            """
+            body = line.lstrip("- ")
+            # Split off the fact list, but only at a colon that ends the name
+            # part -- "(also: ...)" contains one too.
+            depth, cut = 0, len(body)
+            for i, ch in enumerate(body):
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth = max(0, depth - 1)
+                elif ch == ":" and depth == 0:
+                    cut = i
+                    break
+            head = body[:cut]
+            names = [head.split("(", 1)[0]]
+            if "(" in head:
+                inner = head.split("(", 1)[1].rstrip(")")
+                for prefix in ("also:", "aka"):
+                    if inner.lower().startswith(prefix):
+                        inner = inner[len(prefix):]
+                        break
+                names += inner.split(",")
+            return any(n.strip() and n.strip().lower() in ql for n in names)
+
+        hits = [ln for ln in self.facts.splitlines() if ln.strip() and keep(ln)][:max_lines]
+        parts = []
+        if hits:
+            parts.append("Relevant to this scene:\n" + "\n".join(hits))
+        if self.recent_speakers:
+            recent = ", ".join(self.recent_speakers[-max_speakers:])
+            parts.append(f"Most recent speakers, oldest first: {recent}")
+        return "\n\n".join(parts)
+
 
 # The empty state, for quotes that precede the first window boundary.
 EMPTY = Snapshot(window=-1, covers_to=0, entities="", facts="", recent_speakers=())

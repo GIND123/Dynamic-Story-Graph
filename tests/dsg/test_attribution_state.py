@@ -144,3 +144,48 @@ class TestSpanOrdering:
         from dsg.eval.causal_audit import quote_spans
 
         assert quote_spans({"quoteByteSpans": "[[100, 100], [200, 300]]"}) == ((200, 300),)
+
+
+class TestRetrieval:
+    """Query-conditioned rendering: NWM's dump-vs-query contrast, causally."""
+
+    FACTS = (
+        "- Tony Last (also: Tony, Mr Last): resides_in Hetton; knows Brenda\n"
+        "- Brenda: child_of Mrs Beaver; knows Tony Last\n"
+        "- Jock Grant-Menzies: knows Mrs Rattery"
+    )
+
+    def _snap(self) -> Snapshot:
+        return snap(3, 100, facts=self.FACTS, recent_speakers=("Brenda",))
+
+    def test_only_lines_the_query_names_are_kept(self) -> None:
+        out = self._snap().render_retrieved("Brenda crossed the hall.")
+        assert "Brenda:" in out
+        assert "Jock Grant-Menzies" not in out
+
+    def test_an_alias_in_the_query_retrieves_its_character(self) -> None:
+        """'Mr Last' should surface Tony Last, whose aka list carries it."""
+        out = self._snap().render_retrieved("Mr Last said nothing.")
+        assert "Tony Last" in out
+
+    def test_a_query_naming_nobody_retrieves_no_facts(self) -> None:
+        out = self._snap().render_retrieved("The rain fell on the empty road.")
+        assert "Relevant to this scene" not in out
+
+    def test_recent_speakers_survive_even_with_no_fact_hits(self) -> None:
+        out = self._snap().render_retrieved("The rain fell.")
+        assert "Most recent speakers" in out
+
+    def test_retrieval_is_a_subset_of_the_dump(self) -> None:
+        s = self._snap()
+        assert len(s.render_retrieved("Brenda")) < len(s.render())
+
+    def test_line_budget_is_respected(self) -> None:
+        many = "\n".join(f"- Person{i}: knows Someone" for i in range(20))
+        out = snap(1, 10, facts=many).render_retrieved(
+            " ".join(f"Person{i}" for i in range(20)), max_lines=3
+        )
+        assert out.count("- Person") == 3
+
+    def test_the_empty_state_retrieves_nothing(self) -> None:
+        assert EMPTY.render_retrieved("Brenda") == ""

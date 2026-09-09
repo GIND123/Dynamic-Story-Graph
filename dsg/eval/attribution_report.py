@@ -31,12 +31,16 @@ PUBLISHED = {
     "BookNLP+ (non-causal)": {"overall": 0.785, "non_explicit": 0.689},
 }
 
-CONDITION_ORDER = ["prior", "recency", "text-causal", "state-causal", "oracle-noncausal"]
+CONDITION_ORDER = [
+    "prior", "recency", "text-causal",
+    "state-causal", "state-retrieval", "oracle-noncausal",
+]
 CONDITION_LABEL = {
     "prior": "prior\n(candidates only)",
     "recency": "recency\n(last speaker)",
     "text-causal": "text\n(causal prefix)",
-    "state-causal": "text + state\n(causal)",
+    "state-causal": "text + state\n(dumped)",
+    "state-retrieval": "text + state\n(queried)",
     "oracle-noncausal": "oracle\n(non-causal)",
 }
 COLOR_FOR = {
@@ -44,6 +48,7 @@ COLOR_FOR = {
     "recency": CONTEXT,
     "text-causal": FOIL,
     "state-causal": FOCAL,
+    "state-retrieval": FOCAL,
     "oracle-noncausal": ORACLE,
 }
 
@@ -133,6 +138,8 @@ def comparisons(result: dict) -> list[dict]:
     """The contrasts the design turns on, paired over novels."""
     pairs = [
         ("state-causal", "text-causal", "does the state add anything?"),
+        ("state-retrieval", "text-causal", "does queried state add anything?"),
+        ("state-retrieval", "state-causal", "does querying beat dumping? (NWM's claim)"),
         ("text-causal", "recency", "does prefix text beat a trivial heuristic?"),
         ("recency", "prior", "does the last speaker help at all?"),
         ("oracle-noncausal", "state-causal", "the price of causality"),
