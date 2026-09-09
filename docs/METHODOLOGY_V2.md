@@ -89,8 +89,8 @@ does the speaker's name occur within ±250 characters of the quote?
 
 | position of the gold speaker name | count | share |
 |---|---|---|
-| neither side (tag further away / different surface) | 3,472 | 32.3% |
-| **after the quote only — destroyed by a causal cut** | **3,147** | **29.3%** |
+| neither side (tag further away / different surface) | 3,471 | 32.3% |
+| **after the quote only — destroyed by a causal cut** | **3,148** | **29.3%** |
 | both sides | 2,600 | 24.2% |
 | before only | 1,524 | 14.2% |
 

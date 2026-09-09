@@ -78,7 +78,11 @@ def quote_spans(row: dict[str, str]) -> tuple[tuple[int, int], ...]:
             return ()
         if e > s:
             out.append((s, e))
-    return tuple(out)
+    # PDNC does not guarantee document order: 5 of 37,131 quotes list a later
+    # segment first (e.g. HardTimes Q224 = [[83859, 83964], [83789, 83837]]).
+    # Callers take spans[0][0] as the quote's start and spans[-1][1] as its end,
+    # which inverts the range for those, so sort before returning.
+    return tuple(sorted(out))
 
 
 def quote_span(row: dict[str, str]) -> tuple[int, int] | None:

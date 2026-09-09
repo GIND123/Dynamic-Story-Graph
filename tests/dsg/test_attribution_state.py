@@ -103,3 +103,44 @@ class TestRendering:
         out = snap(1, 100, recent_speakers=tuple("ABCDEFGH")).render()
         assert "E, F, G, H" in out
         assert "A," not in out
+
+
+class TestSpanOrdering:
+    """PDNC does not guarantee document order; callers assume it.
+
+    5 of 37,131 quotes list a later segment first. Callers take spans[0][0] as
+    the start and spans[-1][1] as the end, which inverts the range for those and
+    crashes CausalContext -- it did, on the first full run.
+    """
+
+    def test_spans_come_back_sorted(self) -> None:
+        from dsg.eval.causal_audit import quote_spans
+
+        row = {"quoteByteSpans": "[[83859, 83964], [83789, 83837]]"}
+        assert quote_spans(row) == ((83789, 83837), (83859, 83964))
+
+    def test_the_outer_range_is_not_inverted(self) -> None:
+        from dsg.eval.causal_audit import quote_span
+
+        row = {"quoteByteSpans": "[[83859, 83964], [83789, 83837]]"}
+        start, end = quote_span(row)
+        assert start < end
+
+    def test_a_three_segment_out_of_order_quote_sorts(self) -> None:
+        from dsg.eval.causal_audit import quote_spans
+
+        row = {"quoteByteSpans": "[[570083, 570395], [568680, 568956], [569161, 569198]]"}
+        spans = quote_spans(row)
+        assert [s for s, _ in spans] == sorted(s for s, _ in spans)
+        assert spans[0][0] < spans[-1][1]
+
+    def test_already_sorted_spans_are_unchanged(self) -> None:
+        from dsg.eval.causal_audit import quote_spans
+
+        row = {"quoteByteSpans": "[[100, 200], [300, 400]]"}
+        assert quote_spans(row) == ((100, 200), (300, 400))
+
+    def test_degenerate_spans_are_dropped(self) -> None:
+        from dsg.eval.causal_audit import quote_spans
+
+        assert quote_spans({"quoteByteSpans": "[[100, 100], [200, 300]]"}) == ((200, 300),)
