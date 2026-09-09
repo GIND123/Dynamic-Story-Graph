@@ -106,7 +106,9 @@ def score(replies: list[str], items: list[ClozeItem]) -> dict:
     }
 
 
-def load_texts(root: Path = DEFAULT_ROOT, limit: int | None = None) -> dict[str, tuple[str, list[str]]]:
+def load_texts(
+    root: Path = DEFAULT_ROOT, limit: int | None = None
+) -> dict[str, tuple[str, list[str]]]:
     """novel -> (text, character names), reusing PDNC's own annotation."""
     from dsg.eval.causal_audit import alias_sets
 

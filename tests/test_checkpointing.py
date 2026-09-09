@@ -20,6 +20,7 @@ def test_resolve_token_falls_back_to_hf_token_then_bare_hf(
 ) -> None:
     monkeypatch.delenv("HF_TOKEN", raising=False)
     monkeypatch.delenv("HF", raising=False)
+    monkeypatch.setattr(checkpointing, "_load_dotenv_if_present", lambda: None)
     monkeypatch.setenv("HF", "bare-hf-value")
     assert checkpointing.resolve_token() == "bare-hf-value"
 

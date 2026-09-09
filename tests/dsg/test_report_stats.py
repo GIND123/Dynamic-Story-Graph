@@ -7,16 +7,19 @@ correlation out of novel names.
 
 from __future__ import annotations
 
-import numpy as np
-import pytest
-
 from dsg.eval.attribution_report import memorization_check
 
 
 def _fixture(acc: list[float], cloze: list[float]) -> tuple[dict, dict]:
     names = [f"N{i:02d}" for i in range(len(acc))]
-    result = {"per_novel": {n: {"state-causal": {"accuracy": a}} for n, a in zip(names, acc)}}
-    cl = {"per_novel": {n: {"cloze_accuracy": c} for n, c in zip(names, cloze)}}
+    result = {
+        "per_novel": {
+            n: {"state-causal": {"accuracy": a}} for n, a in zip(names, acc, strict=True)
+        }
+    }
+    cl = {
+        "per_novel": {n: {"cloze_accuracy": c} for n, c in zip(names, cloze, strict=True)}
+    }
     return result, cl
 
 
