@@ -97,6 +97,98 @@ class TestLeakageGuard:
             ctx.verify(TEXT[QUOTE_START : QUOTE_START + 90], label="q42")
 
 
+SPLIT = 'Before. "Hello there," said Elizabeth, "how are you today?" After that.'
+S1 = (SPLIT.index('"Hello'), SPLIT.index('," said') + 2)
+S2 = (SPLIT.index('"how'), SPLIT.index('?"') + 2)
+
+
+class TestSplitQuotes:
+    """28.9% of PDNC is multi-segment; the interjection holds the speech tag."""
+
+    def test_quote_text_excludes_the_interjected_tag(self) -> None:
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        assert "Elizabeth" not in ctx.quote
+        assert "Hello there," in ctx.quote
+        assert "how are you today?" in ctx.quote
+
+    def test_the_interjection_is_forbidden_evidence(self) -> None:
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        assert "said Elizabeth" in ctx.forbidden
+
+    def test_showing_the_naive_span_is_caught(self) -> None:
+        """text[first_start:last_end] contains the answer -- must not pass."""
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        naive = SPLIT[S1[0] : S2[1]]
+        with pytest.raises(LeakageError):
+            ctx.verify(f"Who speaks?\n{naive}")
+
+    def test_showing_only_the_spoken_words_passes(self) -> None:
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        ctx.verify(f"Context:\n{ctx.tail(20)}\nLine:\n{ctx.quote}\nSpeaker:")
+
+    def test_text_after_the_quote_is_still_forbidden(self) -> None:
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        assert "After that." in ctx.forbidden
+
+    def test_single_segment_defaults_and_still_guards(self) -> None:
+        ctx = CausalContext(TEXT, QUOTE_START, len(TEXT))
+        assert ctx.spans == ((QUOTE_START, len(TEXT)),)
+        assert ctx.quote.startswith('"I have been')
+
+    def test_forbidden_separator_blocks_cross_region_shingles(self) -> None:
+        """A shingle must not straddle two disjoint forbidden regions."""
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        assert "\x00" in ctx.forbidden
+
+    def test_end_before_start_is_rejected(self) -> None:
+        with pytest.raises(ValueError):
+            CausalContext(SPLIT, 30, 5)
+
+    def test_short_speech_tag_is_caught_despite_being_under_shingle_width(self) -> None:
+        """The regression this guard exists for: tags are ~20 chars, shingles are 40."""
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        tag = ctx.forbidden_regions[0]
+        assert len(tag.strip()) < 40, "fixture must exercise the short-region path"
+        with pytest.raises(LeakageError, match="forbidden region"):
+            ctx.verify(f"Who speaks?{tag}")
+
+
+class TestWhitelistGuard:
+    """verify_evidence asks where a block came from, not whether it looks bad."""
+
+    def test_a_prefix_slice_is_accepted(self) -> None:
+        ctx = CausalContext(TEXT, QUOTE_START, len(TEXT))
+        ctx.verify_evidence(ctx.tail(60))
+
+    def test_the_spoken_words_are_accepted(self) -> None:
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        ctx.verify_evidence(ctx.quote)
+
+    def test_the_interjected_tag_is_rejected(self) -> None:
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        with pytest.raises(LeakageError, match="not a slice of allowed text"):
+            ctx.verify_evidence("said Elizabeth")
+
+    def test_text_after_the_quote_is_rejected(self) -> None:
+        ctx = CausalContext(SPLIT, S1[0], S2[1], (S1, S2))
+        with pytest.raises(LeakageError):
+            ctx.verify_evidence("After that.")
+
+    def test_invented_text_is_rejected_even_though_it_is_not_in_the_novel(self) -> None:
+        """A whitelist rejects anything unsanctioned, not just known-bad strings."""
+        ctx = CausalContext(TEXT, QUOTE_START, len(TEXT))
+        with pytest.raises(LeakageError):
+            ctx.verify_evidence("a sentence from some entirely different book")
+
+    def test_empty_blocks_are_ignored(self) -> None:
+        ctx = CausalContext(TEXT, QUOTE_START, len(TEXT))
+        ctx.verify_evidence("", "   ")
+
+    def test_whitespace_reflow_does_not_break_acceptance(self) -> None:
+        ctx = CausalContext(TEXT, QUOTE_START, len(TEXT))
+        ctx.verify_evidence("\n  ".join(ctx.tail(60).split()))
+
+
 class TestNormalisation:
     def test_case_punctuation_and_spacing_fold(self) -> None:
         assert normalise_name("  ELIZABETH   Bennet! ") == normalise_name("elizabeth bennet")

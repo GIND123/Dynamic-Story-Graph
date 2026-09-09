@@ -31,6 +31,7 @@ __all__ = [
     "LeakageError",
     "assert_no_leakage",
     "normalise_name",
+    "quoted_only",
     "score_attribution",
     "AttributionScore",
 ]
@@ -39,6 +40,9 @@ __all__ = [
 # collocations ("said the young man") do not trip it, short enough to catch a
 # copied clause.
 _LEAK_NGRAM = 40
+# Below this, a forbidden region is too short to be checked literally without
+# matching ordinary prose everywhere.
+_MIN_LITERAL = 12
 
 
 class LeakageError(AssertionError):
@@ -58,17 +62,50 @@ def _shingles(text: str, n: int = _LEAK_NGRAM) -> set[str]:
     return {flat[i : i + n] for i in range(len(flat) - n + 1)}
 
 
-def assert_no_leakage(prompt: str, text: str, start: int, *, label: str = "") -> None:
-    """Fail if ``prompt`` shares any ``_LEAK_NGRAM``-char shingle with ``text[start:]``.
+def _flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _assert_regions_absent(prompt: str, regions: Sequence[str], *, label: str = "") -> None:
+    """Blacklist check with a width that adapts to each forbidden region.
+
+    A shingle check alone cannot see a speech tag: `," said Elizabeth, "` is
+    about twenty characters, well under ``_LEAK_NGRAM``, so it produces no
+    shingles and slips through. Short regions are therefore checked by literal
+    containment instead. Regions below ``_MIN_LITERAL`` are skipped -- a fragment
+    that small matches everywhere and would only produce noise.
+    """
+    flat_prompt = _flat(prompt)
+    for region in regions:
+        flat = _flat(region)
+        if len(flat) < _MIN_LITERAL:
+            continue
+        if len(flat) < _LEAK_NGRAM:
+            if flat in flat_prompt:
+                raise LeakageError(
+                    f"prompt leaks future text{' for ' + label if label else ''}: "
+                    f"contains forbidden region {flat!r}"
+                )
+            continue
+        overlap = _shingles(region) & _shingles(prompt)
+        if overlap:
+            raise LeakageError(
+                f"prompt leaks future text{' for ' + label if label else ''}: "
+                f"{len(overlap)} shared {_LEAK_NGRAM}-char shingle(s); "
+                f"first={sorted(overlap)[0]!r}"
+            )
+
+
+def _assert_no_overlap(prompt: str, forbidden: str, *, label: str = "") -> None:
+    """Fail if ``prompt`` shares any ``_LEAK_NGRAM``-char shingle with ``forbidden``.
 
     This is the guard the causal claim depends on (G1). It runs on every quote,
     not a sample, and raises rather than warning so a leaking run cannot finish
     and be written up.
     """
-    future = text[start:]
-    if not future:
+    if not forbidden:
         return
-    overlap = _shingles(prompt) & _shingles(future)
+    overlap = _shingles(prompt) & _shingles(forbidden)
     if overlap:
         example = sorted(overlap)[0]
         raise LeakageError(
@@ -78,27 +115,108 @@ def assert_no_leakage(prompt: str, text: str, start: int, *, label: str = "") ->
         )
 
 
+def assert_no_leakage(prompt: str, text: str, start: int, *, label: str = "") -> None:
+    """Fail if ``prompt`` contains any of ``text[start:]``.
+
+    The blunt whole-suffix form, for callers with no quote to exempt.
+    """
+    _assert_no_overlap(prompt, text[start:], label=label)
+
+
+def quoted_only(text: str, spans: Sequence[tuple[int, int]], joiner: str = " [...] ") -> str:
+    """The spoken words alone, with interjected narration removed.
+
+    PDNC annotates split quotes as several spans -- `"Hello," he said, "how are
+    you?"` is two. 28.9% of the corpus is multi-segment, so taking
+    ``text[spans[0][0]:spans[-1][1]]`` as "the quote" silently hands the model
+    the very speech tag it is being asked to recover, for nearly three quotes in
+    ten. Only the quoted segments are the question; everything between them is
+    narration and is evidence.
+    """
+    return joiner.join(text[s:e] for s, e in spans)
+
+
 @dataclass(slots=True, frozen=True)
 class CausalContext:
-    """The only sanctioned way to obtain text for a quote at ``start``.
+    """The only sanctioned way to obtain text for a quote.
 
-    Slicing is done here so no caller can accidentally reach past the cut. Every
-    accessor returns a prefix of ``text[:start]``; there is no method that can
-    return later text, which is why the guard is structural rather than a
-    convention someone has to remember.
+    Slicing is done here so no caller can accidentally reach past the cut. The
+    reader may see ``text[:start]`` (the prefix) and the spoken words themselves,
+    because the quote is the *question*. Everything else from ``start`` onward --
+    the narration interjected between quoted segments, and all text after the
+    quote ends -- is future text and is forbidden.
+
+    ``spans`` defaults to a single segment ``[(start, end)]``. Pass the real
+    PDNC spans for split quotes or the inter-segment narration will be treated
+    as quotable when it is not.
     """
 
     text: str
     start: int
+    end: int | None = None
+    spans: tuple[tuple[int, int], ...] = ()
 
     def __post_init__(self) -> None:
-        if not 0 <= self.start <= len(self.text):
-            raise ValueError(f"start {self.start} outside text of length {len(self.text)}")
+        n = len(self.text)
+        if not 0 <= self.start <= n:
+            raise ValueError(f"start {self.start} outside text of length {n}")
+        end = self.start if self.end is None else self.end
+        if not self.start <= end <= n:
+            raise ValueError(f"end {end} outside [{self.start}, {n}]")
+        object.__setattr__(self, "end", end)
+        if not self.spans:
+            object.__setattr__(self, "spans", ((self.start, end),))
 
     @property
     def prefix(self) -> str:
         """Everything the reader has passed. Never includes the quote itself."""
         return self.text[: self.start]
+
+    @property
+    def quote(self) -> str:
+        """The spoken words only -- the question, not evidence."""
+        return quoted_only(self.text, self.spans)
+
+    @property
+    def forbidden_regions(self) -> tuple[str, ...]:
+        """Future text, as separate regions: inter-segment narration, then the tail.
+
+        Kept separate rather than concatenated so no shingle can straddle two
+        disjoint regions and invent an overlap that exists in neither.
+        """
+        parts: list[str] = []
+        cursor = self.start
+        for s, e in self.spans:
+            if s > cursor:
+                parts.append(self.text[cursor:s])
+            cursor = max(cursor, e)
+        parts.append(self.text[cursor:])
+        return tuple(p for p in parts if p)
+
+    @property
+    def forbidden(self) -> str:
+        """All forbidden regions, separated so shingles cannot straddle them."""
+        return "\n\x00\n".join(self.forbidden_regions)
+
+    def verify_evidence(self, *blocks: str, label: str = "") -> None:
+        """Whitelist check: every block must be a slice of text the reader may see.
+
+        Stronger than the blacklist, and with no false positives: rather than
+        asking whether a prompt happens to contain forbidden text -- which the
+        prefix may legitimately repeat -- it asks whether each piece of evidence
+        came from ``text[:start]`` or from the spoken words. Anything else did
+        not come from a sanctioned slice and is rejected regardless of length.
+        """
+        allowed = (_flat(self.prefix), _flat(self.quote))
+        for block in blocks:
+            flat = _flat(block)
+            if not flat:
+                continue
+            if not any(flat in a for a in allowed):
+                raise LeakageError(
+                    f"evidence block is not a slice of allowed text"
+                    f"{' for ' + label if label else ''}: {flat[:80]!r}"
+                )
 
     def tail(self, chars: int) -> str:
         """The last ``chars`` characters before the quote."""
@@ -108,7 +226,7 @@ class CausalContext:
 
     def verify(self, prompt: str, *, label: str = "") -> str:
         """Return ``prompt`` unchanged, having proved it does not leak."""
-        assert_no_leakage(prompt, self.text, self.start, label=label)
+        _assert_regions_absent(prompt, self.forbidden_regions, label=label)
         return prompt
 
 

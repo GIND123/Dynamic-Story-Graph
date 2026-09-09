@@ -62,14 +62,29 @@ def alias_sets(folder: Path) -> dict[str, set[str]]:
     return out
 
 
+def quote_spans(row: dict[str, str]) -> tuple[tuple[int, int], ...]:
+    """Every quoted segment, in order.
+
+    28.9% of PDNC quotes are split across two or more segments, and the
+    narration between them is where the speech tag lives. Callers that collapse
+    this to (first_start, last_end) hand that tag to the model.
+    """
+    raw = _literal(row.get("quoteByteSpans") or row.get("quoteSpans"), [])
+    out: list[tuple[int, int]] = []
+    for span in raw:
+        try:
+            s, e = int(span[0]), int(span[1])
+        except (TypeError, ValueError, IndexError):
+            return ()
+        if e > s:
+            out.append((s, e))
+    return tuple(out)
+
+
 def quote_span(row: dict[str, str]) -> tuple[int, int] | None:
-    spans = _literal(row.get("quoteByteSpans") or row.get("quoteSpans"), [])
-    if not spans:
-        return None
-    try:
-        return int(spans[0][0]), int(spans[-1][1])
-    except (TypeError, ValueError, IndexError):
-        return None
+    """Outer bounds of a quote. For span-accurate work use ``quote_spans``."""
+    spans = quote_spans(row)
+    return (spans[0][0], spans[-1][1]) if spans else None
 
 
 @dataclass(slots=True)
