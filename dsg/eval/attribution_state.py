@@ -200,6 +200,27 @@ def snapshot_for(snapshots: list[Snapshot], quote_start: int) -> Snapshot:
     return chosen
 
 
+def placebo_for(snapshots: list[Snapshot], quote_start: int, back: int = 12) -> Snapshot:
+    """A length- and format-matched state block describing a *different* moment.
+
+    The control for "does adding state help, or does adding a block of text
+    help". It returns a real snapshot from the same book, taken ``back`` windows
+    earlier than the one the quote is entitled to, so it has the same shape and
+    similar length but describes the wrong point in the story.
+
+    Still causal: an earlier snapshot covers strictly less text than the correct
+    one, so it cannot reach past the quote. Falls back to the earliest available
+    snapshot rather than to the empty state, because an empty placebo would
+    reintroduce the length difference it exists to remove.
+    """
+    eligible = [s for s in snapshots if s.covers_to <= quote_start]
+    if not eligible:
+        return EMPTY
+    chosen = eligible[max(0, len(eligible) - 1 - back)]
+    chosen.assert_causal(quote_start)
+    return chosen
+
+
 def load_all(
     root: Path = DEFAULT_PROPOSALS, policy: str = "dsg-full", novels: list[str] | None = None
 ) -> dict[str, list[Snapshot]]:

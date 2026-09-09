@@ -189,3 +189,52 @@ class TestRetrieval:
 
     def test_the_empty_state_retrieves_nothing(self) -> None:
         assert EMPTY.render_retrieved("Brenda") == ""
+
+
+class TestPlacebo:
+    """The control that separates 'state helps' from 'a text block helps'.
+
+    Same logic as the blind best-of-4 arm in the generation study: without it, a
+    difference between "no state" and "state" is a difference in prompt shape as
+    much as in prompt content.
+    """
+
+    SNAPS = [snap(i, (i + 1) * 1000, facts=f"- P{i}: knows Q") for i in range(30)]
+
+    def test_placebo_is_an_earlier_snapshot_than_the_correct_one(self) -> None:
+        from dsg.eval.attribution_state import placebo_for
+
+        correct = snapshot_for(self.SNAPS, 25_000)
+        placebo = placebo_for(self.SNAPS, 25_000)
+        assert placebo.window < correct.window
+
+    def test_placebo_is_still_causal(self) -> None:
+        """An earlier snapshot covers less text, so it cannot reach past."""
+        from dsg.eval.attribution_state import placebo_for
+
+        for pos in range(1000, 30_000, 700):
+            assert placebo_for(self.SNAPS, pos).covers_to <= pos
+
+    def test_placebo_is_not_empty_when_history_exists(self) -> None:
+        """An empty placebo would reintroduce the length gap it removes."""
+        from dsg.eval.attribution_state import placebo_for
+
+        assert placebo_for(self.SNAPS, 25_000).facts != ""
+
+    def test_placebo_falls_back_to_the_earliest_rather_than_empty(self) -> None:
+        from dsg.eval.attribution_state import placebo_for
+
+        out = placebo_for(self.SNAPS, 3_000)
+        assert out is not EMPTY
+        assert out.window == 0
+
+    def test_no_history_at_all_yields_the_empty_state(self) -> None:
+        from dsg.eval.attribution_state import placebo_for
+
+        assert placebo_for(self.SNAPS, 10) is EMPTY
+
+    def test_placebo_describes_a_different_moment(self) -> None:
+        from dsg.eval.attribution_state import placebo_for
+
+        correct = snapshot_for(self.SNAPS, 25_000)
+        assert placebo_for(self.SNAPS, 25_000).facts != correct.facts

@@ -44,6 +44,7 @@ from dsg.eval.attribution_state import (
     EMPTY,
     Snapshot,
     build_snapshots,
+    placebo_for,
     snapshot_for,
 )
 from dsg.eval.causal_audit import DEFAULT_ROOT, alias_sets, quote_spans
@@ -53,6 +54,7 @@ CAUSAL_CONDITIONS = (
     "recency",
     "text-causal",
     "state-causal",
+    "state-shuffled",
     "state-retrieval",
 )
 ALL_CONDITIONS = (*CAUSAL_CONDITIONS, "oracle-noncausal")
@@ -130,6 +132,7 @@ def build_prompt(
     window: int,
     recent: str | None,
     snapshot: Snapshot = EMPTY,
+    placebo: Snapshot = EMPTY,
 ) -> str:
     """Assemble one prompt. Causal conditions are verified before returning."""
     ctx = CausalContext(novel.text, quote.start, quote.end, quote.spans)
@@ -159,7 +162,9 @@ def build_prompt(
         hint = f"\nThe most recent speaker before this line was: {recent or 'unknown'}.\n"
         return head + hint + ask
     label = f"{novel.name}:{quote.quote_id}"
-    if condition in ("text-causal", "state-causal", "state-retrieval"):
+    if condition in (
+        "text-causal", "state-causal", "state-shuffled", "state-retrieval"
+    ):
         evidence = ctx.tail(window)
         # Sound guard: prove the evidence came from a sanctioned slice.
         ctx.verify_evidence(evidence, label=label)
@@ -171,6 +176,16 @@ def build_prompt(
             rendered = snapshot.render_retrieved(evidence)
             if rendered:
                 body += f"\n\nThe reader's notes, filtered to this scene:\n{rendered}\n"
+        if condition == "state-shuffled":
+            # Length- and format-matched placebo: a real state block, but one
+            # built at a different point in the same book. If state-causal ties
+            # this, the effect of "adding state" is prompt length and shape, not
+            # what the state says. Same control logic as the blind best-of-4 arm
+            # in the generation study, and the shuffled arm in Stage C.
+            placebo.assert_causal(quote.start, label=label)
+            rendered = placebo.render()
+            if rendered:
+                body += f"\n\nThe reader's notes at this point:\n{rendered}\n"
         if condition == "state-causal":
             # The state block is DERIVED text, not a slice of the novel, so the
             # substring whitelist cannot vouch for it. Its causality rests on
@@ -266,7 +281,7 @@ def run(
             last = q.speaker
 
         snaps: list[Snapshot] = []
-        if {"state-causal", "state-retrieval"} & set(conditions):
+        if {"state-causal", "state-shuffled", "state-retrieval"} & set(conditions):
             path = (proposals or DEFAULT_PROPOSALS) / f"{nd.name}.jsonl"
             if path.exists():
                 snaps = build_snapshots(path)
@@ -282,8 +297,11 @@ def run(
                     window=window,
                     recent=prev_by_start.get(q.start),
                     snapshot=snapshot_for(snaps, q.start) if snaps else EMPTY,
+                    placebo=placebo_for(snaps, q.start) if snaps else EMPTY,
                 )
-                if cond in ("text-causal", "state-causal", "state-retrieval"):
+                if cond in (
+                    "text-causal", "state-causal", "state-shuffled", "state-retrieval"
+                ):
                     try:
                         CausalContext(
                             nd.text, q.start, q.end, q.spans
