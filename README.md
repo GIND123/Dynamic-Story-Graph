@@ -1,804 +1,543 @@
-# Dynamic Narration Graph
+# Dynamic Story Graph
 
-Research workspace for long-context consistent story generation.
+**What a reader can know at page 200, and what it costs to only know that.**
 
-## Projects
+Computational narrative understanding reads finished books. Extraction over a
+novel is run *retrospectively*: a system annotating chapter 2 may already have
+seen chapter 40. That is the right design for describing a book and the wrong
+design for anything that must read as a reader does — a drafting assistant that
+must not know the ending, a model of suspense or surprise, or any measurement of
+what a text makes available to a reader *when*.
 
-- [`dsg/`](dsg/) **Dynamic Story Graph**: a revision aware, prefix causal
-  narrative state for book length fiction, and a study of what such a state is
-  good for. One positive result (the calculus keeps a maintained state
-  coherent), three negatives that bound it (state conditioning does not help
-  generation, and the contradiction count does not measure a text). Full write
-  up with all tables and figures: [`dsg/README.md`](dsg/README.md). Methodology:
-  [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md).
-- [`gnsm/`](gnsm/) — Grounded Narrative State Model: symbolic extraction,
-  learned narrative state, supervised transitions, conditioned generation, and
-  deterministic consistency verification.
-- [`manuscript-memory-engine/`](manuscript-memory-engine/) — the existing graph
-  memory baseline and evaluation harness.
-- [`Dataset Generation/`](Dataset%20Generation/) and
-  [`Long Model Comparison/`](Long%20Model%20Comparison/) — research notebooks.
+This repository asks what changes under a **prefix-causal** constraint: at
+character `s`, a system may condition on `text[0:s]` and on state derived from
+`text[0:s]`, and on nothing else. It is enforced in code, on every item, and
+raises rather than warns.
 
-Start with `python -m dsg doctor` for the current line of work, or
-`python -m gnsm demo` for a dependency-light end-to-end GNSM run.
-See [`gnsm/README.md`](gnsm/README.md) for setup, architecture, and extension
-points.
-
-## Run on Colab (clone → paste → run)
-
-Open [`gnsm/colab/GNSM_Colab.ipynb`](gnsm/colab/GNSM_Colab.ipynb) in Colab, or
-paste this into a fresh **GPU** Colab cell (Runtime → Change runtime type → GPU):
-
-```python
-!git clone https://github.com/GIND123/Dynamic-Narration-Graph.git
-%cd Dynamic-Narration-Graph
-from gnsm.colab.bootstrap import ensure_hf_token; ensure_hf_token()  # activate ambient HF token, no prompt
-!python -m gnsm.colab.bootstrap   # keeps Colab's CUDA torch, installs the rest, prints a report
-!python -m gnsm demo              # deterministic end-to-end loop (no downloads)
-!python -m gnsm smoke --json      # trains the neural state stack on the GPU
-```
-
-Then work through [Loading the datasets in Colab](#loading-the-datasets-in-colab)
-(Steps 1–6) and [Models](#models) (Steps 7–8) to put the corpora and weights on
-disk.
-
-> ### ⚠️ ATTACH THE GPU BEFORE THE BOOTSTRAP CELL
->
-> THE BOOTSTRAP KEEPS WHATEVER TORCH COLAB SHIPS. ON A CPU RUNTIME THAT IS A
-> `+cpu` BUILD, SO `gnsm smoke` SILENTLY TRAINS ON CPU AND THE CUDA PATH IS
-> NEVER EXERCISED. `python -m gnsm doctor --require-gpu` EXITS NON-ZERO WHEN
-> NO GPU IS ATTACHED — USE IT AS THE GATE.
-
-CUDA target is **cu121** (compatible with Colab and CUDA 12.1–12.4 hosts).
-Hugging Face auth is never prompted: gated models (Llama-3.1, Gemma, ...) are
-reached through a token that is already active in the session — an `HF_TOKEN`
-env var, a prior `huggingface-cli login`, or a Colab secret named `HF_TOKEN`
-(or `hf`). Public models need nothing. Full notes:
-[`gnsm/colab/README.md`](gnsm/colab/README.md).
+231 tests pass, 20 skipped. No LLM judge appears in any primary metric. No paid
+API is used anywhere in the pipeline. Every number below is generated from a
+committed artifact by the command printed beside it.
 
 ---
 
-## Datasets
+## 1. The measurement that motivates the project
 
-Eight corpora back the project. None are redistributed here — every one is
-fetched from its original source into `data/`, which is git-ignored.
+Quote attribution on the Project Dialogism Novel Corpus is a solved-looking task:
+Llama-3 8B zero-shot reaches **90.6** overall and **89.1** on non-explicit quotes
+(Michel, Epure, Hennequin & Cerisara 2024, arXiv:2406.11380, Table 1). Every
+published number is obtained non-causally — the system reads a window *centred*
+on the quote.
 
-| Dataset | Role in GNSM | Source |
-| --- | --- | --- |
-| **LitBank** | NER + coref + event supervision for the extraction plane | [dbamman/litbank](https://github.com/dbamman/litbank) |
-| **BookCoref** | Full-book coref → breaks LitBank's ~2K-token ceiling | [sapienzanlp/bookcoref](https://huggingface.co/datasets/sapienzanlp/bookcoref) |
-| **PDNC** | Quote/speaker edge training + quote-attribution eval | [Priya22/project-dialogism-novel-corpus](https://github.com/Priya22/project-dialogism-novel-corpus) |
-| **EvolvTrip / LitCharToM** | Gold temporal belief/desire/emotion/intention → supervises the soft internal-state heads | [yangbh217/EvolvTrip](https://huggingface.co/datasets/yangbh217/EvolvTrip) |
-| **ConStory-Bench** | Primary consistency evaluation (CED / GRR, 5 categories / 19 subtypes) | [jayden8888/ConStory-Bench](https://huggingface.co/datasets/jayden8888/ConStory-Bench) |
-| **FABLES** | Book-length faithfulness eval | [mungg/FABLES](https://github.com/mungg/FABLES) |
-| **GPT4-Books** | Name-cloze eval and memorization guardrail | [bamman-group/gpt4-books](https://github.com/bamman-group/gpt4-books) |
+We asked where the evidence actually sits. For the 10,743 explicit quotes whose
+gold speaker has resolvable aliases, we located the speaker's name within ±250
+characters:
 
-Roles and split policies are registered in
-[`gnsm/data/manifests/datasets.yaml`](gnsm/data/manifests/datasets.yaml).
+| position of the gold speaker's name | count | share |
+|---|---|---|
+| neither side (tag further away, or a different surface) | 3,471 | 32.3% |
+| **after the quote only — destroyed by a causal cut** | **3,148** | **29.3%** |
+| both sides | 2,600 | 24.2% |
+| before only | 1,524 | 14.2% |
 
-### Train / eval boundary
+> **A strict prefix-causal cut removes the decisive lexical cue for 29.3% of
+> explicit quotes — about 8.8% of the corpus.**
 
-`constory_bench`, `fables`, and `gpt4_books` are marked `trainable: false` in the
-manifest. FABLES additionally ships a **canary string** at the top level of its
-JSON declaring that the benchmark must never appear in training corpora — keep
-that key intact in any derived artifact rather than stripping it, so the
-contamination check still works downstream.
+The benchmark is substantially easier than it looks because, for a large slice of
+it, the answer arrives after the question. This is a property of the corpus, not
+of any system, and it holds for every result ever published on it.
 
-### Loader status
+```
+python -m dsg.eval.causal_audit --report tag-position
+```
 
-Only three datasets have working loaders in this repo today:
+Three annotation defects surfaced only by running the guards against real PDNC.
+None appears in the corpus documentation, and each would silently inflate a
+causal number:
 
-| Dataset | Loader |
-| --- | --- |
-| PDNC | `manuscript-memory-engine/ingestion/pdnc.py` |
-| LitBank | `manuscript-memory-engine/ingestion/litbank.py` |
-| GPT4-Books | `manuscript-memory-engine/evals/metrics/gpt4_books_cloze.py` |
+| defect | scale | consequence if unguarded |
+|---|---|---|
+| quotes annotated as several spans | 10,734 / 37,131 (**28.9%**) | the interjected `," said Elizabeth, "` is handed to the model as part of "the quote" |
+| speech tags shorter than a shingle | every explicit tag (~20 chars vs 40) | a shingle-based leak check sees nothing and passes |
+| spans not in document order | 5 / 37,131 | the quote's range inverts and the run crashes |
 
-BookCoref, EvolvTrip/LitCharToM, ConStory-Bench, and FABLES are downloaded and
-verified but still need adapters written against
-`manuscript-memory-engine/ingestion/base.py`. All four are plain JSON / JSONL /
-Parquet on disk after the steps below.
-
-### On-disk schemas
-
-Field names exactly as they appear on disk, confirmed by the Step 6 run below.
-
-**LitBank** — `data/litbank/entities/tsv/*.tsv`, 100 documents. Tab-separated
-BRAT exports; `LitBankLoader` emits entities + events
-(`1023_bleak_house_brat`: 154 entities, 61 events).
-
-**PDNC** — `data/pdnc/data/<Novel>/`, 28 novels. `PDNCLoader` emits
-`entities` / `quotations` / `segments` (`AHandfulOfDust`: 104 / 2337 / 375).
-
-**GPT4-Books** — `<GPT4BOOKS_ROOT>/model_output/chatgpt_results/*.txt`,
-571 books × 100 cloze rows. `read_book` returns rows carrying a `.gold` name
-(`1023_bleak_house` → `'Charley'`).
-
-**BookCoref** — `data/bookcoref/{train,validation,test}.jsonl`, 45 / 5 / 3 docs.
-One JSON object per line:
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `doc_key` | str | e.g. `o_pioneers!_24` |
-| `gutenberg_key` | str | source book id |
-| `sentences` | list[list[str]] | tokens per sentence; reconstructed at load time (30K–67K tokens/book) |
-| `clusters` | list | coreference clusters, one per character (9–12 per book) |
-| `characters` | list | character names, aligned 1:1 with `clusters` |
-
-**EvolvTrip / LitCharToM** — `data/evolvtrip_data/*.json`, JSON arrays:
-
-| File | Records | Keys |
-| --- | --- | --- |
-| `all_books_current.json` | 638 | `book_name`, `character`, `plot_index`, `plot_summary`, `scenario`, `triples`, `qa_data` |
-| `all_books_with_prev.json` | 638 | same, plus `previous_plots` |
-| `ood_test_book.json` | 779 | `messages`, `corresponding_triples`, `triples`, `plot_id`, `book_name`, `character`, `correct_answer`, `qa_type` |
-
-**ConStory-Bench** — `data/constory_bench/hf_data/prompts.parquet`, 2000 rows,
-columns `id`, `language`, `task_type`, `prompt`. `task_type` ∈ {`completion`,
-`continuation`, `expansion`, `generation`}. Sibling `stories.parquet` and
-`evaluations/*.csv` hold other models' outputs for leaderboard comparison.
-
-**FABLES** — `data/fables/data/FABLES.json`. Top level is `{canary, FABLES}`;
-`FABLES[book][summarizer]` → `general_comment`, `summary`, `claims`. 26 books ×
-5 summarizers (GPT-3.5-TURBO, GPT-4, GPT-4-TURBO, MIXTRAL, CLAUDE-3-OPUS).
+Effective N after dropping quotes whose gold speaker has no resolvable alias:
+**35,083 of 37,131**, across 28 novels.
 
 ---
 
-## Loading the datasets in Colab
-
-Run these after the bootstrap cell above. Each cell uses explicit paths rather
-than environment variables, so they are safe to run in any order and after a
-runtime restart.
-
-### Step 1 — clone the six git-hosted corpora
-
-```python
-%cd /content/Dynamic-Narration-Graph
-!mkdir -p data
-%cd data
-
-# LitBank
-!git clone --depth 1 https://github.com/dbamman/litbank.git litbank
-
-# PDNC
-!git clone --depth 1 https://github.com/Priya22/project-dialogism-novel-corpus.git pdnc
-
-# EvolvTrip / LitCharToM  (code + schema docs only; data comes in Step 2)
-!git clone --depth 1 https://github.com/Bernard-Yang/EvolvTrip.git evolvtrip
-
-# ConStory-Bench  (evaluation code only; prompts come in Step 2)
-!git clone --depth 1 https://github.com/Picrew/ConStory-Bench.git constory_bench
-
-# FABLES
-!git clone --depth 1 https://github.com/mungg/FABLES.git fables
-
-# GPT4-Books
-!git clone --depth 1 https://github.com/bamman-group/gpt4-books.git gpt4_books
-
-%cd /content/Dynamic-Narration-Graph
-!du -sh data/*
-```
-
-Expected: `litbank` 116M, `pdnc` 40M, `gpt4_books` 41M, `constory_bench` 5.6M,
-`fables` 4.6M, `evolvtrip` 424K.
-
-`fatal: destination path ... already exists` on a re-run is harmless — git is
-refusing to overwrite an existing clone.
-
-### Step 2 — pull the two Hugging Face corpora
-
-Cloned over plain git rather than the `datasets` library, so this is immune to
-`huggingface_hub` / `datasets` version drift in the Colab image.
-
-```python
-%cd /content/Dynamic-Narration-Graph/data
-!git lfs install
-
-# ConStory-Bench — 2,000 prompts + generated stories + per-model evaluations
-!git clone https://huggingface.co/datasets/jayden8888/ConStory-Bench constory_bench/hf_data
-
-# EvolvTrip / LitCharToM — the GitHub repo above is docs-only; data lives here
-!git clone https://huggingface.co/datasets/yangbh217/EvolvTrip evolvtrip_data
-
-%cd /content/Dynamic-Narration-Graph
-!du -sh data/constory_bench/hf_data data/evolvtrip_data
-```
-
-Expected: `constory_bench/hf_data` **5.5G**, `evolvtrip_data` 11M.
-
-The ConStory-Bench clone is large because LFS pulls generated stories for ~38
-models. Only `prompts.parquet` is needed to run the benchmark on your own model;
-`stories.parquet` and `evaluations/*.csv` are other models' outputs for
-leaderboard comparison. To skip them:
-
-```python
-%cd /content/Dynamic-Narration-Graph/data
-!GIT_LFS_SKIP_SMUDGE=1 git clone https://huggingface.co/datasets/jayden8888/ConStory-Bench constory_bench/hf_data
-!cd constory_bench/hf_data && git lfs pull --include="prompts.parquet"
-%cd /content/Dynamic-Narration-Graph
-```
-
-### Step 3 — unzip FABLES
-
-The annotations ship compressed in the GitHub clone.
-
-```python
-import zipfile, json
-
-root = "/content/Dynamic-Narration-Graph/data/fables"
-with zipfile.ZipFile(f"{root}/data/FABLES.json.zip") as z:
-    z.extractall(f"{root}/data")
-
-data = json.load(open(f"{root}/data/FABLES.json"))
-print("top-level keys:", list(data))          # ['canary', 'FABLES']
-print("books:", len(data["FABLES"]))          # 26
-```
-
-Structure is `FABLES[book][summarizer_model]` → `general_comment`, `summary`,
-`claims`. Five summarizers per book: GPT-3.5-TURBO, GPT-4, GPT-4-TURBO, MIXTRAL,
-CLAUDE-3-OPUS. Note the sibling `canary` key described above.
-
-FABLES contains claim-level annotations only — the source books are recent
-commercial titles and are not redistributed.
-
-### Step 4 — BookCoref (needs a temporary version pin)
-
-BookCoref publishes annotations without book text; the `sentences` field is
-reconstructed at load time by a dataset script that fetches Project Gutenberg
-texts through the Wayback Machine. Script-based loading was removed in
-`datasets` 4.0, so this step pins `datasets==3.6.0`, downloads, then restores.
-
-**4a — pin, then restart the runtime**
-
-```python
-# pins from the BookCoref dataset card
-!pip install -q "datasets==3.6.0" "deepdiff==8.5.0" "spacy==3.8.7" "nltk==3.9.1"
-
-# hub version compatible with datasets 3.6.0 (<1.0); --force-reinstall avoids
-# the mixed-file state that a plain downgrade can leave behind
-!pip install -q --force-reinstall --no-deps "huggingface_hub==0.34.4"
-
-print("Now: Runtime > Restart session, then run 4b.")
-```
-
-> ### ⚠️ RESTART THE RUNTIME NOW — RUNTIME → RESTART SESSION
->
-> THE PIN DOES NOT TAKE EFFECT UNTIL YOU RESTART. `datasets` IS ALREADY
-> IMPORTED IN THE KERNEL, SO PIP ONLY SWAPS FILES ON DISK. SKIPPING THIS
-> RESTART MAKES STEP 4b FAIL WITH
-> `RuntimeError: Dataset scripts are no longer supported`.
-
-Dependency-conflict warnings about `gradio` are unrelated and safe to ignore.
-
-After restarting, confirm the pin took before spending 35 minutes on the download:
-
-```python
-import datasets, huggingface_hub
-print("datasets:", datasets.__version__)   # must be 3.6.0
-print("hub:", huggingface_hub.__version__) # must be 0.34.4
-```
-
-**4b — download (~35 minutes)**
-
-```python
-import os
-os.environ["HF_HUB_DISABLE_XET"] = "1"
-
-from datasets import load_dataset
-
-bookcoref = load_dataset("sapienzanlp/bookcoref", trust_remote_code=True)
-print(bookcoref)
-
-out = "/content/Dynamic-Narration-Graph/data/bookcoref"
-os.makedirs(out, exist_ok=True)
-for split, ds in bookcoref.items():
-    ds.to_json(f"{out}/{split}.jsonl")
-    print(split, ds.num_rows, "docs")
-```
-
-`trust_remote_code=True` is required and is supported again under 3.6.0. Most of
-the runtime is tokenizing 52 Gutenberg books; it happens once. Expected splits:
-45 train / 5 validation / 3 test, ~103M on disk.
-
-If it fails on a missing spaCy model, run
-`!python -m spacy download en_core_web_sm` and re-run. Interrupted Wayback
-fetches are cached, so re-running resumes.
-
-**4c — restore versions, then restart again**
-
-```python
-!pip install -q -U "datasets>=4"
-!pip install -q --force-reinstall --no-deps "huggingface_hub==0.36.2"
-print("Now: Runtime > Restart session, then run Step 5.")
-```
-
-> ### ⚠️ RESTART THE RUNTIME NOW — RUNTIME → RESTART SESSION
->
-> THE KERNEL IS STILL HOLDING `datasets` 3.6.0 IN MEMORY. WITHOUT THIS
-> RESTART THE REST OF THE PIPELINE RUNS AGAINST THE OLD PINNED VERSIONS.
-
-`0.36.2` matches what `gnsm.colab.bootstrap` installs. Nothing downstream reads
-BookCoref through `datasets` — the adapter reads the JSONL directly.
-
-### Step 5 — set dataset roots
-
-> ### ⚠️ RE-RUN THIS CELL AFTER EVERY RUNTIME RESTART
->
-> ENVIRONMENT VARIABLES DO NOT SURVIVE A RESTART. IF STEP 6 RAISES
-> `KeyError: 'PDNC_ROOT'`, THIS CELL HAS NOT BEEN RUN IN THE CURRENT SESSION.
-
-```python
-import os, glob
-from pathlib import Path
-
-REPO = Path("/content/Dynamic-Narration-Graph")
-DATA = REPO / "data"
-
-# GPT4-Books nests model_output/chatgpt_results under a version-dependent
-# subfolder, so locate it rather than hardcoding the path.
-hits = glob.glob(str(DATA / "gpt4_books" / "**" / "model_output" / "chatgpt_results"), recursive=True)
-assert hits, "chatgpt_results not found — check the gpt4_books clone"
-gpt4_root = str(Path(hits[0]).parent.parent)
-
-env = {
-    # --- read by manuscript-memory-engine/app/config.py ---
-    "PDNC_ROOT": str(DATA / "pdnc"),
-    "LITBANK_ROOT": str(DATA / "litbank"),
-    "GPT4BOOKS_ROOT": gpt4_root,
-
-    # --- no loader yet; names follow gnsm/data/manifests/datasets.yaml ---
-    "BOOKCOREF_ROOT": str(DATA / "bookcoref"),
-    "EVOLVTRIP_ROOT": str(DATA / "evolvtrip_data"),       # HF data, not the docs repo
-    "LITCHARTOM_ROOT": str(DATA / "evolvtrip_data"),      # same repo hosts both
-    "EVOLVTRIP_DOCS": str(DATA / "evolvtrip"),            # README = schema reference
-    "CONSTORY_BENCH_ROOT": str(DATA / "constory_bench"),
-    "FABLES_ROOT": str(DATA / "fables"),
-
-    # loader smoke tests need no real API key
-    "LLM_MODE": "fake",
-}
-os.environ.update(env)
-
-# subprocesses (python -m ingestion.cli, ...) read this via pydantic-settings
-(REPO / "manuscript-memory-engine" / ".env").write_text(
-    "\n".join(f"{k}={v}" for k, v in env.items()) + "\n"
-)
-
-for k, v in env.items():
-    status = ("OK" if Path(v).exists() else "MISSING") if k.endswith(("_ROOT", "_DOCS")) else "set"
-    print(f"{k:22} {status:7} {v}")
-```
-
-All `_ROOT` / `_DOCS` lines should read `OK`. `LLM_MODE` reads `set` — it is a
-mode string, not a path.
-
-### Step 6 — verify every dataset
-
-```python
-!pip install -q pydantic pydantic-settings
-
-import sys, os, json
-import pandas as pd
-from pathlib import Path
-sys.path.insert(0, "/content/Dynamic-Narration-Graph/manuscript-memory-engine")
-
-from ingestion.pdnc import PDNCLoader
-from ingestion.litbank import LitBankLoader
-from evals.metrics.gpt4_books_cloze import book_path, read_book
-
-# --- PDNC: speaker/addressee ---
-novels = sorted(p.name for p in (Path(os.environ["PDNC_ROOT"]) / "data").iterdir() if p.is_dir())
-ir = PDNCLoader(Path(os.environ["PDNC_ROOT"]) / "data" / novels[0]).load()
-print(f"PDNC        {len(novels)} novels | {novels[0]}: {len(ir.entities)} chars, "
-      f"{len(ir.quotations)} quotes, {len(ir.segments)} segments")
-
-# --- LitBank: entities/events ---
-docs = sorted(p.stem for p in (Path(os.environ["LITBANK_ROOT"]) / "entities" / "tsv").glob("*.tsv"))
-ir2 = LitBankLoader(os.environ["LITBANK_ROOT"], docs[0]).load()
-print(f"LITBANK     {len(docs)} docs | {docs[0]}: {len(ir2.entities)} entities, {len(ir2.events)} events")
-
-# --- GPT4-Books: name cloze ---
-cloze_dir = Path(os.environ["GPT4BOOKS_ROOT"], "model_output", "chatgpt_results")
-books = sorted(p.stem for p in cloze_dir.glob("*.txt"))
-rows = read_book(book_path(books[0], os.environ["GPT4BOOKS_ROOT"]))
-print(f"GPT4BOOKS   {len(books)} books | {books[0]}: {len(rows)} cloze rows | gold[0]={rows[0].gold!r}")
-
-# --- BookCoref: full-book coref (sentences must be populated) ---
-for split in ["train", "validation", "test"]:
-    with open(f"{os.environ['BOOKCOREF_ROOT']}/{split}.jsonl") as f:
-        row = json.loads(f.readline())
-    n_tok = sum(len(s) for s in row["sentences"])
-    print(f"BOOKCOREF   {split:10} {row['doc_key']:28} tokens={n_tok:7} "
-          f"clusters={len(row['clusters'])} chars={len(row['characters'])}")
-
-# --- EvolvTrip / LitCharToM: temporal ToM ---
-for fname in ["all_books_current.json", "all_books_with_prev.json", "ood_test_book.json"]:
-    d = json.load(open(f"{os.environ['EVOLVTRIP_ROOT']}/{fname}"))
-    print(f"EVOLVTRIP   {fname:26} {len(d)} records | keys={list(d[0])[:4]}...")
-
-# --- ConStory-Bench: consistency prompts ---
-prompts = pd.read_parquet(f"{os.environ['CONSTORY_BENCH_ROOT']}/hf_data/prompts.parquet")
-print(f"CONSTORY    {prompts.shape[0]} prompts | task types: "
-      f"{sorted(prompts['task_type'].unique())}")
-
-# --- FABLES: faithfulness annotations ---
-fab = json.load(open(f"{os.environ['FABLES_ROOT']}/data/FABLES.json"))
-print(f"FABLES      {len(fab['FABLES'])} books x "
-      f"{len(next(iter(fab['FABLES'].values())))} summarizers | canary present: {'canary' in fab}")
-```
-
-Reference output from a clean run:
-
-```text
-PDNC        28 novels | AHandfulOfDust: 104 chars, 2337 quotes, 375 segments
-LITBANK     100 docs | 1023_bleak_house_brat: 154 entities, 61 events
-GPT4BOOKS   571 books | 1023_bleak_house: 100 cloze rows | gold[0]='Charley'
-BOOKCOREF   train      o_pioneers!_24               tokens=  67463 clusters=12 chars=12
-BOOKCOREF   validation the_boxcar_children_42796    tokens=  30819 clusters=10 chars=10
-BOOKCOREF   test       siddhartha_2500              tokens=  47785 clusters=9 chars=9
-EVOLVTRIP   all_books_current.json     638 records | keys=['book_name', 'character', 'plot_index', 'plot_summary']...
-EVOLVTRIP   all_books_with_prev.json   638 records | keys=['book_name', 'character', 'plot_index', 'plot_summary']...
-EVOLVTRIP   ood_test_book.json         779 records | keys=['messages', 'corresponding_triples', 'triples', 'plot_id']...
-CONSTORY    2000 prompts | task types: ['completion', 'continuation', 'expansion', 'generation']
-FABLES      26 books x 5 summarizers | canary present: True
-```
+## 2. The first prefix-causal number on PDNC
+
+Qwen2.5-7B-Instruct, 1,200-character window, greedy decoding, gold candidate
+lists (matching the literature's protocol). Paired bootstrap over 28 novels,
+10,000 resamples.
+
+| condition | evidence available | overall | explicit | non-explicit |
+|---|---|---|---|---|
+| `prior` | candidate list only | 0.139 | 0.144 | 0.138 |
+| `recency` | last attributed speaker before `s` | 0.165 | 0.165 | 0.171 |
+| **`text-causal`** | `text[s−W:s]` | **0.523** | **0.497** | **0.537** |
+| `state-causal`† | `text[s−W:s]` + serialised state at `s` | 0.450 | 0.424 | 0.464 |
+| `oracle-noncausal`‡ | `text[s−W:s+W]`, target marked | 0.696 | 0.850 | 0.644 |
+
+| comparison | Δ | 95% CI | excludes 0 |
+|---|---|---|---|
+| `text-causal` − `recency` | +0.3579 | [+0.3253, +0.3887] | yes |
+| `recency` − `prior` | +0.0257 | [+0.0098, +0.0419] | yes |
+
+**`text-causal` = 0.523 is the headline: the first prefix-causal attribution
+number on PDNC**, on 35,083 quotes with leakage enforced per item.
+
+† **`state-causal` supports no claim in this repository.** It scores −0.073
+below `text-causal` (CI [−0.0919, −0.0555]), but adding the state block also
+adds ~1,400 characters between the recent text and the question, so the
+contrast confounds content with prompt length. The `state-shuffled` placebo that
+would separate them is specified in
+[`docs/METHODOLOGY_V2.md`](docs/METHODOLOGY_V2.md) §2.4 and **was not run — the
+compute budget for this project is exhausted.** The number is published here for
+completeness and is excluded from every conclusion.
+
+‡ **`oracle-noncausal` is superseded.** This run's oracle was asked about "the
+next line" while its context bracketed the quote. The fix is implemented; the
+rerun will not happen for the same reason. **No "cost of causality" figure is
+claimed from this row.**
+
+### The evidence that the causal cut is what bites
+
+Without a valid internal oracle, the cross-paper gap (0.523 against a published
+0.906) confounds model with setting and cannot be read as a causality price. One
+piece of evidence survives that confound, because it compares **orderings within
+a condition** rather than numbers across papers.
+
+§1 predicts an asymmetry: a causal cut destroys the decisive cue for 29.3% of
+*explicit* quotes, while anaphoric and implicit quotes never had a nearby name
+cue to lose. So the explicit slice — the easy one in every published setting —
+should become the hard one under a causal constraint.
+
+| setting | overall | non-explicit | which slice is easier |
+|---|---|---|---|
+| BookNLP+, non-causal `[published]` | 78.5 | 68.9 | explicit (overall > non-explicit) |
+| Llama-3 8B zero-shot, non-causal `[published]` | 90.6 | 89.1 | explicit (overall > non-explicit) |
+| **`text-causal`, this work** | **52.3** | **53.7** | **non-explicit — the ordering inverts** |
+
+Both published systems score *below* their overall accuracy on non-explicit
+quotes; ours scores *above* it. Each row is an internal comparison within one
+system and one prompt, so the inversion is robust to the model differences that
+make the absolute numbers incomparable. **The slice the corpus audit says should
+break is the slice that breaks.**
+
+### Leakage is enforced, not asserted
+
+The causal claim lives or dies here, so the guards are code:
+
+- **G1 — offset assertion.** Every prompt is built by one function that can only
+  slice `text[:s]`. A 40-character shingle check plus a literal check for short
+  regions runs on *every* quote and raises. The literal check exists because
+  `," said Elizabeth, "` is ~20 characters and slips under a shingle.
+  ([`dsg/eval/attribution.py`](dsg/eval/attribution.py))
+- **G2 — no gold at inference.** Gold-candidate and system-candidate regimes are
+  reported separately and never mixed in one table.
+- **G3 — memorization covariate.** Name cloze run with our own model over PDNC,
+  correlated per novel with attribution accuracy.
+- **G6 — provenance, not substrings.** The state digest is written by the
+  extractor, so no substring check can vouch for it. Each snapshot carries the
+  window index and offset it was taken at and is rejected if its coverage reaches
+  past the quote. The window *containing* the quote is always excluded.
+- **G4 — book-level splits only.** **G5 — no LLM judge**; exact match against
+  gold after alias normalisation.
+
+### The memorization check, and what it actually shows
+
+Qwen has read these public-domain novels. Per novel, ρ = **+0.411** between name
+cloze and attribution accuracy (permutation p = 0.030) — which looks like
+contamination. But mean cloze is **0.054** (the model can barely recall these
+books), and `text-causal` correlates *equally* (ρ = 0.403). Equal correlation
+with and without state points at **book tractability** — famous, small-cast
+novels are both easier to cloze and easier to attribute — rather than at
+memorization. Reported as a complication that wants a difficulty control, not
+explained away.
 
 ---
 
-## Models
+## 3. Persistent narrative state is self-poisoning
 
-Seven checkpoints back the project. Like the corpora they are fetched into a
-git-ignored directory (`models/`) and never committed.
+The reading study, on 28 PDNC novels and 100 LitBank excerpts, at three extractor
+scales. Extraction is **held constant**: every policy replays a byte-identical
+cached proposal stream, so differences are attributable to the representation and
+not to extractor variance.
 
-| Model | Dir | Size | `model_type` | Role | Load via |
-| --- | --- | --- | --- | --- | --- |
-| `meta-llama/Llama-3.1-8B-Instruct` | `models/llama-3.1-8b-instruct` | 15G | llama | generator (comparability, frozen) | transformers |
-| `Qwen/Qwen2.5-7B-Instruct` | `models/qwen2.5-7b-instruct` | 15G | qwen2 | generator (T4 variant) | transformers |
-| `Qwen/Qwen2.5-14B-Instruct` | `models/qwen2.5-14b-instruct` | 28G | qwen2 | generator (headline) | transformers |
-| `answerdotai/ModernBERT-large` | `models/modernbert-large` | 7.4G | modernbert | state-encoder backbone | transformers |
-| `microsoft/deberta-v3-large` | `models/deberta-v3-large` | 3.0G | deberta-v2 | state-encoder alt backbone | transformers |
-| `sapienzanlp/maverick-mes-litbank` | `models/maverick-mes-litbank` | 1.9G | — | coref (within-context) | `maverick` (Lightning ckpt) |
-| `sapienzanlp/xcore-litbank` | `models/xcore-litbank` | 2.0G | — | coref (book-length) | `xcore` (Lightning ckpt) |
+Carrying state forward buys a great deal and breaks the state in the same motion.
+At 7B, `append-only` against `window-only`:
 
-Total ≈ 72 GB. Only Llama-3.1 is gated; the rest need no token.
+| metric | Δ | 95% CI | win split |
+|---|---|---|---|
+| identity CoNLL F1 | **+0.209** | [+0.182, +0.240] | 28–0 |
+| mention linking | **+0.152** | [+0.124, +0.183] | 28–0 |
+| self-contradictory slots | **+0.261** *(worse)* | [+0.233, +0.291] | 28–0 |
 
-### Key files per model
+The accuracy gain is large at every scale but its shape moves, so the range is
+reported rather than a single cell: CoNLL +0.209 (7B) / +0.088 (3B) / +0.063
+(1.5B) / +0.081 (LitBank); mention linking +0.152 (7B) / +0.310 (3B) / +0.314
+(1.5B).
 
-- **llama-3.1-8b-instruct/**: `config.json`, `generation_config.json`, `model-0000{1..4}-of-00004.safetensors`, `special_tokens_map.json`, `tokenizer.json`, `tokenizer_config.json`
-- **qwen2.5-7b-instruct/**: `config.json`, `generation_config.json`, `model-0000{1..4}-of-00004.safetensors`, `tokenizer.json`, `tokenizer_config.json`, `vocab.json`
-- **qwen2.5-14b-instruct/**: `config.json`, `generation_config.json`, `model-0000{1..8}-of-00008.safetensors`, `tokenizer.json`, `tokenizer_config.json`, `vocab.json`
-- **modernbert-large/**: `config.json`, `model.safetensors`, `pytorch_model.bin`, `special_tokens_map.json`, `tokenizer.json`, `tokenizer_config.json`, `onnx/*` (unused by the PyTorch path)
-- **deberta-v3-large/**: `config.json`, `generator_config.json`, `pytorch_model.bin`, `pytorch_model.generator.bin`, `spm.model`, `tokenizer_config.json`, `tf_model.h5` (unused)
-- **maverick-mes-litbank/**: `config.yaml`, `weights.ckpt`
-- **xcore-litbank/**: `weights.ckpt`
+The share of single-valued slots holding two or more live conflicting values:
 
-Maverick and xCoRe are PyTorch-Lightning checkpoints, **not** `transformers`
-models — `AutoConfig.from_pretrained` will not read them. Note also that
-[`gnsm/extraction/maverick.py`](gnsm/extraction/maverick.py) still defaults to
-the `sapienzanlp/maverick-mes-ontonotes` checkpoint, while the LitBank-trained
-one above is what the pipeline actually wants.
+| corpus / extractor | `window-only` | `append-only` |
+|---|---|---|
+| PDNC, Qwen2.5-7B | 0.110 | **0.371** |
+| PDNC, Qwen2.5-3B | 0.101 | **0.423** |
+| PDNC, Qwen2.5-1.5B‡ | 0.004 | **0.107** |
+| LitBank, Qwen2.5-7B | 0.091 | **0.181** |
 
-### Local weights are used automatically
+‡ Partly a yield comparison: the 1.5B extractor fails to produce parseable output
+on 20.6% of windows (3,226/4,063), so its lower rates reflect a thinner state.
 
-[`HuggingFaceFrozenGenerator`](gnsm/generation/huggingface.py) resolves a Hub
-repo ID against `models/` before loading, so a checkpoint that is already on
-disk is never re-downloaded:
+**An append-only store, given a real novel, turns 11–42% of its own slots
+self-contradictory.** It cannot say "this was true then", "this was never true",
+or "these two people are one", so every contradiction it creates is permanent.
+That is the empirical result, and it is a measurement of what novels do to a
+naive incremental pipeline.
 
-```text
-meta-llama/Llama-3.1-8B-Instruct   ->  models/llama-3.1-8b-instruct
-Qwen/Qwen2.5-7B-Instruct           ->  models/qwen2.5-7b-instruct
-```
+### Reading the consistency number honestly
 
-The rule is the lowercased repo basename — exactly the layout Step 7 writes.
+Policies equipped with the revision calculus report **0.000** self-contradictory
+slots — on all 184 book-runs, at every scale, on both corpora. **This is a
+conformance check, not an empirical finding, and we state it as one.**
 
-```python
-from gnsm.generation.huggingface import HuggingFaceFrozenGenerator
+Invariant I1 ([`dsg/invariants.py`](dsg/invariants.py)) is defined as "two live
+conflicting values in one single-valued slot." `_close_and_link`
+([`dsg/store.py`](dsg/store.py)) closes *every* conflicting assertion before
+adding a new one. So I1 = 0 is a postcondition the calculus enforces by
+construction; the metric and the mechanism are the same object, and 0/184 is what
+a guarantee looks like rather than what a measurement looks like.
 
-gen = HuggingFaceFrozenGenerator("Qwen/Qwen2.5-7B-Instruct")   # or an explicit path
-gen.load()   # 4-bit NF4 on CUDA when bitsandbytes is present, else bf16/fp16
-```
+What that leaves is the question worth asking, and it is empirical:
 
-- an explicit path is honoured as given and never rewritten;
-- a repo ID with no local copy falls back to the Hub unchanged;
-- `GNSM_MODELS_DIR` overrides the search root (default `<repo>/models`);
-- `gen._load_summary["local_weights"]` reports which branch was taken.
+> **What does enforcing consistency cost?**
 
-Still not wired: [`gnsm/configs/models/`](gnsm/configs/models/) and
-[`gnsm/config.py`](gnsm/config.py) are not read at runtime — `load_config()` is
-exercised only by [`tests/test_config.py`](tests/test_config.py), and the CLI
-does not accept a config file. The profiles there cover Llama-3.1-8B and
-Qwen2.5-14B; there is none for the 7B checkpoint. Pass the model reference to
-the generator directly until that layer lands.
+The answer is nothing, and it was not obvious in advance — the natural worry is
+that aggressive revision throws away correct facts.
 
-### Step 7 — download the weights (~35 min)
+| rung (7B) | identity CoNLL F1 | mention linking | self-contradictory slots |
+|---|---|---|---|
+| + identity merging | −0.002 (ns) | −0.005 (ns) | +0.007 *(worse)* |
+| + fact revision | 0.000 (exact) | 0.000 (exact) | **−0.377** (0–28) |
+| + deferred commitment | −0.003 (ns) | **+0.007** | 0.000 |
+| cost of causality | −0.002 (ns) | **+0.028** | 0.000 |
 
-Preflight first: this needs ~72 GB free and, for Llama, an accepted licence on
-the account behind your HF token.
+Bold entries have a 95% interval excluding zero. The revision rung moves the
+consistency metric by exactly the amount it is defined to move it and moves the
+accuracy metrics by *exactly zero* — identity and fact revision are disjoint, and
+the ladder shows it rather than assuming it.
 
-```python
-import shutil
-from huggingface_hub import HfApi, whoami
+Two findings on that ladder are genuinely empirical:
 
-total, used, free = shutil.disk_usage("/content")
-print(f"disk: {free/1e9:.0f} GB free of {total/1e9:.0f} GB")
-print("HF user:", whoami()["name"])
-
-api = HfApi()
-for repo in ["meta-llama/Llama-3.1-8B-Instruct", "Qwen/Qwen2.5-7B-Instruct",
-             "Qwen/Qwen2.5-14B-Instruct", "answerdotai/ModernBERT-large",
-             "microsoft/deberta-v3-large", "sapienzanlp/maverick-mes-litbank",
-             "sapienzanlp/xcore-litbank"]:
-    try:
-        info = api.model_info(repo, files_metadata=True)
-        print(f"OK       {sum(f.size or 0 for f in info.siblings)/1e9:6.1f} GB  {repo}")
-    except Exception as e:
-        print(f"BLOCKED             {repo}  {type(e).__name__}")
-```
-
-A `BLOCKED` row on Llama means the token is missing or the licence has not been
-accepted — everything else still downloads.
-
-```python
-import os
-os.environ["HF_HUB_DISABLE_XET"] = "1"   # avoids the Xet backend import breakage on Colab
-
-from huggingface_hub import snapshot_download
-from pathlib import Path
-
-DEST = Path("/content/Dynamic-Narration-Graph/models")
-DEST.mkdir(parents=True, exist_ok=True)
-
-# repo_id -> (local subdir, ignore patterns)
-MODELS = {
-    "meta-llama/Llama-3.1-8B-Instruct": ("llama-3.1-8b-instruct",
-        ["original/*", "*.pth"]),                       # skip the duplicate raw-Meta checkpoint
-    "Qwen/Qwen2.5-7B-Instruct":         ("qwen2.5-7b-instruct", []),
-    "Qwen/Qwen2.5-14B-Instruct":        ("qwen2.5-14b-instruct", []),
-    "answerdotai/ModernBERT-large":     ("modernbert-large", []),
-    "microsoft/deberta-v3-large":       ("deberta-v3-large", []),
-    "sapienzanlp/maverick-mes-litbank": ("maverick-mes-litbank", []),
-    "sapienzanlp/xcore-litbank":        ("xcore-litbank", []),
-}
-
-for repo, (subdir, ignore) in MODELS.items():
-    print(f"\n=== {repo} -> models/{subdir} ===")
-    snapshot_download(repo_id=repo, local_dir=str(DEST / subdir), ignore_patterns=ignore or None)
-
-!du -sh /content/Dynamic-Narration-Graph/models/*
-```
-
-On a smaller runtime, drop what the PyTorch path never touches — adding
-`"onnx/*", "*.h5", "*.msgpack"` to every `ignore_patterns` list saves ~6 GB, and
-skipping `qwen2.5-14b-instruct` saves another 28 GB (the 7B variant is the T4
-generator).
-
-### Step 8 — verify the weights
-
-```python
-import os
-os.environ["HF_HUB_DISABLE_XET"] = "1"
-from pathlib import Path
-from transformers import AutoConfig, AutoTokenizer
-
-MODELS = Path("/content/Dynamic-Narration-Graph/models")
-
-for name in ["llama-3.1-8b-instruct", "qwen2.5-7b-instruct", "qwen2.5-14b-instruct",
-             "modernbert-large", "deberta-v3-large"]:
-    try:
-        cfg = AutoConfig.from_pretrained(MODELS / name)
-        tok = AutoTokenizer.from_pretrained(MODELS / name)
-        print(f"OK   {name:24} {cfg.model_type:12} vocab={tok.vocab_size}")
-    except Exception as e:
-        print(f"FAIL {name:24} {type(e).__name__}: {e}")
-
-# Lightning checkpoints — presence check only
-for name in ["maverick-mes-litbank", "xcore-litbank"]:
-    ck = MODELS / name / "weights.ckpt"
-    print(f"{'OK  ' if ck.exists() else 'FAIL'} {name:24} weights.ckpt")
-```
-
-Reference output from a clean run:
-
-```text
-OK   llama-3.1-8b-instruct    llama        vocab=128000
-OK   qwen2.5-7b-instruct      qwen2        vocab=151643
-OK   qwen2.5-14b-instruct     qwen2        vocab=151643
-OK   modernbert-large         modernbert   vocab=50280
-OK   deberta-v3-large         deberta-v2   vocab=128000
-OK   maverick-mes-litbank     weights.ckpt
-OK   xcore-litbank            weights.ckpt
-```
-
-A sentencepiece / "incorrect regex" `UserWarning` on `deberta-v3-large` is
-expected and harmless — the row still reads `OK`.
+- **Identity merging without fact revision makes the state worse.** Merging two
+  characters unifies their assertion slots; without revision the merged slot
+  simply holds both rival values. Mention linking −0.016 at 3B and −0.023 at
+  1.5B, both intervals excluding zero (not significant at 7B). The two mechanisms
+  are complementary, not additive — merging is only safe once the state can
+  revise.
+- **Causality has a price, and it is small.** A non-causal oracle given the
+  identical extraction is better on mention linking by +0.028 (7B, 25–2), +0.031
+  (3B), +0.050 (1.5B, 28–0). Reading forward genuinely costs something. It is a
+  few points, not a collapse, and it does not touch consistency.
 
 ---
 
-## Run training on Modal, with periodic Hugging Face checkpoints
+## 4. Three negatives that bound the positive
 
-`gnsm/infra/modal_app.py` runs GNSM training on [Modal](https://modal.com) and
-periodically pushes checkpoints — plus a train/val loss-curve plot, as
-matched PNG + PDF — to a private Hugging Face repo, so training is resumable
-from the Hub after any restart, by you or by anyone else with access to that
-repo. Three entrypoints:
+These are reported at the same volume as the positive result, because they are
+what make the positive claim narrow enough to be true.
 
-- **`main`** (default) launches `gnsm.training.smoke` — a GPU wiring check on
-  a synthetic batch, not a research result (see that module's docstring).
-- **`evolvtrip`** and **`pdnc`** both launch `gnsm.training.train_state` (a
-  shared, dataset-agnostic training engine — vocab sizes and the batch
-  collate function are supplied per dataset) against their own adapter:
-  - `gnsm/training/evolvtrip_adapter.py` — 428 examples from EvolvTrip's
-    belief/desire/intention/emotion triples. Needs
-    `data/evolvtrip_data/all_books_current.json` on disk first:
-    `git clone https://huggingface.co/datasets/yangbh217/EvolvTrip data/evolvtrip_data`.
-  - `gnsm/training/pdnc_adapter.py` — ~36K consecutive same-speaker quote
-    pairs across 28 novels, reusing `ingestion.pdnc.PDNCLoader` from
-    `manuscript-memory-engine` rather than re-parsing PDNC's CSVs. Needs
-    `data/pdnc/data/` on disk first:
-    `git clone --depth 1 https://github.com/Priya22/project-dialogism-novel-corpus.git data/pdnc`.
+### 4.1 State conditioning does not help generation
 
-  Each adapter's docstring explains exactly how a raw record becomes
-  node/edge/attribute/(emotion)/delta tensors — a documented v1 design, not a
-  final one. Emotion supervision is optional per-dataset (PDNC has no
-  emotion signal; `gnsm.state.losses.grounded_state_loss` simply omits that
-  term when absent).
+Five designs, four runs, **18,600 generated chapters**, 30 stories, conditions
+paired within story. Canon is planted in chapter 1 and withheld afterwards;
+violations are deterministic string tests near a mention of the subject. No
+language model appears in any metric.
 
-- **`experiment`** runs Stage C: graph-state-conditioned *generation*. It
-  trains a `StatePrefixAdapter` (`gnsm/generation/adapter.py`) that projects
-  the learned narrative state into soft-prompt embeddings prepended to a
-  **frozen** LM's own token embeddings via `inputs_embeds` — standard prefix
-  tuning (Li & Liang, 2021; Lester et al., 2021), with the state rather than
-  a free parameter as the prefix source. Both the encoder (loaded from a
-  trained `best.json` checkpoint) and the LM stay frozen; only the adapter
-  learns. See `gnsm/training/train_adapter.py` and
-  `gnsm/eval/adapter_experiment.py`.
+| memory at generation time | violations ↓ | prompt tokens |
+|---|---|---|
+| none | 0.487 | 112 |
+| previous chapter | 0.312 | 1,017 |
+| full transcript | 0.254 | 5,362 |
+| serialised state digest | **0.588** | 357 |
+| digest + previous chapter | 0.379 | 1,194 |
+| beat-conditioned retrieval | **0.571** | 212 |
+| retrieval + previous chapter | 0.317 | 1,098 |
+| + graph guard | 0.317 | 1,095 |
 
-> **Measured Stage C result — the primary hypothesis was not supported.**
-> Across 5 paired seeds on a Modal T4, conditioning on the *matched* narrative
-> state performed no better than conditioning on a deliberately *mismatched*
-> one (Δ +0.0015, 95% CI [−0.0144, +0.0189] — spans zero). A varying prefix
-> did beat a constant one (Δ −0.039, CI [−0.0631, −0.0101]), so the benefit
-> comes from the prefix varying, not from the state being correct. Full
-> numbers, figure, qualitative samples, and limitations:
-> [`gnsm/docs/adapter_results.md`](gnsm/docs/adapter_results.md). The most
-> likely cause and cheapest next test is stated there: the frozen encoder was
-> trained on 428 EvolvTrip examples to val_loss 3.79, versus 1.90 available
-> from PDNC's ~36K.
+Serialised state is worse than no memory (+0.083, CI [+0.025, +0.142]).
+Beat-conditioned retrieval — the design the prior literature predicts should win
+— is also worse than no memory (+0.083, CI [+0.038, +0.125]).
 
-All of these share the same checkpoint hook (`gnsm.training.checkpointing.attach_to_run`).
-Every path it writes — periodic checkpoints, `latest.json`, the best-val-loss
-checkpoint, `best.json` — is namespaced under `{run_id}/`, so multiple
-training lines (EvolvTrip, PDNC, future datasets) can safely share one HF
-repo without one run's "best" clobbering another's. `--resume` must reuse the
-original run's `--run-id`.
+**This is not an extraction ceiling.** The state held **0.492** of the planted
+canon at the moment of writing, and conditioning on it still added nothing.
 
-`evolvtrip`/`pdnc` early-stop: they track validation loss every epoch and
-stop after `--patience` epochs with no improvement, rather than always
-running the full `--epochs` budget. Every time val loss improves, the
-checkpoint is pushed separately to `{run_id}/checkpoints/best` (+ a
-`{run_id}/best.json` pointer) — a single stable "the best model so far"
-artifact, distinct from the periodic `checkpoints/checkpoint-step-N`
-resumability snapshots. The loss plot marks the best step with a vertical line.
+**It replicates a published negative.** The Narrative World Model paper's own
+ablation reports serialised current state at 0.358 against query-conditioned
+retrieval at 0.898. Our `state-digest` is structurally their `State Memory`. We
+reproduce their failure with a 3B open model and, unlike them, find their success
+condition does not transfer.
 
-> **Findings so far**: EvolvTrip has little data (386 train pairs) for a
-> 720K-param model — without early stopping it overfits hard after ~20
-> epochs (val loss climbs from ~4 to ~8.5); with `--patience 10` a Modal T4
-> run stopped itself at epoch 24, best checkpoint at epoch ~14 (val loss
-> 3.79). PDNC has ~76x more data (32,679 train pairs) and converges cleanly
-> with no overfitting — train and val loss track together down to ~1.9 and
-> stay there; a `--patience 5` run stopped around epoch 20 with best val
-> loss ~1.89. More data, less overfitting, as expected.
+### 4.2 The contradiction count does not measure a text
 
-### One-time setup
+We tested our own instrument's external validity and it failed. 215 published
+novels and 30 generated stories, first 20 chapters each, same extraction prompt,
+reconciler and policy. If the contradiction rate measured textual consistency,
+edited novels should score far below machine-generated ones.
+
+**They do not separate: AUC 0.394, 95% CI [0.259, 0.534]** — the interval spans
+chance. Published novels score 0.238, which is not credible as a rate of genuine
+self-contradiction in edited prose. The flagged "contradictions" are extraction
+artefacts: in *Peter Pan*, `Mrs. Darling.occupation: [wife, mother]` (both true),
+`Nana.material: [Newfoundland dog, dog]` (the same thing at two precisions),
+`Wendy.resides_in: [14, nursery]` (a house number and a room).
+
+This bounds §3: the ladder is a controlled comparison of policies on identical
+input, unaffected by a shared noise floor. Reporting the contradiction rate as a
+measure of how consistent a *text* is would not be, and we do not.
+
+### 4.3 The revision trace is a weaker instrument than it first appeared
+
+Revision events trend steeply with discourse position — from 4.6% of operations
+in the first twentieth of a book to 29.8% in the last (ρ = +0.82, p = 9×10⁻⁶).
+Read alone that is a tidy narratological story: exposition first, reversal later.
+
+It is mostly an artefact. As a book proceeds the state holds more assertions, so
+*any* conflict-driven operation becomes mechanically more likely. Permuting the
+reading order destroys narrative order while preserving state growth exactly:
+
+| ordering (3B) | elaboration ρ | revision ρ |
+|---|---|---|
+| narrative | **−0.59** (p = 0.007) | **+0.82** (p = 9×10⁻⁶) |
+| shuffled | +0.08 (p = 0.75) | **+0.69** (p = 8×10⁻⁴) |
+
+The revision trend largely survives shuffling, so most of it is state growth. The
+elaboration trend disappears, so that one is real. **The control reversed our
+first reading of this result**, and the surviving signal is in the opposite
+operation from the one we expected to carry it.
+
+Scope: this holds at 3B and **reverses at 7B** (narrative elaboration ρ = −0.084,
+p = 0.72). The claim is restricted accordingly rather than generalised.
+
+---
+
+## 5. Method
+
+A small open-weight model **proposes**; a deterministic reconciler **disposes**.
+The model reads one window plus a bounded digest and emits typed proposals. It
+has no write access. Whether a conflict is a world change or a reader error is
+decided by an inspectable predicate table and marker list
+([`dsg/lexicon.py`](dsg/lexicon.py)), identical across every condition.
+
+Three update types that append-only pipelines conflate:
+
+| operation | fires when | effect |
+|---|---|---|
+| `ELABORATE` | later text specifies what earlier text left open | refined in place; nothing retracted |
+| `SUPERSEDE` | the **story world** changed | validity interval closed; kept as history |
+| `REVISE` | the **reader** was wrong; it was never true | retracted, and so is anything derived from it |
+
+The `SUPERSEDE`/`REVISE` split is the operational form of the narratological
+distinction between an event in the story and a disclosure in the telling — a
+distinction static belief revision (AGM, TMS) does not make, because a knowledge
+base has no notion of the world legitimately moving on.
+
+Assertions carry two independent clocks: discourse time (while the reader held
+the belief) and story time (while the fact held in the world). Seven structural
+invariants are checked after every reading step, including prefix causality.
+Memory is bounded by cast size, not book length.
+
+**Deferred commitment** is the central lever. A definite description (`the
+stranger`) creates a *provisional* node, promoted only once it has a proper name
+and two attestations. If "the stranger" commits on first sight, the later reveal
+that they are Magwitch requires a non-monotone rollback; held provisional, the
+identical reveal is monotone refinement.
+
+Full specification: [`docs/METHOD.md`](docs/METHOD.md).
+
+### Identity constraints adopted after measurement
+
+Merging is irreversible in practice: a fused node matches both name sets and
+attracts further merges, so one bad link cascades. Three defects found by reading
+the output — not by a test — materially changed the numbers:
+
+1. **Titles were stripped before comparing surfaces**, so `Mrs. Bennet` and
+   `Miss Bennet` scored 0.9 against each other. In this corpus a title is the
+   primary distinguisher between people sharing a surname.
+2. **Nothing prevented merging two separately named characters.** On *Pride and
+   Prejudice* this collapsed 74 gold characters into 3 nodes.
+3. **The link *bind* path bypassed the merge guard**, so even `append-only` was
+   receiving identity resolution it should not have had.
+
+Fixing these moved conflation on *Pride and Prejudice* from 1.33 to 0.05.
+
+The obvious fix for (2) was to require corroboration. **Measured before
+adopting, and it does not work:** across 205 links on one novel, `Mr. Darcy →
+Elizabeth` was proposed nine times, exactly as often as the correct `Mr. Bingley
+→ Bingley`. Repetition does not separate good links from bad, so the constraint
+had to be structural rather than statistical.
+
+---
+
+## 6. Controls, and what they cost us
+
+Every headline in this repository is paired with the control that could have
+killed it. Three of them did:
+
+| control | what it killed |
+|---|---|
+| `on_premise` (does the chapter write about the story it was asked for) | A fine-tuned writer scoring **0.054** against 0.367 — an apparent 7× win. It had degenerated into pastiche of its training corpus, reproducing even Project Gutenberg's hard-wrap indentation. A model that stops writing about the premise cannot violate its canon. `on_premise` 1.000 → 0.765; canon restated 0.84 → 0.09. The arm was excluded from every conclusion. |
+| blind best-of-4 selection arm | A **0.054** gain from graph-based candidate ranking. Ranking four candidates and picking blind scored the same: graph − blind = **+0.004**, CI [−0.058, +0.063]. The gain belonged to extra sampling, not to the graph. |
+| cross-run spread | A **baseline ordering**. The full-transcript condition moves 0.146 across runs — larger than almost every effect in this project — so its ranking against "previous chapter" is not established, and was retracted. |
+| shuffled reading order | Our first reading of the revision profile (§4.3). |
+| human-vs-machine discrimination | The claim that the contradiction rate measures a text (§4.2). |
+
+**The portable principle**, replicated twice in this repository two months apart
+on different tasks: *a headline metric that a degenerate policy can saturate
+requires a paired denominator, reported together, always.* A contradiction rate
+of 0.000 achieved by flagging everything, and a violation rate of 0.054 achieved
+by writing off-premise, are the same failure.
+
+### Pre-registration is auditable
+
+Falsifiers were committed at **2026-09-03 17:19** (`2934dce`,
+[`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) §5). The earliest result
+artifact reached the Hub at **2026-09-04 04:18:59**; the generation runs ran
+2026-09-04 20:29 → 2026-09-06 04:15. Two independent timestamped systems, plan
+before results in both.
+
+Of the four pre-registered falsifiers, **three fired.** The project's original
+framing — "premature commitment, not incrementality" — predicted an
+identity-accuracy gain the experiments did not find. The claim was rewritten to
+follow the evidence.
+
+---
+
+## 7. What is not claimed
+
+- **Not competitive with supervised coreference.** MEIC-DT reports 81.27 CoNLL
+  on LitBank. Our identity plane is an unsupervised alias-string partition over a
+  different item set; the comparison would not mean anything.
+- **The revision calculus does not improve identity accuracy** at any scale
+  tested. That was a pre-registered falsifier and it fired.
+- **The 0.000 consistency figure is conformance, not evidence** (§3).
+- **The contradiction rate does not measure textual consistency** (AUC 0.394).
+- **No cost-of-causality figure is claimed *for attribution*.** The E1 oracle
+  that would price it is superseded and will not be rerun (§2); the cross-paper
+  gap confounds model with setting, so only the explicit/non-explicit *ordering
+  inversion* is claimed there. This does not affect §3, where the `retrospective`
+  oracle replays the identical cached proposal stream with full lookahead and the
+  causality cost is measured internally.
+- **`state-causal` − `text-causal` = −0.073 supports nothing** — the length
+  placebo was not run and cannot be (§2).
+- **No "first" claim** stands until every related-work entry is checked against
+  its published version; [`paper/RELATED_WORK.md`](paper/RELATED_WORK.md) tracks
+  which were read directly.
+- **One model family, one language.** 28 English novels plus 100 LitBank
+  excerpts, Qwen2.5 throughout.
+- **`SUPERSEDE` vs `REVISE` is decided by a lexicon** whose accuracy has not
+  itself been evaluated against annotation. It is the conceptual centre and the
+  least evaluated part.
+- The `manuscript-memory-engine` graph-vs-baseline comparison is **invalid** (the
+  graph reads gold speaker labels while baselines read raw prose) and is cited
+  nowhere.
+
+---
+
+## 8. Reproducing
 
 ```bash
-pip install -e ".[modal]"   # installs the modal SDK
-modal setup                 # browser auth flow, links or creates a Modal account
-modal secret create hf-token HF=<your-HF-write-token>
+python -m dsg doctor                      # environment check
+python -m pytest tests/ -q                # 231 passed, 20 skipped
+python -m dsg.eval.causal_audit --report tag-position   # §1
+python -m dsg report                      # regenerates every table from results.json
 ```
 
-The HF token must have **write** access to the target repo. Locally, the same
-token is read from this repo's `.env` (`HF=...`) — `gnsm.training.checkpointing`
-checks `HF_TOKEN` then the bare `HF` var, so no renaming is needed.
+Results are read from `artifacts/results/*/results.json` and rendered to
+`artifacts/report/*/results.md`. Comparisons are paired bootstraps over books
+(10,000 resamples, 95% intervals) with win/loss splits reported. Identity is
+scored against PDNC's human alias annotation and LitBank's gold coreference;
+mention linking against PDNC's annotated referring expressions.
 
-### Running
+Corpora, weights, and the Modal training path:
+[`docs/SETUP.md`](docs/SETUP.md).
 
-```bash
-# cheap pre-spend smoke test — a few seconds on the cheapest GPU tier
-modal run gnsm/infra/modal_app.py --steps 5 --gpu t4 \
-    --hf-repo <you>/DNG-GNSM-test --checkpoint-every 2
+---
 
-# a real run
-modal run gnsm/infra/modal_app.py --steps 5000 --gpu t4 \
-    --hf-repo <you>/DNG-GNSM --checkpoint-every 100
+## 9. Layout
 
-# resume after any restart
-modal run gnsm/infra/modal_app.py --steps 5000 --gpu t4 \
-    --hf-repo <you>/DNG-GNSM --checkpoint-every 100 --resume
+| path | contents |
+|---|---|
+| [`dsg/`](dsg/) | the study: store, calculus, invariants, policies, evaluation, generation |
+| [`dsg/eval/attribution.py`](dsg/eval/attribution.py) | E1 prompts and the leakage guards |
+| [`dsg/store.py`](dsg/store.py) · [`dsg/invariants.py`](dsg/invariants.py) | the revision calculus and the seven invariants |
+| [`docs/METHOD.md`](docs/METHOD.md) | formal specification, independent of implementation |
+| [`docs/FINDINGS.md`](docs/FINDINGS.md) · [`docs/GENERATION_FINDINGS.md`](docs/GENERATION_FINDINGS.md) | full results with every interval |
+| [`docs/METHODOLOGY_V2.md`](docs/METHODOLOGY_V2.md) | current design, E1/E2 protocol, known reporting defects |
+| [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) | the pre-registered plan and its falsifiers |
+| [`paper/`](paper/) | draft, related-work survey, architecture |
+| [`artifacts/results/`](artifacts/results/) | committed `results.json` behind every table |
+| [`gnsm/`](gnsm/) | LoRA training infrastructure (Modal) |
+| [`manuscript-memory-engine/`](manuscript-memory-engine/) | earlier model failure-profiling harness |
 
-# is it still making progress? (no GPU spun up, near-zero cost)
-modal run gnsm/infra/modal_app.py::health_check --run-id primary --hf-repo <you>/DNG-GNSM
+---
 
-# real training on EvolvTrip, with early stopping — pushes periodic
-# checkpoints, the best-val-loss checkpoint ({run-id}/checkpoints/best), and
-# plots/{run-id}/loss.{png,pdf} with the best step marked
-modal run gnsm/infra/modal_app.py::evolvtrip --epochs 100 --patience 10 \
-    --batch-size 16 --gpu t4 --hf-repo <you>/DNG-GNSM --checkpoint-every 50
+## 10. Status and open work
 
-# real training on PDNC — same shared engine, ~76x more data, no overfitting
-modal run gnsm/infra/modal_app.py::pdnc --epochs 30 --patience 5 \
-    --batch-size 64 --gpu t4 --hf-repo <you>/DNG-GNSM --checkpoint-every 500
-```
+**The compute budget for this project is exhausted.** Everything below reflects
+a closed experimental record: no further runs are planned or possible, and the
+scope is bounded accordingly rather than deferred to future work.
 
-- **GPU sizing**: defaults to `T4` (Modal's cheapest CUDA tier) because the
-  smoke test's modules are sub-10M parameters on a tiny synthetic batch —
-  right-sized, not a guess. Pass `--gpu a10` / `--gpu a100` once real
-  data-scale training replaces the smoke test.
-- **Waste controls**: a hard `timeout` (kill switch against runaway billing)
-  and a `scaledown_window` that tears the container down ~120s after the last
-  call, so idle time isn't billed.
-- **Resumability**: `latest.json` in the HF repo is only written after its
-  checkpoint folder has fully uploaded, so an interrupted push leaves it
-  pointing at the previous good checkpoint, never a partial one.
-- The same workflow works without Modal — `python -m gnsm smoke --hf-repo
-  <you>/DNG-GNSM --checkpoint-every 50 [--resume]` runs locally against
-  whatever device `--device` resolves to.
+**Complete and standing.** The causal audit of PDNC and its three annotation
+defects (§1, pure corpus analysis, no model); the first prefix-causal attribution
+number on 35,083 quotes with per-item leakage enforcement (§2); the reading study
+at 1.5B/3B/7B on PDNC and 7B on LitBank, 184 book-runs (§3); four generation
+runs, 18,600 chapters (§4.1); the external-validity test on 215 novels vs 30
+stories (§4.2); the shuffled-order control (§4.3).
 
-See `gnsm/infra/modal_app.py`'s module docstring for the full command
-reference, and `gnsm/training/checkpointing.py` for the push/resume/heartbeat
-implementation.
+**Permanently unresolved, and excluded from all claims.** The utility of a
+serialised state at attribution time — `state-causal` cannot be separated from
+its length confound without the `state-shuffled` placebo, and no internal cost of
+causality can be quantified without a corrected oracle. Neither run will happen.
+These are reported as limits of the study, not as pending work.
 
-## Disk layout
+**Fixable without compute, and still open.**
 
-```text
-data/                           ≈ 5.9 GB
-├── litbank/                    LitBank clone (entities/, events/, coref/)
-├── pdnc/                       PDNC clone (data/<Novel>/)
-├── gpt4_books/                 GPT4-Books clone; root is data/
-├── bookcoref/                  train|validation|test .jsonl with sentences
-├── evolvtrip/                  docs + schema reference only
-├── evolvtrip_data/             EvolvTrip + LitCharToM JSON
-├── constory_bench/             evaluation code
-│   └── hf_data/                prompts.parquet, stories.parquet, evaluations/
-└── fables/data/FABLES.json     faithfulness annotations
+1. **Six reporting defects** catalogued in
+   [`docs/METHODOLOGY_V2.md`](docs/METHODOLOGY_V2.md) §5, including a figure
+   provenance error (`fig6-revision-profile.png` is byte-identical to the LitBank
+   figure while the prose beside it reports 3B numbers). All are editorial.
+2. **Citation verification** for the 2026 preprints the positioning rests on.
 
-models/                         ≈ 72 GB
-├── llama-3.1-8b-instruct/      safetensors shards + tokenizer
-├── qwen2.5-7b-instruct/        safetensors shards + tokenizer
-├── qwen2.5-14b-instruct/       safetensors shards + tokenizer
-├── modernbert-large/           safetensors + onnx exports (unused)
-├── deberta-v3-large/           pytorch_model.bin + spm.model
-├── maverick-mes-litbank/       config.yaml + weights.ckpt (Lightning)
-└── xcore-litbank/              weights.ckpt (Lightning)
-```
+**What a continuation would need.** Mention-level identity gold (BookCoref) to
+replace the alias-set proxy; validation of the `SUPERSEDE`/`REVISE` decision
+against a few hundred hand-annotated conflict pairs; a second model family to
+show the negatives are not Qwen-specific; human validation that a flagged canon
+violation reads as a continuity error. The corpus-level results in §1 require no
+GPU and are the cheapest of these to extend.
 
-≈ 78 GB total. `data/` is dominated by ConStory-Bench's generated stories,
-`models/` by the two Qwen generators.
+---
 
-Both trees are runtime-local and git-ignored — fetched from source, never
-committed. Nothing under them should ever reach a commit, including derived
-checkpoints.
+## References
 
-See [`gnsm/data/README.md`](gnsm/data/README.md) for the intended normalized
-layout (`raw/`, `processed/`, `cache/`, `manifests/`).
+Michel, Epure, Hennequin & Cerisara (2024). *Evaluating LLMs for Quotation
+Attribution in Literary Texts.* arXiv:2406.11380 ·
+Vishnubhotla, Hammond & Hirst (2022). *The Project Dialogism Novel Corpus.* LREC ·
+Bamman, Popat & Shen (2019). *An Annotated Dataset of Literary Entities.* NAACL ·
+Bamman, Lewke & Mansoor (2020). *An Annotated Dataset of Coreference in English
+Literature.* LREC ·
+Chang, Cramer, Soni & Bamman (2023). *Speak, Memory: An Archaeology of Books
+Known to ChatGPT/GPT-4.* EMNLP ·
+Bamman, Chang, Lucy & Zhou (2024). *On Classification with Large Language Models
+in Cultural Analytics.* arXiv:2410.12029 ·
+Martinelli, Bonomo, Huguet Cabot & Navigli (2025). *BookCoref: Coreference
+Resolution at Book Scale.* ACL ·
+Alchourrón, Gärdenfors & Makinson (1985). *On the Logic of Theory Change.* JSL ·
+Doyle (1979). *A Truth Maintenance System.* ·
+Genette (1980). *Narrative Discourse.* ·
+Sternberg (1992). *Telling in Time (II).*
 
-## Notes
-
-- Steps 1–8 all run fine on CPU — nothing there needs a GPU, only disk and
-  bandwidth. Training does. Switch to **Runtime → Change runtime type → GPU**,
-  then re-run the bootstrap so torch is the CUDA build, and confirm with
-  `python -m gnsm doctor --require-gpu` before `python -m gnsm smoke --json`.
-
-> ### ⚠️ RESTART ≠ CHANGE RUNTIME TYPE
->
-> **RUNTIME → RESTART SESSION** KEEPS `/content`: THE DATA AND WEIGHTS SURVIVE
-> AND ONLY STEP 5 MUST BE RE-RUN TO RESTORE THE ENVIRONMENT VARIABLES.
-> **RUNTIME → CHANGE RUNTIME TYPE** DISCARDS THE VM AND ITS DISK, SO ALL ~78 GB
-> WOULD HAVE TO BE FETCHED AGAIN. ATTACH THE GPU *BEFORE* RUNNING STEPS 1–8, OR
-> STAGE `data/` AND `models/` ON GOOGLE DRIVE SO THEY OUTLIVE THE RUNTIME.
-
-- `python -m ingestion.cli pdnc <Novel>` writes into Neo4j and Redis from
-  `manuscript-memory-engine/docker-compose.yml`, and will not work in stock
-  Colab. Step 6 exercises the same loaders without the graph write. For the graph
-  itself in Colab, point `NEO4J_URI` / `NEO4J_USER` / `NEO4J_PASSWORD` at a
-  hosted instance.
+Full annotated survey, with per-entry verification status:
+[`paper/RELATED_WORK.md`](paper/RELATED_WORK.md).

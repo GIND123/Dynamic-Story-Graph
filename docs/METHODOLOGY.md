@@ -19,10 +19,21 @@ positive claim narrow enough to be true.
 
 ## 2. C1 — The revision calculus (positive, well evidenced)
 
-**Claim.** Given a fixed stream of extracted assertions, a store equipped with
-an explicit update calculus holds **0.000** self-contradictory slots, against
-**0.370–0.423** for an append-only store — at 1.5B, 3B and 7B extractors, over
-28 novels.
+**Claim.** Given a fixed stream of extracted assertions, an append-only store
+turns **0.107–0.423** of its own single-valued slots self-contradictory — at
+1.5B, 3B and 7B extractors, over 28 novels — and equipping the store with an
+explicit update calculus removes that at **no measurable cost in accuracy**.
+
+**What is measured, and what is not.** The append-only rate is the empirical
+quantity. The calculus's own **0.000** is a *conformance check*: invariant I1 is
+defined as two live conflicting values in one single-valued slot, and
+`_close_and_link` in `dsg/store.py` closes every conflicting assertion before
+adding a new one, so I1 = 0 is a postcondition enforced by construction. It
+holds on all 184 book-runs, which is what a guarantee looks like rather than
+what a measurement looks like. The load-bearing empirical result is the *cost*:
+identity CoNLL F1 and mention linking do not move across the revision rung
+(intervals spanning zero), against the natural expectation that aggressive
+revision discards correct facts.
 
 **Method.** Three update types that append-only pipelines conflate:
 

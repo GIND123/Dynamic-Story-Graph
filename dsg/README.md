@@ -9,7 +9,7 @@ in any metric.
 
 ```bash
 python -m dsg doctor                  # environment and corpus check
-python -m pytest tests/dsg -q         # 72 tests, no weights, no network
+python -m pytest tests/dsg -q         # 158 tests, no weights, no network
 ```
 
 ## Contents
@@ -72,19 +72,32 @@ prefix causality: no assertion may cite text the reader has not reached.
 
 ## 3. Result one: maintaining a state
 
-Given a fixed stream of extracted assertions, a store with the full calculus
-holds no self contradictory slots at all, while an append only store accumulates
-them.
+Given a fixed stream of extracted assertions, an append only store turns a large
+share of its own slots self contradictory. A store with the full calculus reports
+none.
 
 | corpus and extractor | documents | append only | DSG |
 |---|---|---|---|
-| PDNC, Qwen2.5 7B | 28 novels | 0.371 | **0.000** |
-| PDNC, Qwen2.5 3B | 28 novels | 0.423 | **0.000** |
-| PDNC, Qwen2.5 1.5B | 28 novels | 0.107 | **0.000** |
-| LitBank, Qwen2.5 7B | 100 excerpts | 0.181 | **0.000** |
+| PDNC, Qwen2.5 7B | 28 novels | **0.371** | 0.000 |
+| PDNC, Qwen2.5 3B | 28 novels | **0.423** | 0.000 |
+| PDNC, Qwen2.5 1.5B | 28 novels | **0.107** | 0.000 |
+| LitBank, Qwen2.5 7B | 100 excerpts | **0.181** | 0.000 |
 
 Share of single valued slots holding two or more live conflicting values. Lower
 is better.
+
+**The empirical column is the left one.** Invariant I1 is defined as two live
+conflicting values in one single valued slot, and `_close_and_link` in
+`dsg/store.py` closes every conflicting assertion before adding a new one, so
+I1 = 0 is a postcondition the calculus enforces by construction. It holds on all
+184 book runs, which is what a guarantee looks like rather than what a
+measurement looks like. The 0.000 column is a conformance check and is reported
+as one.
+
+What is measured, and was not obvious in advance, is that enforcing consistency
+costs nothing: the accuracy metrics do not move across the revision rung. The
+natural worry is that aggressive revision discards correct facts, and it does
+not.
 
 Each rung of the policy ladder adds exactly one mechanism, so each is priced on
 its own. Every policy replays a byte identical cached proposal stream, so
