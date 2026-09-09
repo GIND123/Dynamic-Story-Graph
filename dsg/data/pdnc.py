@@ -98,7 +98,7 @@ def _parse_aliases(raw: str) -> set[str]:
         value = ast.literal_eval(raw)
     except (ValueError, SyntaxError):
         return {raw}
-    if isinstance(value, (set, list, tuple)):
+    if isinstance(value, set | list | tuple):
         return {str(v).strip() for v in value if str(v).strip()}
     return {str(value).strip()}
 
@@ -110,7 +110,7 @@ def _parse_spans(raw: str) -> list[tuple[int, int]]:
         return []
     out = []
     for pair in value if isinstance(value, list) else []:
-        if isinstance(pair, (list, tuple)) and len(pair) == 2:
+        if isinstance(pair, list | tuple) and len(pair) == 2:
             out.append((int(pair[0]), int(pair[1])))
     return out
 
@@ -154,7 +154,7 @@ def _parse_mentions(row: dict[str, str]) -> list[GoldMention]:
         if not (isinstance(sub_t, list) and isinstance(sub_s, list) and isinstance(sub_e, list)):
             continue
         for text, span, entity in zip(sub_t, sub_s, sub_e, strict=False):
-            if not (isinstance(span, (list, tuple)) and len(span) == 2):
+            if not (isinstance(span, list | tuple) and len(span) == 2):
                 continue
             # An expression annotated with several referents is genuinely
             # ambiguous; scoring it would measure the annotation, not the state.
