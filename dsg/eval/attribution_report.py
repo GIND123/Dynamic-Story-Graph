@@ -185,9 +185,27 @@ def memorization_check(result: dict, cloze: dict, condition: str = "state-causal
     mem = np.array([cloze["per_novel"][n]["cloze_accuracy"] for n in novels])
 
     def rank(v):
-        order = v.argsort()
+        """Average ranks for ties, which Spearman requires.
+
+        Not optional here: 16 of 28 novels score exactly 0.000 on cloze. Giving
+        tied values distinct ranks orders them by whatever the input order was --
+        alphabetical, in our case -- and manufactures a correlation out of novel
+        names. An argsort-only implementation reported rho=+0.389, p=0.042 and
+        flagged the result contaminated on that basis.
+        """
+        order = v.argsort(kind="mergesort")
         r = np.empty(len(v), dtype=float)
         r[order] = np.arange(len(v), dtype=float)
+        # Replace each run of equal values with the mean of its ranks.
+        sv = v[order]
+        i = 0
+        while i < len(sv):
+            j = i
+            while j + 1 < len(sv) and sv[j + 1] == sv[i]:
+                j += 1
+            if j > i:
+                r[order[i : j + 1]] = np.arange(i, j + 1, dtype=float).mean()
+            i = j + 1
         return r
 
     ra, rm = rank(acc), rank(mem)
