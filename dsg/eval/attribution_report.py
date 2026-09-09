@@ -157,7 +157,56 @@ def comparisons(result: dict) -> list[dict]:
     return rows
 
 
-def write_markdown(result: dict, rows: list[dict], figures: list[Path], out: Path) -> Path:
+def memorization_check(result: dict, cloze: dict, condition: str = "state-causal") -> dict:
+    """G3 -- does attribution accuracy track how well the model memorised the book?
+
+    Spearman rank correlation across novels between name-cloze accuracy (the
+    memorization proxy) and attribution accuracy. A significant positive
+    correlation means E1 is partly measuring recall of the training corpus
+    rather than inference from the causal prefix, and must be reported as such.
+    """
+    import numpy as np
+
+    novels = sorted(
+        n for n in result["per_novel"]
+        if n in cloze.get("per_novel", {}) and condition in result["per_novel"][n]
+    )
+    if len(novels) < 4:
+        return {"n": len(novels), "note": "too few novels for a correlation"}
+
+    acc = np.array([result["per_novel"][n][condition]["accuracy"] for n in novels])
+    mem = np.array([cloze["per_novel"][n]["cloze_accuracy"] for n in novels])
+
+    def rank(v):
+        order = v.argsort()
+        r = np.empty(len(v), dtype=float)
+        r[order] = np.arange(len(v), dtype=float)
+        return r
+
+    ra, rm = rank(acc), rank(mem)
+    if ra.std() == 0 or rm.std() == 0:
+        return {"n": len(novels), "note": "no variance in one series"}
+    rho = float(((ra - ra.mean()) * (rm - rm.mean())).mean() / (ra.std() * rm.std()))
+    # Permutation test: exact enough at n<=28 with 20k shuffles, and makes no
+    # normality assumption, which a t-approximation on 28 points would.
+    rng = np.random.default_rng(0)
+    null = np.array([
+        ((ra - ra.mean()) * (rng.permutation(rm) - rm.mean())).mean() / (ra.std() * rm.std())
+        for _ in range(20000)
+    ])
+    p = float((np.abs(null) >= abs(rho)).mean())
+    return {
+        "n": len(novels),
+        "condition": condition,
+        "spearman_rho": rho,
+        "p_permutation": p,
+        "mean_cloze": float(mem.mean()),
+        "contaminated": bool(p < 0.05 and rho > 0),
+    }
+
+
+def write_markdown(result: dict, rows: list[dict], figures: list[Path], out: Path,
+                   memo: dict | None = None) -> Path:
     conds = _present(result)
     novels = sorted(result["per_novel"])
     n_quotes = int(sum(
@@ -214,6 +263,30 @@ def write_markdown(result: dict, rows: list[dict], figures: list[Path], out: Pat
             f"| {r['wins_a']}-{r['wins_b']} |"
         )
 
+    if memo:
+        lines += ["", "## G3 -- memorization control", ""]
+        if "spearman_rho" in memo:
+            lines += [
+                f"Name-cloze accuracy (memorization proxy) vs `{memo['condition']}` "
+                f"attribution accuracy across {memo['n']} novels:",
+                "",
+                f"- Spearman rho = **{memo['spearman_rho']:+.3f}**, "
+                f"permutation p = {memo['p_permutation']:.4f}",
+                f"- mean name-cloze accuracy = {memo['mean_cloze']:.3f}",
+                "",
+                (
+                    "**Contaminated:** accuracy tracks memorization, so E1 is partly "
+                    "measuring recall of the training corpus and must be reported as such."
+                    if memo.get("contaminated")
+                    else
+                    "No significant positive correlation, so memorization does not "
+                    "explain the attribution result. This is the same check Michel et al. "
+                    "(2024) ran before their SOTA claim."
+                ),
+            ]
+        else:
+            lines += [f"Not run: {memo.get('note', 'unavailable')}."]
+
     if figures:
         lines += ["", "## Figures", ""]
         lines += [f"![{f.stem}]({f.name})" for f in figures]
@@ -227,6 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--result", type=Path, required=True)
     ap.add_argument("--out", type=Path, default=Path("artifacts/report/e1"))
+    ap.add_argument("--cloze", type=Path, help="name-cloze result for the G3 control")
     args = ap.parse_args(argv)
 
     result = json.loads(args.result.read_text())
@@ -235,7 +309,11 @@ def main(argv: list[str] | None = None) -> int:
         figure_causality_cost(result, args.out / "e1-causality-cost"),
     ]
     rows = comparisons(result)
-    md = write_markdown(result, rows, figs, args.out / "attribution.md")
+    memo = None
+    if args.cloze and args.cloze.exists():
+        memo = memorization_check(result, json.loads(args.cloze.read_text()))
+        print(f"  G3 memorization: {memo}")
+    md = write_markdown(result, rows, figs, args.out / "attribution.md", memo=memo)
     print(f"wrote {md}")
     for f in figs:
         print(f"wrote {f}")
