@@ -1,0 +1,4 @@
+[[PLACEHOLDER: paste a single passage of 150-300 words in the target voice here,
+replacing this whole note. Use text you wrote or that is public-domain or
+licensed for this use. While this note is present, load_example() treats the
+file as "no example" and the prose template runs without one.]]
