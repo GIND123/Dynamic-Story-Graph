@@ -451,3 +451,43 @@ def test_rewording_covers_every_predicate_and_negation():
     assert plain_fact("occupation", "apothecary") == "works as an apothecary"
     passthrough = "- Odell\n(nothing established yet)"
     assert plain_digest(passthrough) == passthrough
+
+
+def test_rotation_starts_each_story_further_along_the_outline():
+    from dsg.generate.canon import _BEATS, rotate_beats
+
+    premises = rotate_beats(build_premises(n=11), 2)
+    assert [p.beats[0] for p in premises[:3]] == [_BEATS[0], _BEATS[2], _BEATS[4]]
+    assert premises[10].beats[0] == _BEATS[0], "wraps around the outline"
+    assert all(sorted(p.beats) == sorted(_BEATS) for p in premises)
+    stock = build_premises(n=3)
+    assert [p.to_json() for p in rotate_beats(build_premises(n=3), 0)] == [
+        p.to_json() for p in stock
+    ]
+
+
+def test_tuned_conditions_stay_classic():
+    from dsg.generate.conditions import CONDITIONS, PROSE_LADDER, check_conditions
+
+    check_conditions(CONDITIONS + PROSE_LADDER)
+    with pytest.raises(ValueError):
+        check_conditions(("tuned:full-context~prose",))
+
+
+def test_a_prose_run_never_loses_its_example_by_accident(tmp_path):
+    from dsg.generate.conditions import BASE_LADDER, PROSE_LADDER, resolve_example
+
+    shipped = str(Path(__file__).parents[2] / "dsg" / "generate" / "voice" / "example.txt")
+    voice = tmp_path / "voice.txt"
+    voice.write_text("word " * 200)
+
+    assert resolve_example(PROSE_LADDER, str(voice)).split() == ["word"] * 200
+    for path in ("", shipped):
+        with pytest.raises(ValueError, match="--no-example"):
+            resolve_example(PROSE_LADDER, path)
+    assert resolve_example(PROSE_LADDER, no_example=True) == ""
+    with pytest.raises(ValueError, match="not both"):
+        resolve_example(PROSE_LADDER, str(voice), no_example=True)
+    assert resolve_example(BASE_LADDER) == "", "classic runs need nothing"
+    with pytest.raises(ValueError, match="only applies"):
+        resolve_example(BASE_LADDER, str(voice))

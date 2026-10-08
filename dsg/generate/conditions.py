@@ -18,6 +18,7 @@ from dsg.generate.canon import SIZE_FACTOR, Premise, beat_size
 from dsg.generate.prompt import (
     TEMPLATES,
     background_memory,
+    load_example,
     plain_digest,
     state_memory,
     writer_messages,
@@ -155,6 +156,50 @@ def memory_of(condition: str) -> str:
 def variant_of(condition: str) -> str:
     return split_condition(condition)[0]
 
+
+
+def check_conditions(conditions: tuple[str, ...]) -> None:
+    """Refuse combinations a run cannot honestly serve.
+
+    The adapter was trained on the classic prompt; serving it the prose one
+    would measure formatting drift, not the template. Until a writer is trained
+    on prose, the tuned arm stays classic.
+    """
+    for condition in conditions:
+        template = template_of(condition)
+        if variant_of(condition) == "tuned" and template != "classic":
+            raise ValueError(
+                f"{condition!r}: the tuned writer was trained on the classic "
+                f"template and cannot be served the {template!r} one"
+            )
+
+
+def resolve_example(
+    conditions: tuple[str, ...], example_path: str = "", no_example: bool = False
+) -> str:
+    """The voice example a run will use, refusing every accidental omission.
+
+    A prose run without its example is a different treatment, and on a paid
+    run that should only ever be a decision: so it needs ``no_example`` said
+    out loud, and the shipped placeholder never counts as an example.
+    """
+    has_prose = any(template_of(c) == "prose" for c in conditions)
+    if no_example:
+        if example_path:
+            raise ValueError("pass either --example-path or --no-example, not both")
+        return ""
+    example = load_example(example_path)
+    if not has_prose:
+        if example_path:
+            raise ValueError("--example-path only applies to a ladder with prose conditions")
+        return ""
+    if not example:
+        where = f"{example_path} is still the placeholder" if example_path else "none given"
+        raise ValueError(
+            f"prose conditions need a voice example ({where}); supply one with "
+            "--example-path, or pass --no-example to run without one on purpose"
+        )
+    return example
 
 # Backwards-compatible alias used by the state-policy map.
 STATE_CONDITIONS = STATE_MEMORIES

@@ -6,6 +6,9 @@ chapter is up to three batched rounds -- write, summarise, read-back.
 
     modal run dsg/infra/modal_generate.py::main --stories 3 --chapters 4   # smoke
     modal run --detach dsg/infra/modal_generate.py::main                   # full run
+    modal run dsg/infra/modal_generate.py::main --ladder prose --stories 10 \
+        --chapters 5 --beat-rotation 2 --example-path dsg/generate/voice/example.txt
+        # (or --no-example, to run prose without a voice example on purpose)
 
 --detach is mandatory for a full run: without it Modal cancels the remote
 function when the local client disconnects. Results are also written to the
@@ -45,6 +48,9 @@ weights = modal.Volume.from_name("dsg-weights", create_if_missing=True)
 results = modal.Volume.from_name("dsg-results", create_if_missing=True)
 hf_secret = modal.Secret.from_name("hf-token")
 _VOLUMES = {"/root/.cache/huggingface": weights, "/results": results}
+# Where the results volume is mounted. A module constant so the loop can be
+# exercised off-GPU against a temporary directory.
+RESULTS_DIR = Path("/results")
 
 
 def _window_at(chapters: list[str], index: int):
@@ -85,7 +91,11 @@ def _advance_shadow(state, run, raw: str) -> None:
 
 
 def _generate_candidates(llm, prompts, runs, chapter, lora_path, max_tokens):
-    """Draw k candidates per run, grouped so vLLM returns them in one pass."""
+    """Draw k candidates per run, grouped so vLLM returns them in one pass.
+
+    Returns the cleaned texts and, alongside, whether each one hit the token
+    cap -- a chapter cut off mid-sentence reads badly whatever its template.
+    """
     from vllm import SamplingParams
     from vllm.lora.request import LoRARequest
 
@@ -97,6 +107,7 @@ def _generate_candidates(llm, prompts, runs, chapter, lora_path, max_tokens):
         groups.setdefault((variant_of(run.condition) == "tuned", k), []).append(i)
 
     out: dict[int, list[str]] = {}
+    cut: dict[int, list[bool]] = {}
     request = LoRARequest("dsg-writer", 1, lora_path) if lora_path else None
     for (tuned, k), idx in groups.items():
         params = SamplingParams(
@@ -108,9 +119,10 @@ def _generate_candidates(llm, prompts, runs, chapter, lora_path, max_tokens):
         )
         for i, res in zip(idx, results, strict=False):
             out[i] = [c.text for c in res.outputs]
+            cut[i] = [c.finish_reason == "length" for c in res.outputs]
     from dsg.generate.run import clean_chapter
 
-    return {i: [clean_chapter(t) for t in texts] for i, texts in out.items()}
+    return {i: [clean_chapter(t) for t in texts] for i, texts in out.items()}, cut
 
 
 def _generate_split(llm, prompts, params, use_lora, lora_path):
@@ -123,6 +135,7 @@ def _generate_split(llm, prompts, params, use_lora, lora_path):
     from vllm.lora.request import LoRARequest
 
     texts: list[str] = [""] * len(prompts)
+    cut: list[bool] = [False] * len(prompts)
     request = LoRARequest("dsg-writer", 1, lora_path) if lora_path else None
     groups = {
         False: [i for i, flag in enumerate(use_lora) if not flag],
@@ -137,7 +150,8 @@ def _generate_split(llm, prompts, params, use_lora, lora_path):
         )
         for i, out in zip(idx, outs, strict=False):
             texts[i] = out.outputs[0].text
-    return texts
+            cut[i] = out.outputs[0].finish_reason == "length"
+    return texts, cut
 
 
 def _run_generation(
@@ -150,18 +164,29 @@ def _run_generation(
     lora_repo: str = "",
     run_id: str = "gen",
     checkpoint_every: int = 1,
+    example: str = "",
+    beat_rotation: int = 0,
 ) -> dict:
+    import hashlib
+
     from transformers import AutoTokenizer
     from vllm import LLM, SamplingParams
 
     from dsg.generate.canon import Premise
-    from dsg.generate.conditions import parse_selection, variant_of
+    from dsg.generate.conditions import (
+        chapter_budget,
+        check_conditions,
+        parse_selection,
+        template_of,
+        variant_of,
+    )
+    from dsg.generate.prompt import continuity_of, with_note
     from dsg.generate.repair import repair_instruction
     from dsg.generate.run import (
         WRITE_EXTRACT_PROMPT,
         apply_extraction,
         build_summary_prompt,
-        chapter_prompts,
+        chapter_messages,
         check_chapter_against_state,
         clean_chapter,
         extraction_prompt,
@@ -173,6 +198,15 @@ def _run_generation(
         summary_targets,
     )
     from dsg.generate.select import choose
+
+    check_conditions(conditions)
+    run_meta = {
+        "templates": sorted({template_of(c) for c in conditions}),
+        "example_sha256": (
+            hashlib.sha256(example.encode()).hexdigest() if example.strip() else ""
+        ),
+        "beat_rotation": beat_rotation,
+    }
 
     # The tuned conditions are served by the same base weights plus a LoRA, so
     # base and tuned answer identical prompts on one GPU and every comparison
@@ -218,6 +252,15 @@ def _run_generation(
             for p in prompts
         ]
 
+    def chat_messages(conversations: list[list[dict]]) -> list[str]:
+        """The writer's turns: one user turn for classic, system + user for prose."""
+        return [
+            tokenizer.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=False
+            )
+            for messages in conversations
+        ]
+
     premises = [Premise.from_json(d) for d in premise_dicts]
     by_id = {p.story_id: p for p in premises}
     runs = init_runs(premises, conditions)
@@ -233,7 +276,7 @@ def _run_generation(
     # Generated chapters are expensive and unrecoverable, so they are written to
     # the volume after every chapter. Losing the connection then costs one
     # chapter, not the run.
-    ckpt_path = Path("/results") / f"{run_id}-checkpoint.json"
+    ckpt_path = RESULTS_DIR / f"{run_id}-checkpoint.json"
 
     def save_checkpoint(done: int) -> None:
         # Everything a resume needs: the prose, the rolling summaries, and the
@@ -243,7 +286,7 @@ def _run_generation(
             "premises": [p.to_json() for p in premises],
             "meta": {"model": model_id, "conditions": list(conditions),
                      "chapters": chapters, "words": words,
-                     "lora_repo": lora_repo, "stories": len(premises)},
+                     "lora_repo": lora_repo, "stories": len(premises), **run_meta},
             "repairs_attempted": repairs_attempted,
             "repairs_accepted": repairs_accepted,
             "runs": [
@@ -270,14 +313,15 @@ def _run_generation(
 
     t0 = time.time()
     for chapter in range(start_chapter + 1, chapters + 1):
-        prompts = chapter_prompts(runs, by_id, chapter, chapters, words)
+        prompts = chapter_messages(runs, by_id, chapter, chapters, words, example)
         # What each condition costs to *ask*: the whole point of carrying a
-        # digest rather than the transcript is that it does not grow.
-        prompt_sizes = [
-            (len(p), len(tokenizer(p).input_ids)) for p in prompts
-        ]
-        candidates = _generate_candidates(
-            llm, chat(prompts), runs, chapter, lora_path, max_tokens=900
+        # digest rather than the transcript is that it does not grow. Counted
+        # over every turn's text, which for classic is exactly the old prompt.
+        asked = ["\n".join(m["content"] for m in p) for p in prompts]
+        prompt_sizes = [(len(a), len(tokenizer(a).input_ids)) for a in asked]
+        continuity = [continuity_of(p) for p in prompts]
+        candidates, cut_off = _generate_candidates(
+            llm, chat_messages(prompts), runs, chapter, lora_path, max_tokens=900
         )
 
         # Where a condition draws more than one candidate, read each into a
@@ -313,6 +357,7 @@ def _run_generation(
                 )
                 chosen_raw[i] = by_run.get(i, [""])[pick] if by_run.get(i) else ""
                 candidates[i] = [candidates[i][pick]]
+                cut_off[i] = [cut_off[i][pick]]
                 if scores:
                     selection_log.append({
                         "story_id": run.story_id, "condition": run.condition,
@@ -320,6 +365,7 @@ def _run_generation(
                         "conflicts": [sc.conflicts for sc in scores],
                     })
 
+        truncated = [cut_off[i][0] for i in range(len(runs))]
         for i, run in enumerate(runs):
             run.chapters.append(candidates[i][0])
             shadow = shadow_states.get(i)
@@ -362,15 +408,16 @@ def _run_generation(
                 continue
             index = runs.index(run)
             retry_runs.append(run)
-            retry_prompts.append(prompts[index] + repair_instruction(conflicts))
+            retry_prompts.append(with_note(prompts[index], repair_instruction(conflicts)))
             repairs_attempted += 1
         if retry_runs:
-            fixed = _generate_split(
-                llm, chat(retry_prompts), chapter_params,
+            fixed, fixed_cut = _generate_split(
+                llm, chat_messages(retry_prompts), chapter_params,
                 [variant_of(r.condition) == "tuned" for r in retry_runs], lora_path,
             )
-            for run, text in zip(retry_runs, fixed, strict=False):
+            for run, text, cut in zip(retry_runs, fixed, fixed_cut, strict=False):
                 run.chapters[-1] = clean_chapter(text)
+                truncated[runs.index(run)] = cut
             refresh = llm.generate(
                 chat([extraction_prompt(r, r.chapters[-1]) for r in retry_runs]),
                 aux_params, use_tqdm=False,
@@ -388,10 +435,15 @@ def _run_generation(
         for run in stateful:
             apply_extraction(run, extractions.get(id(run), ""), run.chapters[-1])
 
-        for run, (p_chars, p_tokens) in zip(runs, prompt_sizes, strict=False):
+        for i, (run, (p_chars, p_tokens)) in enumerate(
+            zip(runs, prompt_sizes, strict=False)
+        ):
+            premise = by_id[run.story_id]
             rec = record(
-                run, by_id[run.story_id], run.chapters[-1], chapter,
+                run, premise, run.chapters[-1], chapter,
                 prompt_chars=p_chars, prompt_tokens=p_tokens,
+                word_budget=chapter_budget(premise, run, chapter, words),
+                truncated=truncated[i], continuity=continuity[i],
             )
             payload = rec.to_json()
             payload["text"] = rec.text
@@ -414,6 +466,7 @@ def _run_generation(
             "repairs_attempted": repairs_attempted,
             "repairs_accepted": repairs_accepted,
             "lora_repo": lora_repo,
+            **run_meta,
         },
         "premises": [p.to_json() for p in premises],
         "records": records,
@@ -421,12 +474,13 @@ def _run_generation(
 
 
 def _entry(premise_dicts, model_id, conditions, chapters, words, max_model_len,
-           run_id, lora_repo=""):
+           run_id, lora_repo="", example="", beat_rotation=0):
     payload = _run_generation(
         premise_dicts, model_id, tuple(conditions), chapters, words,
         max_model_len, lora_repo, run_id,
+        example=example, beat_rotation=beat_rotation,
     )
-    out = Path("/results") / f"{run_id}.json"
+    out = RESULTS_DIR / f"{run_id}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload))
     results.commit()
@@ -444,27 +498,30 @@ def _entry(premise_dicts, model_id, conditions, chapters, words, max_model_len,
               secrets=[hf_secret])
 def generate_a10g(premise_dicts: list[dict], model_id: str, conditions: list[str],
                   chapters: int, words: int, max_model_len: int, run_id: str,
-                  lora_repo: str = "") -> dict:
+                  lora_repo: str = "", example: str = "",
+                  beat_rotation: int = 0) -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id, lora_repo)
+                  max_model_len, run_id, lora_repo, example, beat_rotation)
 
 
 @app.function(image=image, gpu="L4", timeout=60 * 60 * 5, volumes=_VOLUMES,
               secrets=[hf_secret])
 def generate_l4(premise_dicts: list[dict], model_id: str, conditions: list[str],
                 chapters: int, words: int, max_model_len: int, run_id: str,
-                lora_repo: str = "") -> dict:
+                lora_repo: str = "", example: str = "",
+                beat_rotation: int = 0) -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id, lora_repo)
+                  max_model_len, run_id, lora_repo, example, beat_rotation)
 
 
 @app.function(image=image, gpu="A100-40GB", timeout=60 * 60 * 5, volumes=_VOLUMES,
               secrets=[hf_secret])
 def generate_a100(premise_dicts: list[dict], model_id: str, conditions: list[str],
                   chapters: int, words: int, max_model_len: int, run_id: str,
-                  lora_repo: str = "") -> dict:
+                  lora_repo: str = "", example: str = "",
+                  beat_rotation: int = 0) -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id, lora_repo)
+                  max_model_len, run_id, lora_repo, example, beat_rotation)
 
 
 _FNS = {"A10G": generate_a10g, "L4": generate_l4, "A100-40GB": generate_a100}
@@ -472,7 +529,7 @@ _FNS = {"A10G": generate_a10g, "L4": generate_l4, "A100-40GB": generate_a100}
 
 @app.function(image=image, volumes={"/results": results}, timeout=600)
 def read_result(run_id: str) -> dict:
-    path = Path("/results") / f"{run_id}.json"
+    path = RESULTS_DIR / f"{run_id}.json"
     if not path.exists():
         raise FileNotFoundError(f"no generation result for '{run_id}'")
     return json.loads(path.read_text())
@@ -505,13 +562,19 @@ def main(
     lora_repo: str = "",
     ladder: str = "base",
     out_dir: str = "artifacts/generation",
+    example_path: str = "",
+    no_example: bool = False,
+    beat_rotation: int = 0,
 ):
-    from dsg.generate.canon import build_premises
+    from dsg.generate.canon import build_premises, rotate_beats
     from dsg.generate.conditions import (
         BASE_LADDER,
         CONDITIONS,
+        PROSE_LADDER,
         RETRIEVAL_LADDER,
         SELECTION_LADDER,
+        check_conditions,
+        resolve_example,
     )
 
     model_id = MODELS.get(model, model)
@@ -520,16 +583,25 @@ def main(
         "base": BASE_LADDER,
         "retrieval": RETRIEVAL_LADDER,
         "selection": SELECTION_LADDER,
+        "prose": PROSE_LADDER,
         "all": CONDITIONS,
     }.get(ladder, BASE_LADDER)
-    run_id = run_id or f"gen-{model}-s{stories}-c{chapters}"
-    premises = build_premises(n=stories, n_canon=n_canon, seed=seed)
+    check_conditions(conditions)
+    example = resolve_example(conditions, example_path, no_example)
+    # A ladder other than the published base one gets its own default id, so it
+    # can never resume from, or overwrite, a published run's volume files.
+    tag = "" if ladder == "base" else f"-{ladder}"
+    rot = f"-r{beat_rotation}" if beat_rotation else ""
+    run_id = run_id or f"gen-{model}{tag}-s{stories}-c{chapters}{rot}"
+    premises = rotate_beats(
+        build_premises(n=stories, n_canon=n_canon, seed=seed), beat_rotation
+    )
     print(f"[local] {len(premises)} stories x {len(conditions)} conditions x "
           f"{chapters} chapters, model={model_id} gpu={gpu_name}")
 
     payload = _FNS[gpu_name].remote(
         [p.to_json() for p in premises], model_id, list(conditions),
-        chapters, words, max_model_len, run_id, lora_repo,
+        chapters, words, max_model_len, run_id, lora_repo, example, beat_rotation,
     )
     print(f"[local] wrote {_write_local(payload, out_dir, run_id)}")
     print(f"[local] {json.dumps(payload['meta'])}")

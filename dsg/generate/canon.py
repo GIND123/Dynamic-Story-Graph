@@ -258,6 +258,21 @@ def build_premises(n: int = 30, n_canon: int = 8, seed: int = 0) -> list[Premise
     return premises
 
 
+def rotate_beats(premises: list[Premise], step: int) -> list[Premise]:
+    """Start story ``i`` at beat ``i * step`` of the outline, in place.
+
+    A short run on the stock order only ever sees the opening beats, none of
+    them small, so a per-beat budget could not be tested. Rotating spreads the
+    stories over the whole arc. Every condition shares the premise, so every
+    arm still sees identical beats; ``step`` 0 leaves the outline untouched.
+    """
+    if step:
+        for i, premise in enumerate(premises):
+            k = (i * step) % len(premise.beats)
+            premise.beats = premise.beats[k:] + premise.beats[:k]
+    return premises
+
+
 @dataclass(slots=True)
 class CanonReport:
     chapter: int
