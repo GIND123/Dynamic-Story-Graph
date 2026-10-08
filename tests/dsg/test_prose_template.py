@@ -209,3 +209,245 @@ def test_repair_note_lands_in_the_last_user_turn():
 
 def test_prose_system_is_stable_without_an_example():
     assert prose_system() == prose_system("   ")
+
+
+# ------------------------------------------------------------ step 3: plumbing
+
+def _story(condition, chapters=()):
+    from dsg.generate.run import apply_extraction
+
+    premise = build_premises(1)[0]
+    run = init_runs([premise], (condition,))[0]
+    for text in chapters:
+        run.chapters.append(text)
+        apply_extraction(
+            run, "FACT | Hesper | eye_colour | grey\nFACT | seal | material | iron\n"
+            "FACT | Jarrow | hair_colour | auburn", text,
+        )
+    return premise, run
+
+
+_CHAPTER = (
+    "Hesper set the iron seal on the table.\n\n"
+    '"Three ships this month," she said.\n\n'
+    "Jarrow pushed his auburn hair back and did not answer.\n\n"
+    "Outside, the fog came down over the water."
+)
+
+
+def test_template_tags_parse_without_disturbing_memory_or_variant():
+    from dsg.generate.conditions import (
+        BASE_LADDER,
+        CONDITIONS,
+        RETRIEVAL_LADDER,
+        SELECTION_LADDER,
+        memory_of,
+        template_of,
+        variant_of,
+    )
+
+    tagged = "base:dsg-hybrid~prose@bo4-graph"
+    assert (variant_of(tagged), memory_of(tagged), template_of(tagged)) == (
+        "base", "dsg-hybrid", "prose"
+    )
+    for condition in CONDITIONS + BASE_LADDER + RETRIEVAL_LADDER + SELECTION_LADDER:
+        assert template_of(condition) == "classic"
+        assert "~" not in memory_of(condition) + variant_of(condition)
+    with pytest.raises(ValueError):
+        template_of("base:none~poetry")
+
+
+def test_tagged_conditions_get_the_same_state_as_their_twin():
+    premise = build_premises(1)[0]
+    runs = {r.condition: r for r in init_runs(
+        [premise], ("base:dsg-hybrid", "base:dsg-hybrid~prose", "base:last-chapter~prose")
+    )}
+    assert runs["base:dsg-hybrid~prose"].state.policy.name == "dsg-full"
+    assert runs["base:dsg-hybrid"].state.policy.name == "dsg-full"
+    assert runs["base:last-chapter~prose"].state is None
+
+
+def test_classic_chapter_messages_are_the_classic_prompt():
+    from dsg.generate.conditions import build_chapter_messages
+    from dsg.generate.run import chapter_messages, chapter_prompts
+
+    premise, run = _story("base:dsg-hybrid", [_CHAPTER])
+    assert build_chapter_messages(premise, run, 2, 5) == [
+        {"role": "user", "content": build_chapter_prompt(premise, run, 2, 5)}
+    ]
+    by_id = {premise.story_id: premise}
+    assert [m[0]["content"] for m in chapter_messages([run], by_id, 2, 5)] == (
+        chapter_prompts([run], by_id, 2, 5)
+    )
+
+
+def test_prose_gives_canon_in_chapter_one_only():
+    from dsg.generate.conditions import build_chapter_messages
+
+    premise, run = _story("base:none~prose")
+    first = build_chapter_messages(premise, run, 1, 5)[1]["content"]
+    assert all(f.statement in first for f in premise.canon)
+    run.chapters.append(_CHAPTER)
+    later = build_chapter_messages(premise, run, 2, 5)[1]["content"]
+    assert not any(f.statement in later for f in premise.canon), "memory, not prompt"
+
+
+def test_prose_shows_the_same_memory_as_classic_apart_from_digest_framing():
+    from dsg.generate.conditions import build_chapter_messages, build_memory
+
+    premise, run = _story("base:last-chapter~prose", [_CHAPTER])
+    user = build_chapter_messages(premise, run, 2, 5)[1]["content"]
+    assert build_memory(run, beat=premise.beats[1]) in user, "memory is not trimmed"
+
+    premise, run = _story("base:dsg-hybrid~prose", [_CHAPTER])
+    user = build_chapter_messages(premise, run, 2, 5)[1]["content"]
+    assert "do not contradict" in user and "must keep consistent" not in user.lower()
+    assert "auburn hair" in user and "hair_colour" not in user
+
+
+def test_a_real_prose_prompt_never_shows_the_previous_chapter_twice():
+    from dsg.generate.conditions import build_chapter_messages
+    from dsg.generate.prompt import continuity_of
+
+    for condition, quoted in (
+        ("base:last-chapter~prose", False), ("base:dsg-hybrid~prose", False),
+        ("base:beat-hybrid~prose", False), ("base:none~prose", True),
+        ("base:dsg-state~prose", True),
+    ):
+        premise, run = _story(condition, [_CHAPTER])
+        user = build_chapter_messages(premise, run, 2, 5)[1]["content"]
+        paragraphs = _CHAPTER.split("\n\n")
+        for paragraph in paragraphs:
+            assert user.count(paragraph) <= 1, (condition, paragraph)
+        assert user.count(paragraphs[-1]) == 1, "the writer always sees where it left off"
+        assert ("The previous chapter ended:" in user) is quoted, condition
+        messages = build_chapter_messages(premise, run, 2, 5)
+        assert continuity_of(messages) == ("tail" if quoted else "cue"), condition
+
+
+def test_classic_digest_keeps_its_labels():
+    from dsg.generate.conditions import build_memory
+
+    _, run = _story("base:dsg-state", [_CHAPTER])
+    memory = build_memory(run)
+    assert memory.startswith("Established facts you must keep consistent")
+    assert "hair_colour auburn" in memory
+
+
+def test_beat_budgets_scale_with_the_size_of_the_event():
+    from dsg.generate.canon import _BEATS, beat_budget, beat_size
+
+    sizes = {beat_size(b) for b in _BEATS}
+    assert sizes == {"small", "medium", "large"}
+    small = beat_budget("An alliance shifts.", 500)
+    medium = beat_budget("An accusation is made in public.", 500)
+    large = beat_budget("A last reckoning between the two who began it.", 500)
+    assert small < medium < large
+    assert beat_size("Something no outline mentions.") == "medium"
+    mean = sum(beat_budget(b, 500) for b in _BEATS) / len(_BEATS)
+    assert abs(mean - 500) / 500 <= 0.10, "total length stays matched to classic"
+
+
+def test_the_budget_is_flat_for_classic_and_per_beat_for_prose():
+    from dsg.generate.conditions import build_chapter_messages, chapter_budget
+
+    premise, classic = _story("base:none")
+    _, prose = _story("base:none~prose")
+    assert chapter_budget(premise, classic, 1, 500) == 500
+    assert chapter_budget(premise, prose, 1, 500) == 600       # beat 1 is large
+    user = build_chapter_messages(premise, prose, 1, 5)[1]["content"]
+    assert "About 600 words" in user
+
+
+def test_chapter_one_is_never_given_less_than_the_medium_budget():
+    """Chapter 1 plants every canon fact, so a small opening beat still gets room."""
+    from dsg.generate.canon import Premise
+    from dsg.generate.conditions import build_chapter_messages, chapter_budget
+
+    base, run = _story("base:none~prose")
+    small_first = Premise(**{**{f: getattr(base, f) for f in base.__slots__},
+                             "beats": ["An alliance shifts."] + base.beats[1:]})
+    assert chapter_budget(small_first, run, 1, 500) == 450
+    user = build_chapter_messages(small_first, run, 1, 5)[1]["content"]
+    assert "About 450 words" in user and "small moment" not in user
+    run.chapters.append(_CHAPTER)
+    later = Premise(**{**{f: getattr(base, f) for f in base.__slots__},
+                       "beats": base.beats[:1] + ["An alliance shifts."] + base.beats[2:]})
+    assert chapter_budget(later, run, 2, 500) == 300, "only chapter 1 is lifted"
+    assert chapter_budget(base, run, 1, 500) == 600, "a large opening stays large"
+
+
+def test_records_carry_template_budget_and_truncation():
+    from dsg.generate.conditions import build_chapter_messages
+    from dsg.generate.prompt import continuity_of
+    from dsg.generate.run import record
+
+    premise, run = _story("base:last-chapter~prose")
+    payload = record(run, premise, _CHAPTER, 2, word_budget=600, truncated=True,
+                     continuity="cue").to_json()
+    assert (payload["template"], payload["word_budget"], payload["truncated"],
+            payload["continuity"]) == ("prose", 600, True, "cue")
+    premise, run = _story("base:none")
+    plain = record(run, premise, _CHAPTER, 1)
+    assert (plain.template, plain.continuity) == ("classic", "none")
+    assert continuity_of(build_chapter_messages(premise, run, 1, 5)) == "none"
+
+
+def _facts(line):
+    head, _, facts = line.partition(": ")
+    return head, facts.split("; ") if facts else []
+
+
+def test_rewording_keeps_every_fact_of_a_real_digest():
+    """Only labels change: each head, fact count, object and negation survives."""
+    from dsg.generate.prompt import plain_digest
+    from dsg.generate.run import apply_extraction
+
+    premise = build_premises(1)[0]
+    run = init_runs([premise], ("base:dsg-state",))[0]
+    text = "Hesper, Jarrow and Halloran met at the quay with the seal."
+    run.chapters.append(text)
+    apply_extraction(run, "\n".join([
+        "FACT | Hesper | eye_colour | grey", "FACT | Hesper | possesses | seal",
+        "FACT | Hesper | location | the quay", "FACT | Hesper | occupation | cartographer",
+        "FACT | Jarrow | hair_colour | auburn", "FACT | Jarrow | sibling_of | Hesper",
+        "FACT | Jarrow | birthplace | Ravensmoor", "FACT | seal | material | iron",
+        "FACT | Halloran | alive | false", "FACT | Halloran | emotion | uneasy",
+    ]), text)
+    digest = run.state.fact_digest()
+    reworded = plain_digest(digest)
+    assert len(digest.splitlines()) == len(reworded.splitlines())
+    n_facts = 0
+    for before, after in zip(digest.splitlines(), reworded.splitlines(), strict=True):
+        head_b, facts_b = _facts(before)
+        head_a, facts_a = _facts(after)
+        assert head_a == head_b and len(facts_a) == len(facts_b)
+        for fact, phrase in zip(facts_b, facts_a, strict=True):
+            n_facts += 1
+            predicate, _, obj = fact.partition(" ")
+            assert "_" not in phrase, phrase
+            if predicate == "alive":
+                assert phrase in ("alive", "dead")
+            else:
+                assert obj.removeprefix("NOT ") in phrase
+    assert n_facts >= 8, digest
+
+
+def test_rewording_covers_every_predicate_and_negation():
+    from dsg.generate.prompt import _PHRASES, plain_digest, plain_fact
+    from dsg.lexicon import CANONICAL
+
+    assert set(_PHRASES) | {"alive"} >= CANONICAL, "every known predicate has a phrase"
+    for predicate in sorted(set(_PHRASES)):
+        line = f"- Hesper: {predicate} Ravensmoor; {predicate} NOT Ravensmoor"
+        phrase, negated = plain_digest(line).partition(": ")[2].split("; ")
+        assert "Ravensmoor" in phrase and "Ravensmoor" in negated
+        assert "not" in negated and "not" not in phrase.replace("Ravensmoor", "")
+    assert plain_fact("alive", "true") == "alive" and plain_fact("alive", "dead") == "dead"
+    assert plain_fact("alive", "true", negated=True) == "dead"
+    assert plain_fact("wears", "a coat") == "wears a coat", "unknown predicates still read"
+    assert plain_fact("possesses", "seal") == "has the seal"
+    assert plain_fact("possesses", "Hesper's map") == "has Hesper's map"
+    assert plain_fact("occupation", "apothecary") == "works as an apothecary"
+    passthrough = "- Odell\n(nothing established yet)"
+    assert plain_digest(passthrough) == passthrough

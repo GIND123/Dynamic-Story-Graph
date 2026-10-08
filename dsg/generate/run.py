@@ -17,9 +17,11 @@ from dsg.generate.conditions import (
     GUARDED_MEMORIES,
     STATE_MEMORIES,
     StoryRun,
+    build_chapter_messages,
     build_chapter_prompt,
     build_summary_prompt,
     memory_of,
+    template_of,
     variant_of,
 )
 from dsg.lexicon import is_underspecified, is_valid_object, normalize_predicate
@@ -59,6 +61,10 @@ class ChapterRecord:
     state_violations: int = 0
     rollbacks: int = 0
     canon_in_state: list[str] = field(default_factory=list)
+    template: str = "classic"
+    word_budget: int = 0
+    truncated: bool = False
+    continuity: str = "none"   # prose only: "tail" quoted, or "cue" to the memory
 
     def to_json(self) -> dict:
         return {
@@ -71,6 +77,8 @@ class ChapterRecord:
             "state_facts": self.state_facts,
             "state_violations": self.state_violations, "rollbacks": self.rollbacks,
             "canon_in_state": self.canon_in_state,
+            "template": self.template, "word_budget": self.word_budget,
+            "truncated": self.truncated, "continuity": self.continuity,
         }
 
 
@@ -98,6 +106,20 @@ def chapter_prompts(
 ) -> list[str]:
     return [
         build_chapter_prompt(premises[r.story_id], r, chapter, total, words)
+        for r in runs
+    ]
+
+
+def chapter_messages(
+    runs: list[StoryRun], premises: dict[str, Premise], chapter: int,
+    total: int, words: int = 500, example: str = "",
+) -> list[list[dict]]:
+    """Chat turns per run; a classic run's single turn is its ``chapter_prompts`` text."""
+    return [
+        build_chapter_messages(
+            premises[r.story_id], r, chapter, total, words,
+            example if template_of(r.condition) == "prose" else "",
+        )
         for r in runs
     ]
 
@@ -316,6 +338,7 @@ def _canon_held(run: StoryRun, premise: Premise) -> list[str]:
 def record(
     run: StoryRun, premise: Premise, text: str, chapter: int,
     prompt_chars: int = 0, prompt_tokens: int = 0,
+    word_budget: int = 0, truncated: bool = False, continuity: str = "none",
 ) -> ChapterRecord:
     report = check_chapter(premise, text, chapter)
     rec = ChapterRecord(
@@ -323,6 +346,8 @@ def record(
         text=text, chars=len(text), violations=report.violations,
         restated=report.restated, evidence=report.evidence,
         prompt_chars=prompt_chars, prompt_tokens=prompt_tokens,
+        template=template_of(run.condition), word_budget=word_budget,
+        truncated=truncated, continuity=continuity,
     )
     if run.state is not None:
         rec.canon_in_state = _canon_held(run, premise)
@@ -350,7 +375,8 @@ def clean_chapter(raw: str) -> str:
 
 
 __all__ = [
-    "ChapterRecord", "POLICY_FOR", "apply_extraction", "chapter_prompts",
+    "ChapterRecord", "POLICY_FOR", "apply_extraction", "chapter_messages",
+    "chapter_prompts",
     "clean_chapter", "extraction_prompt", "init_runs", "record",
     "state_targets", "summary_targets", "build_summary_prompt", "tuned_targets",
     "guarded_targets", "check_chapter_against_state", "replay_extraction",

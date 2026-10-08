@@ -149,6 +149,88 @@ def background_memory(digest: str) -> str:
     )
 
 
+# How each predicate reads as a phrase. A "{x}" is the object, verbatim; "{a}"
+# is the object with an article where a bare common noun would read as a label.
+_PHRASES = {
+    "eye_colour": "{x} eyes",
+    "hair_colour": "{x} hair",
+    "material": "made of {x}",
+    "birthplace": "born in {x}",
+    "parent_of": "parent of {x}",
+    "child_of": "child of {x}",
+    "sibling_of": "sibling of {x}",
+    "relative_of": "related to {x}",
+    "identity_of": "really {x}",
+    "true_name": "real name {x}",
+    "gender": "{x}",
+    "species": "{x}",
+    "location": "at {a}",
+    "possesses": "has {a}",
+    "married_to": "married to {x}",
+    "engaged_to": "engaged to {x}",
+    "stance_toward": "attitude toward {x}",
+    "emotion": "feeling {x}",
+    "occupation": "works as {an}",
+    "resides_in": "lives in {x}",
+    "travelling_to": "travelling to {x}",
+    "knows": "knows {x}",
+    "member_of": "member of {a}",
+    "health": "health: {x}",
+    "wealth": "wealth: {x}",
+}
+_NEGATED = {"eye_colour": "eyes not {x}", "hair_colour": "hair not {x}"}
+_ALIVE_TRUE = frozenset({"true", "yes", "alive", "living"})
+_DETERMINERS = ("a ", "an ", "the ", "his ", "her ", "their ", "its ", "my ", "our ",
+                "your ", "some ")
+_DIGEST_LINE = re.compile(r"^- (?P<head>[^:(]+(?: \(also: [^)]*\))?): (?P<facts>.+)$")
+
+
+def _with_article(obj: str, indefinite: bool) -> str:
+    lowered = obj.lower()
+    if not obj[:1].islower() or lowered.startswith(_DETERMINERS):
+        return obj
+    if indefinite:
+        return ("an " if lowered[0] in "aeiou" else "a ") + obj
+    return "the " + obj
+
+
+def plain_fact(predicate: str, obj: str, negated: bool = False) -> str:
+    """One digest fact as a short phrase. Deterministic: a table, not a model."""
+    if predicate == "alive":
+        alive = obj.strip().lower().rstrip(".") in _ALIVE_TRUE
+        return "alive" if alive != negated else "dead"
+    if negated and predicate in _NEGATED:
+        return _NEGATED[predicate].format(x=obj)
+    template = _PHRASES.get(predicate, predicate.replace("_", " ") + " {x}")
+    phrase = template.format(
+        x=obj, a=_with_article(obj, False), an=_with_article(obj, True)
+    )
+    return "not " + phrase if negated else phrase
+
+
+def plain_digest(digest: str) -> str:
+    """Reword a state digest as plain phrases, keeping every fact and its order.
+
+    The facts and their selection are the state's; only the labels change, so
+    "hair_colour auburn" reaches the writer as "auburn hair". Lines that are
+    not facts pass through untouched.
+    """
+    out: list[str] = []
+    for line in (digest or "").splitlines():
+        match = _DIGEST_LINE.match(line)
+        if not match:
+            out.append(line)
+            continue
+        phrases = []
+        for fact in match["facts"].split("; "):
+            predicate, _, rest = fact.partition(" ")
+            negated = rest.startswith("NOT ")
+            obj = rest[4:] if negated else rest
+            phrases.append(plain_fact(predicate, obj, negated) if obj else fact)
+        out.append(f"- {match['head']}: " + "; ".join(phrases))
+    return "\n".join(out)
+
+
 _SENTENCE_START = re.compile(r"(?<=[.!?])[\"'”’]?\s+")
 
 
@@ -178,6 +260,7 @@ def previous_tail(text: str, max_paragraphs: int = 3, max_chars: int = 1200) -> 
     return last[match.end():].strip() if match else last.strip()
 
 
+TAIL_HEADER = "The previous chapter ended:"
 CONTINUE_CUE = "Pick up where the previous chapter above ends, in the same voice. Do not repeat it."
 
 
@@ -194,9 +277,19 @@ def tail_block(previous: str, memory: str = "") -> str:
     if tail in memory:
         return CONTINUE_CUE
     return (
-        'The previous chapter ended:\n"""\n' + tail + '\n"""\n'
+        TAIL_HEADER + '\n"""\n' + tail + '\n"""\n'
         "Pick up from here in the same voice. Do not repeat it."
     )
+
+
+def continuity_of(messages: list[dict]) -> str:
+    """Which continuity device a rendered prompt used: "tail", "cue" or "none"."""
+    user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+    if CONTINUE_CUE in user:
+        return "cue"
+    if TAIL_HEADER in user:
+        return "tail"
+    return "none"
 
 
 def prose_writer_prompt(

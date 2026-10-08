@@ -183,6 +183,35 @@ _BEATS = (
     "The town settles into what it will now be.",
 )
 
+# How much room each beat deserves, for the prose template only. A beat is one
+# event; giving a quiet aftermath the same 500 words as a public accusation is
+# what turns small events into padding. Keyed by text, so a beat outside this
+# list (or a rotated order) still resolves, to medium.
+BEAT_SIZE: dict[str, str] = {
+    _BEATS[0]: "large",    # introduce the household and the trouble
+    _BEATS[3]: "large",    # a journey
+    _BEATS[8]: "large",    # a hidden arrangement exposed
+    _BEATS[11]: "large",   # a choice that cannot be taken back
+    _BEATS[15]: "large",   # the account settled
+    _BEATS[18]: "large",   # the last reckoning
+    _BEATS[12]: "small",   # the cost becomes plain
+    _BEATS[13]: "small",   # an alliance shifts
+    _BEATS[16]: "small",   # a quiet aftermath
+    _BEATS[19]: "small",   # the town settles
+}
+# Scales the run's --words. Over the twenty beats the mean is 0.93, so total
+# length stays close to the classic arm's: violations scale with text length.
+SIZE_FACTOR = {"small": 0.6, "medium": 0.9, "large": 1.2}
+
+
+def beat_size(beat: str) -> str:
+    return BEAT_SIZE.get(beat.strip(), "medium")
+
+
+def beat_budget(beat: str, words: int) -> int:
+    return round(words * SIZE_FACTOR[beat_size(beat)])
+
+
 
 def build_premises(n: int = 30, n_canon: int = 8, seed: int = 0) -> list[Premise]:
     """Deterministic premises with a fixed number of checkable planted facts."""
