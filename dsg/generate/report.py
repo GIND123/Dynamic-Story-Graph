@@ -11,7 +11,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from dsg.experiments.report import CONTEXT, INK, INK_SOFT, _save, _style
-from dsg.generate.score import compare, curves, score_runs, summarize
+from dsg.generate.score import (
+    DIAGNOSTICS,
+    PROSE_METRICS,
+    compare,
+    compare_templates,
+    curves,
+    score_runs,
+    summarize,
+)
 
 ORDER = (
     "base:none",
@@ -190,6 +198,91 @@ def _examples(payload: dict, limit: int = 12) -> str:
     return "\n".join(lines)
 
 
+BUNDLE_NOTE = (
+    "**Prose is a bundled treatment.** Its arm differs from classic in all of: "
+    "a system voice (replacing the backbone's default assistant prompt), the "
+    "example passage, canon framed as background in plain wording, the previous "
+    "chapter's end (quoted, or a cue when the memory already carries it), a word "
+    "budget sized to the beat (chapter 1 never below medium), a hint of the next "
+    "beat, and instructions against summarised feelings and listed traits. A "
+    "difference between the arms is the bundle's, not any one part's."
+)
+
+
+def _fmt(value: float, metric: str) -> str:
+    return f"{value:,.0f}" if metric.startswith("words_per_beat") else f"{value:.3f}"
+
+
+def _prose_section(payload: dict, comparisons: dict) -> str:
+    meta = payload["meta"]
+    example = meta.get("example_sha256") or ""
+    lines = [
+        "## Prose template vs classic",
+        "",
+        BUNDLE_NOTE,
+        "",
+        f"Example passage: {'sha256 `' + example[:12] + '…`' if example else 'none'}. "
+        f"Beat rotation: {meta.get('beat_rotation', 0)}. Every comparison is "
+        "paired within story; with few stories the intervals are wide, and the "
+        "blinded human read is the outcome these numbers explain.",
+    ]
+    continuity: dict[str, dict[str, int]] = {}
+    for rec in payload["records"]:
+        if rec.get("template") == "prose":
+            bucket = continuity.setdefault(rec["condition"], {})
+            device = rec.get("continuity", "none")
+            bucket[device] = bucket.get(device, 0) + 1
+    for entry in comparisons.values():
+        m = entry["metrics"]
+        lines += ["", f"### `{entry['prose']}` vs `{entry['classic']}` "
+                      f"({entry['n_stories']} stories)", "",
+                  "**Guards** (a prose gain counts only if both hold):", ""]
+        for metric, verdict in entry["guards"].items():
+            stat = m[metric]
+            side = "upper" if verdict["margin"] > 0 else "lower"
+            lines.append(
+                f"- `{metric}`: Δ {stat['mean_delta']:+.3f} "
+                f"[{stat['ci_low']:+.3f}, {stat['ci_high']:+.3f}] -- "
+                f"{'**holds**' if verdict['holds'] else '**not shown to hold**'} "
+                f"({side} bound vs margin {verdict['margin']:+.2f})"
+            )
+        capture = entry["canon_capture"]
+        if capture is None:
+            lines.append("- `canon_capture`: n/a (this memory carries no state)")
+        else:
+            flag = " -- **FLAG: arms differ by more than 0.10**" if capture["flagged"] else ""
+            lines.append(
+                f"- `canon_capture`: prose {capture['prose']:.3f}, "
+                f"classic {capture['classic']:.3f}{flag}"
+            )
+        lines += ["", "| metric | prose | classic | Δ | 95% CI | prose–classic wins | n |",
+                  "|---|---|---|---|---|---|---|"]
+        for metric in PROSE_METRICS + DIAGNOSTICS:
+            stat = m[metric]
+            if not stat["n"]:
+                lines.append(f"| {metric} | – | – | – | – | – | 0 |")
+                continue
+            label = f"{metric} (diagnostic)" if metric in DIAGNOSTICS else metric
+            lines.append(
+                f"| {label} | {_fmt(stat['mean_a'], metric)} | "
+                f"{_fmt(stat['mean_b'], metric)} | {stat['mean_delta']:+.3f} | "
+                f"[{stat['ci_low']:+.3f}, {stat['ci_high']:+.3f}] | "
+                f"{int(stat['wins_a'])}–{int(stat['wins_b'])} | {int(stat['n'])} |"
+            )
+        used = continuity.get(entry["prose"], {})
+        if used:
+            counts = ", ".join(f"{k} {v}" for k, v in sorted(used.items()))
+            lines += ["", f"Continuity device on the prose arm (chapters): {counts}."]
+        lines.append("")
+    lines += [
+        "Diagnostics carry no verdict: restating less is the intended effect, "
+        "and it also leaves fewer mentions for a contradiction to be found near, "
+        "so read `violation_rate` with them, never alone.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def build_report(generation_json: Path, out_dir: Path) -> Path:
     payload = json.loads(Path(generation_json).read_text())
     out_dir = Path(out_dir)
@@ -228,6 +321,10 @@ def build_report(generation_json: Path, out_dir: Path) -> Path:
         "![final](figures/gen2-final.png)",
         "",
     ]
+    templates = compare_templates(scores)
+    if templates:
+        (out_dir / "prose.json").write_text(json.dumps(templates, indent=2))
+        body += [_prose_section(payload, templates), ""]
     path = out_dir / "generation.md"
     path.write_text("\n".join(body))
     return path

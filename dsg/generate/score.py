@@ -12,10 +12,11 @@ no model and no human judgement enters the measurement.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from dsg.eval.bootstrap import paired_bootstrap
-from dsg.generate.canon import Premise
+from dsg.generate.canon import Premise, beat_size
 
 
 def on_premise(text: str, premise) -> bool:
@@ -32,6 +33,70 @@ def on_premise(text: str, premise) -> bool:
         if re.search(rf"(?<!\w){re.escape(name)}(?!\w)", text, re.IGNORECASE):
             return True
     return False
+
+
+# ------------------------------------------------------- readability proxies
+#
+# Deterministic, like the rest of this module: no model reads the prose. They
+# are diagnostics of the reviewers' complaints -- stiff, padded, flat -- not a
+# measure of quality, and the blinded human read is the outcome they explain.
+
+_WORD = re.compile(r"[A-Za-z0-9]+(?:['\u2019][A-Za-z]+)?")
+# A quotation never spans a paragraph here: an unmatched quote at the end of a
+# paragraph is left out rather than pairing with the next one and inverting
+# everything after it.
+_QUOTED = re.compile(r'"[^"\n]*"|\u201c[^\u201d\n]*\u201d')
+_STOPWORDS = frozenset({
+    "a", "an", "the", "and", "or", "but", "if", "of", "to", "in", "on", "at", "by",
+    "for", "with", "from", "into", "onto", "as", "is", "was", "were", "be", "been",
+    "being", "it", "its", "he", "she", "they", "them", "his", "her", "their", "him",
+    "i", "you", "we", "us", "our", "your", "my", "me", "that", "this", "these", "those",
+    "there", "here", "then", "than", "so", "not", "no", "do", "did", "does", "had",
+    "has", "have", "would", "could", "should", "will", "can", "may", "might", "must",
+    "up", "down", "out", "over", "all", "what", "which", "who", "whom", "when", "where",
+    "why", "how"
+})
+
+
+def words(text: str) -> list[str]:
+    return [w.lower() for w in _WORD.findall(text or "")]
+
+
+def word_count(text: str) -> int:
+    return len(_WORD.findall(text or ""))
+
+
+def dialogue_share(text: str) -> float:
+    """Share of a chapter's words that sit inside quotation marks."""
+    total = word_count(text)
+    if not total:
+        return 0.0
+    return sum(word_count(q) for q in _QUOTED.findall(text)) / total
+
+
+def phrase_repeats(text: str, seen: set[tuple[str, ...]], n: int = 4) -> tuple[int, int]:
+    """(repeated, counted) word n-grams, against everything in ``seen``.
+
+    ``seen`` is updated in place, so feeding a story chapter by chapter counts
+    a phrase that recurs within a chapter or anywhere earlier in the story.
+    Grams made only of function words ("and then he was") repeat in any prose
+    and are not counted.
+    """
+    tokens = words(text)
+    repeated = counted = 0
+    for i in range(len(tokens) - n + 1):
+        gram = tuple(tokens[i : i + n])
+        if all(t in _STOPWORDS for t in gram):
+            continue
+        counted += 1
+        if gram in seen:
+            repeated += 1
+        seen.add(gram)
+    return repeated, counted
+
+
+def _mean(xs: list[float]) -> float | None:
+    return sum(xs) / len(xs) if xs else None
 
 
 @dataclass(slots=True)
@@ -54,6 +119,16 @@ class RunScore:
     state_entities_final: int = 0
     canon_in_state_final: int = 0
     rollbacks_final: int = 0
+    # Readability proxies, accumulated chapter by chapter.
+    words_total: int = 0
+    dialogue_words: float = 0.0
+    phrases_repeated: int = 0
+    phrases_counted: int = 0
+    seen_phrases: set[tuple[str, ...]] = field(default_factory=set)
+    words_by_size: dict[str, list[int]] = field(default_factory=dict)
+    budget_ratios: list[float] = field(default_factory=list)
+    restated_later: list[int] = field(default_factory=list)
+    truncated_chapters: int = 0
 
     @property
     def violation_rate(self) -> float:
@@ -91,6 +166,28 @@ class RunScore:
             "state_facts_final": float(self.state_facts_final),
             "state_entities_final": float(self.state_entities_final),
             "rollbacks_final": float(self.rollbacks_final),
+            **self.prose_dict(),
+        }
+
+    def prose_dict(self) -> dict:
+        """The readability proxies. ``None`` where a story has nothing to measure."""
+        n = self.n_chapters_seen
+        sized = {
+            f"words_per_beat_{size}": _mean([float(w) for w in self.words_by_size.get(size, [])])
+            for size in ("small", "medium", "large")
+        }
+        return {
+            "dialogue_share": (
+                self.dialogue_words / self.words_total if self.words_total else 0.0
+            ),
+            "repeated_phrase_rate": (
+                self.phrases_repeated / self.phrases_counted if self.phrases_counted else 0.0
+            ),
+            "words_per_beat": self.words_total / n if n else 0.0,
+            **sized,
+            "budget_ratio": _mean(self.budget_ratios),
+            "restated_after_ch1": _mean([float(r) for r in self.restated_later]),
+            "truncated_rate": self.truncated_chapters / n if n else 0.0,
         }
 
 
@@ -111,6 +208,7 @@ def score_runs(payload: dict) -> list[RunScore]:
             scores[key] = score
         score.total_chars += rec["chars"]
         score.n_chapters_seen += 1
+        _add_prose(score, rec, premises[rec["story_id"]])
         if rec.get("text") and on_premise(rec["text"], premises[rec["story_id"]]):
             score.on_premise_chapters += 1
         score.prompt_tokens_total += int(rec.get("prompt_tokens", 0))
@@ -129,6 +227,24 @@ def score_runs(payload: dict) -> list[RunScore]:
         score.state_entities_final = rec.get("state_entities", 0)
         score.rollbacks_final = rec.get("rollbacks", 0)
     return list(scores.values())
+
+
+def _add_prose(score: RunScore, rec: dict, premise: Premise) -> None:
+    text = rec.get("text", "")
+    n_words = word_count(text)
+    score.words_total += n_words
+    score.dialogue_words += dialogue_share(text) * n_words
+    repeated, counted = phrase_repeats(text, score.seen_phrases)
+    score.phrases_repeated += repeated
+    score.phrases_counted += counted
+    if premise.beats:
+        beat = premise.beats[(rec["chapter"] - 1) % len(premise.beats)]
+        score.words_by_size.setdefault(beat_size(beat), []).append(n_words)
+    if rec.get("word_budget"):
+        score.budget_ratios.append(n_words / rec["word_budget"])
+    if rec["chapter"] > 1:
+        score.restated_later.append(len(rec.get("restated", [])))
+    score.truncated_chapters += bool(rec.get("truncated"))
 
 
 def curves(scores: list[RunScore]) -> dict[str, list[float]]:
@@ -228,3 +344,70 @@ def summarize(scores: list[RunScore], order: tuple[str, ...]) -> str:
             )
         lines.append(f"| {condition} | {len(rows)} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
+
+
+# ------------------------------------------------- prose template vs classic
+
+PROSE_METRICS = (
+    "dialogue_share", "repeated_phrase_rate", "words_per_beat",
+    "words_per_beat_small", "words_per_beat_medium", "words_per_beat_large",
+    "budget_ratio", "truncated_rate",
+)
+# A prose gain only counts if these hold. Margins are absolute and one-sided:
+# the prose arm may not break more canon, or wander off the premise more, by
+# more than this at the edge of the 95% interval.
+GUARDS = {"violation_rate": +0.05, "on_premise": -0.05}
+# Reported beside the guards, with no verdict.
+DIAGNOSTICS = ("restatement_rate", "restated_after_ch1")
+# Arms that capture different shares of canon are not reading the same state.
+CAPTURE_FLAG = 0.10
+
+
+def classic_twin(condition: str) -> str:
+    """``base:dsg-hybrid~prose@bo4-graph`` -> ``base:dsg-hybrid@bo4-graph``."""
+    base, at, selection = condition.partition("@")
+    return base.split("~", 1)[0] + at + selection
+
+
+def compare_templates(scores: list[RunScore]) -> dict:
+    """Every prose arm against its classic twin, paired within story."""
+    from dsg.generate.conditions import STATE_MEMORIES, memory_of, template_of
+
+    by_condition: dict[str, dict[str, dict]] = {}
+    for s in scores:
+        by_condition.setdefault(s.condition, {})[s.story_id] = s.as_dict()
+    out: dict[str, dict] = {}
+    for prose in sorted(c for c in by_condition if template_of(c) == "prose"):
+        classic = classic_twin(prose)
+        if classic not in by_condition:
+            continue
+        stories = sorted(set(by_condition[prose]) & set(by_condition[classic]))
+        if not stories:
+            continue
+        entry: dict[str, object] = {"prose": prose, "classic": classic,
+                                    "n_stories": len(stories), "metrics": {}}
+        for metric in PROSE_METRICS + tuple(GUARDS) + DIAGNOSTICS:
+            pairs = [
+                (by_condition[prose][s][metric], by_condition[classic][s][metric])
+                for s in stories
+            ]
+            pairs = [(a, b) for a, b in pairs if a is not None and b is not None]
+            entry["metrics"][metric] = paired_bootstrap(
+                [float(a) for a, _ in pairs], [float(b) for _, b in pairs]
+            ).as_dict()
+        verdicts = {}
+        for metric, margin in GUARDS.items():
+            stat = entry["metrics"][metric]
+            edge = stat["ci_high"] if margin > 0 else stat["ci_low"]
+            holds = edge <= margin if margin > 0 else edge >= margin
+            verdicts[metric] = {"margin": margin, "edge": edge, "holds": bool(holds)}
+        entry["guards"] = verdicts
+        if memory_of(prose) in STATE_MEMORIES:
+            a = sum(by_condition[prose][s]["canon_capture"] for s in stories) / len(stories)
+            b = sum(by_condition[classic][s]["canon_capture"] for s in stories) / len(stories)
+            entry["canon_capture"] = {"prose": a, "classic": b,
+                                      "flagged": abs(a - b) > CAPTURE_FLAG}
+        else:
+            entry["canon_capture"] = None   # no state in this memory
+        out[f"{prose}_vs_{classic}"] = entry
+    return out
