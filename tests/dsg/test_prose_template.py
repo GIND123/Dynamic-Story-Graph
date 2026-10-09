@@ -510,3 +510,14 @@ def test_only_the_prose_ladder_changes_chapter_sampling():
     assert chapter_sampling("prose") == {"max_tokens": 1400, "repetition_penalty": 1.1}
     chapter_sampling("prose")["max_tokens"] = 1
     assert chapter_sampling("prose")["max_tokens"] == 1400, "callers get a copy"
+
+
+def test_the_quoted_tail_carries_the_same_new_moment_instruction():
+    from dsg.generate.prompt import TAIL_CUE
+
+    user = _prose(previous="A.\n\nB.")[1]["content"]
+    assert "The previous chapter ended:" in user and TAIL_CUE in user
+    assert "Pick up from here" not in user
+    shared = "Open on a new moment (later in time, a new place, or the next action). "
+    shared += "Do not reuse any sentence or line of dialogue from the previous chapter."
+    assert shared in TAIL_CUE and shared in CONTINUE_CUE

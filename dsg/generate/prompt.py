@@ -268,6 +268,12 @@ CONTINUE_CUE = (
     "moment (later in time, a new place, or the next action). Do not reuse any "
     "sentence or line of dialogue from the previous chapter."
 )
+# The same instruction after a quoted tail, pointing at the quote instead.
+TAIL_CUE = (
+    "This chapter starts after the final line quoted above. Open on a new moment "
+    "(later in time, a new place, or the next action). Do not reuse any sentence "
+    "or line of dialogue from the previous chapter."
+)
 
 
 def tail_block(previous: str, memory: str = "") -> str:
@@ -283,8 +289,7 @@ def tail_block(previous: str, memory: str = "") -> str:
     if tail in memory:
         return CONTINUE_CUE
     return (
-        TAIL_HEADER + '\n"""\n' + tail + '\n"""\n'
-        "Pick up from here in the same voice. Do not repeat it."
+        TAIL_HEADER + '\n"""\n' + tail + '\n"""\n' + TAIL_CUE
     )
 
 
