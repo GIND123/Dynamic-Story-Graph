@@ -411,3 +411,91 @@ def compare_templates(scores: list[RunScore]) -> dict:
             entry["canon_capture"] = None   # no state in this memory
         out[f"{prose}_vs_{classic}"] = entry
     return out
+
+
+# ------------------------------------------------------------ example leakage
+#
+# The example passage is meant to lend a voice, not a plot. Leakage is the share
+# of its distinctive content words -- not stopwords, not words the premise
+# itself supplies -- that turn up in a story. The classic arm never sees the
+# example, so its share is the baseline: what this premise would produce
+# anyway.
+
+
+def distinctive_words(example: str, premise: dict) -> set[str]:
+    """The example's content words that this premise does not already supply."""
+    supplied = " ".join([
+        premise.get("title", ""), premise.get("setting", ""),
+        " ".join(premise.get("characters", [])), " ".join(premise.get("objects", [])),
+        " ".join(c.get("statement", "") for c in premise.get("canon", [])),
+        " ".join(premise.get("beats", [])),
+    ])
+    return set(words(example)) - _STOPWORDS - set(words(supplied))
+
+
+def example_leakage(payload: dict, sharp: bool = False) -> tuple[dict, dict]:
+    """Per arm and story, the share of the example's distinctive words used.
+
+    ``sharp`` also drops, for each story, every example word the classic arm
+    writes in the *other* stories: words this model uses with no example at all
+    ("door", "said", "hand"), which otherwise swamp the few that betray the
+    example ("porch", "truck"). Leave-one-story-out, so a story's own classic
+    chapters still count towards its baseline.
+
+    Returns (shares, words used) keyed by condition then story; both are empty
+    when the run carries no example text.
+    """
+    from dsg.generate.conditions import template_of
+
+    example = payload.get("meta", {}).get("example", "")
+    if not example:
+        return {}, {}
+    premises = {p["story_id"]: p for p in payload["premises"]}
+    texts: dict[tuple[str, str], list[str]] = {}
+    for rec in payload["records"]:
+        texts.setdefault((rec["condition"], rec["story_id"]), []).append(rec.get("text", ""))
+    vocab = {key: set(words(" ".join(chapters))) for key, chapters in texts.items()}
+    classic_by_story: dict[str, set[str]] = {}
+    for (condition, story), used in vocab.items():
+        if template_of(condition) == "classic":
+            classic_by_story.setdefault(story, set()).update(used)
+    shares: dict[str, dict[str, float]] = {}
+    leaked: dict[str, dict[str, list[str]]] = {}
+    for (condition, story), used in vocab.items():
+        distinct = distinctive_words(example, premises[story])
+        if sharp:
+            for other, seen in classic_by_story.items():
+                if other != story:
+                    distinct -= seen
+        hit = distinct & used
+        shares.setdefault(condition, {})[story] = len(hit) / len(distinct) if distinct else 0.0
+        leaked.setdefault(condition, {})[story] = sorted(hit)
+    return shares, leaked
+
+
+def compare_leakage(payload: dict) -> dict:
+    """Each prose arm's leakage against its classic twin's baseline, paired by story.
+
+    Both measures are reported: ``as_specified`` (stopwords and premise words
+    removed) and ``sharp`` (also words the classic arm uses elsewhere), with the
+    words only the prose arm used, as evidence.
+    """
+    from dsg.generate.conditions import template_of
+
+    out: dict[str, dict] = {}
+    for name, sharp in (("as_specified", False), ("sharp", True)):
+        shares, leaked = example_leakage(payload, sharp=sharp)
+        for prose in sorted(c for c in shares if template_of(c) == "prose"):
+            classic = classic_twin(prose)
+            stories = sorted(set(shares[prose]) & set(shares.get(classic, {})))
+            if not stories:
+                continue
+            entry = out.setdefault(prose, {"classic": classic})
+            entry[name] = paired_bootstrap(
+                [shares[prose][s] for s in stories], [shares[classic][s] for s in stories]
+            ).as_dict()
+            if sharp:
+                only_prose = set().union(*(set(leaked[prose][s]) - set(leaked[classic][s])
+                                           for s in stories))
+                entry["prose_only_words"] = sorted(only_prose)
+    return out

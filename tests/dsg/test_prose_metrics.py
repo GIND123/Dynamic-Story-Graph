@@ -229,3 +229,71 @@ def test_the_report_says_when_the_budget_was_ignored(tmp_path):
     assert "**The model did not follow the word budget.**" in section
     assert "`budget_ratio`" in section and "does not test them" in section
     assert "Chapter sampling (both arms): max_tokens 1400, repetition_penalty 1.1." in section
+
+
+# ------------------------------------------------------------ example leakage
+
+_EXAMPLE = (
+    "Nell cut the heel off the loaf. Tomas watched the hedge while the rain came. "
+    "She wiped the knife on her apron and he took the bread to the door."
+)
+
+
+def _leak_payload(prose_texts, classic_texts, example=_EXAMPLE):
+    premises = build_premises(n=len(prose_texts))
+    records = []
+    for premise, prose, classic in zip(premises, prose_texts, classic_texts, strict=True):
+        for condition, text in (("base:last-chapter~prose", prose),
+                                ("base:last-chapter", classic)):
+            records.append({"story_id": premise.story_id, "condition": condition,
+                            "chapter": 1, "text": text})
+    return {"meta": {"example": example}, "premises": [p.to_json() for p in premises],
+            "records": records}
+
+
+def test_distinctive_words_drop_stopwords_and_what_the_premise_supplies():
+    from dsg.generate.score import distinctive_words
+
+    premise = build_premises(1)[0].to_json()
+    premise["setting"] += " with a door"
+    found = distinctive_words(_EXAMPLE, premise)
+    assert {"loaf", "hedge", "apron", "knife"} <= found
+    assert not {"the", "and", "she", "her"} & found, "stopwords are not distinctive"
+    assert "door" not in found, "the premise supplied it"
+
+
+def test_leakage_uses_classic_as_the_baseline():
+    from dsg.generate.score import compare_leakage
+
+    payload = _leak_payload(
+        ["Hesper wiped the knife on her apron beside the hedge."] * 2,
+        ["Hesper walked to the quay in the rain."] * 2,
+    )
+    entry = compare_leakage(payload)["base:last-chapter~prose"]
+    assert entry["as_specified"]["mean_a"] > entry["as_specified"]["mean_b"]
+    assert {"knife", "apron", "hedge"} <= set(entry["prose_only_words"])
+
+
+def test_the_sharp_measure_ignores_words_the_model_uses_anyway():
+    """"rain" is in the example, but classic writes it in every story regardless."""
+    from dsg.generate.score import compare_leakage
+
+    payload = _leak_payload(
+        ["The rain came and Hesper waited.", "The rain came and Jarrow waited."],
+        ["The rain came over the quay.", "The rain came over the moor."],
+    )
+    entry = compare_leakage(payload)["base:last-chapter~prose"]
+    assert entry["sharp"]["mean_delta"] == pytest.approx(0.0)
+    assert "rain" not in entry["prose_only_words"]
+
+
+def test_no_example_means_no_leakage_section(tmp_path):
+    from dsg.generate.report import _leakage_paragraph
+    from dsg.generate.score import compare_leakage
+
+    payload = _leak_payload(["x"], ["y"], example="")
+    assert compare_leakage(payload) == {}
+    assert "not measured" in _leakage_paragraph(payload)
+    shown = _leakage_paragraph(_leak_payload(["knife apron"], ["quay"]))
+    assert "| `base:last-chapter~prose` | sharp |" in shown
+    assert "Example words only `base:last-chapter~prose` used: apron, knife." in shown

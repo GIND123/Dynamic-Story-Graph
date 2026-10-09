@@ -73,6 +73,7 @@ EXAMPLE_BLOCK = """
 
 Here is a short passage in the voice to write in. It is from a different
 story: take its voice and rhythm, not its content, names, or events.
+Nothing in the example exists in this story: none of its people, objects, places or events.
 <<<
 {example}
 >>>"""

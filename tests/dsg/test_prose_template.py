@@ -96,6 +96,8 @@ def test_the_example_goes_in_the_system_turn():
     passage = "word " * 200
     system = _prose(example=passage)[0]["content"]
     assert "<<<" in system and passage.strip() in system
+    assert ("Nothing in the example exists in this story: none of its people, objects, "
+            "places or events.") in system
 
 
 def test_canon_is_rendered_only_when_given():

@@ -131,6 +131,7 @@ def test_meta_records_templates_example_and_rotation(loop, tmp_path):
     meta = payload["meta"]
     assert meta["templates"] == ["classic", "prose"]
     assert len(meta["example_sha256"]) == 64 and meta["beat_rotation"] == 2
+    assert meta["example"] == EXAMPLE, "the passage itself, so leakage can be scored"
     assert (tmp_path / "t-checkpoint.json").exists()
     assert len(payload["records"]) == 2 * len(CONDITIONS) * 3
 

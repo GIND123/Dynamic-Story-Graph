@@ -207,6 +207,8 @@ def _run_generation(
         "example_sha256": (
             hashlib.sha256(example.encode()).hexdigest() if example.strip() else ""
         ),
+        # The passage itself, so leakage into the stories can be scored later.
+        "example": example.strip(),
         "beat_rotation": beat_rotation,
         "chapter_sampling": dict(sampling or CHAPTER_SAMPLING),
     }

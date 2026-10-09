@@ -15,6 +15,7 @@ from dsg.generate.score import (
     DIAGNOSTICS,
     PROSE_METRICS,
     compare,
+    compare_leakage,
     compare_templates,
     curves,
     score_runs,
@@ -267,6 +268,36 @@ def _budget_paragraph(payload: dict) -> str:
     )
 
 
+def _leakage_paragraph(payload: dict) -> str:
+    leaks = compare_leakage(payload)
+    if not leaks:
+        return "Example leakage: not measured (no example text recorded for this run)."
+    lines = [
+        "**Example leakage** -- share of the example's distinctive content words "
+        "that appear in a story. Classic never sees the example, so it is the "
+        "baseline. *As specified*: stopwords and words the premise supplies are "
+        "excluded. *Sharp*: also excludes words the classic arm writes in other "
+        "stories, which this model uses with no example at all and which otherwise "
+        "swamp the few that betray it.",
+        "",
+        "| prose arm | measure | prose | classic baseline | Δ | 95% CI | n |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for prose, entry in leaks.items():
+        for name in ("as_specified", "sharp"):
+            stat = entry[name]
+            lines.append(
+                f"| `{prose}` | {name.replace('_', ' ')} | {stat['mean_a']:.3f} | "
+                f"{stat['mean_b']:.3f} | {stat['mean_delta']:+.3f} | "
+                f"[{stat['ci_low']:+.3f}, {stat['ci_high']:+.3f}] | {int(stat['n'])} |"
+            )
+    lines.append("")
+    for prose, entry in leaks.items():
+        found = ", ".join(entry.get("prose_only_words", [])) or "none"
+        lines.append(f"Example words only `{prose}` used: {found}.")
+    return "\n".join(lines)
+
+
 def _prose_section(payload: dict, comparisons: dict) -> str:
     meta = payload["meta"]
     example = meta.get("example_sha256") or ""
@@ -285,6 +316,8 @@ def _prose_section(payload: dict, comparisons: dict) -> str:
         ) + ".",
         "",
         _budget_paragraph(payload),
+        "",
+        _leakage_paragraph(payload),
     ]
     continuity: dict[str, dict[str, int]] = {}
     for rec in payload["records"]:

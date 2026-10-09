@@ -380,7 +380,20 @@ whose canon gives Hesper grey eyes and Odell amber eyes:
   reflecting the same melancholy"*. The amber eyes are given to Silas, which is
   wrong but contradicts no planted fact; Hesper is merely named nearby.
 
-This is not specific to the prose template. **Every published generation
+The checker does not even need a second character. Any word from a fact's
+closed vocabulary near the subject's name counts, whatever it describes. Two
+more from `gen-qwen7b-prose-smoke2` (2026-10-09), story00, prose arm,
+chapter 1:
+
+- `s00f00` (Hesper's grey eyes) flagged on *"a modest cottage stood, painted a
+  dull blue with green shutters. Hesper sat at her kitchen table"*. "Blue" and
+  "green" are the cottage's paint; they are in the eye-colour vocabulary.
+- `s00f07` (Hesper works as a cartographer) flagged on *"Halloran, the village
+  bookbinder, entered"*. That is Halloran's trade, and correct canon;
+  "bookbinder" is in the trade vocabulary and Hesper is named nearby.
+
+Both violations that the smoke run charged to this chapter are false
+positives. This is not specific to the prose template. **Every published generation
 result uses the same checker**, so its violation rates include false positives
 of this kind. Any condition whose prose packs several characters into a short
 span is penalised more. A planted cast that shares a vocabulary (two
