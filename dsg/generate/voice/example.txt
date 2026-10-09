@@ -1,4 +1,21 @@
-[[PLACEHOLDER: paste a single passage of 150-300 words in the target voice here,
-replacing this whole note. Use text you wrote or that is public-domain or
-licensed for this use. While this note is present, load_example() treats the
-file as "no example" and the prose template runs without one.]]
+The kettle had boiled twice before Maya noticed it. She poured the water over yesterday's grounds and carried the mug to the window, where her father was still on the porch steps with the newspaper folded on his knee. He hadn't turned a page in an hour.
+
+"You going to tell him?" Theo asked from the doorway. He had his jacket on already, keys in his hand.
+
+"Tell him what?"
+
+"That the man about the truck called. Again."
+
+She set the mug down on the sill. Outside, a pickup went by slowly, the driver lifting two fingers off the wheel. Her father lifted two fingers back without looking up.
+
+"He knows," she said.
+
+"Then why is he sitting out there?"
+
+Maya didn't answer. She went to the hall closet, took down the envelope with the truck's title in it, and held it out to her brother. Theo looked at it, then at her.
+
+"I'm not doing it," he said.
+
+"You're the one with the car."
+
+He took the envelope. At the door he stopped, turned the keys over once in his palm, and went out the side way, so their father wouldn't see him go.

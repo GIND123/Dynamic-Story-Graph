@@ -11,6 +11,7 @@ from dsg.generate.canon import build_premises
 from dsg.generate.conditions import StoryRun, build_chapter_prompt
 from dsg.generate.prompt import (
     CONTINUE_CUE,
+    EXAMPLE_WORDS,
     WRITER_PROMPT,
     background_memory,
     load_example,
@@ -23,6 +24,8 @@ from dsg.generate.prompt import (
 )
 from dsg.generate.repair import Conflict, repair_instruction
 from dsg.generate.run import init_runs
+
+_SHIPPED = Path(__file__).parents[2] / "dsg" / "generate" / "voice" / "example.txt"
 
 
 def _sha(text: str) -> str:
@@ -182,8 +185,11 @@ def test_tail_of_nothing_is_empty():
 
 def test_example_loader(tmp_path):
     assert load_example(None) == ""
-    shipped = Path(__file__).parents[2] / "dsg" / "generate" / "voice" / "example.txt"
-    assert load_example(shipped) == "", "the shipped placeholder is skipped"
+    placeholder = tmp_path / "placeholder.txt"
+    placeholder.write_text("[[PLACEHOLDER: paste a passage here]]")
+    assert load_example(placeholder) == "", "a placeholder is never an example"
+    lo, hi = EXAMPLE_WORDS
+    assert lo <= len(load_example(_SHIPPED).split()) <= hi, "the shipped passage loads"
     good = tmp_path / "good.txt"
     good.write_text("word " * 200)
     assert load_example(good).split() == ["word"] * 200
@@ -478,12 +484,13 @@ def test_tuned_conditions_stay_classic():
 def test_a_prose_run_never_loses_its_example_by_accident(tmp_path):
     from dsg.generate.conditions import BASE_LADDER, PROSE_LADDER, resolve_example
 
-    shipped = str(Path(__file__).parents[2] / "dsg" / "generate" / "voice" / "example.txt")
+    placeholder = tmp_path / "placeholder.txt"
+    placeholder.write_text("[[PLACEHOLDER: paste a passage here]]")
     voice = tmp_path / "voice.txt"
     voice.write_text("word " * 200)
 
     assert resolve_example(PROSE_LADDER, str(voice)).split() == ["word"] * 200
-    for path in ("", shipped):
+    for path in ("", str(placeholder)):
         with pytest.raises(ValueError, match="--no-example"):
             resolve_example(PROSE_LADDER, path)
     assert resolve_example(PROSE_LADDER, no_example=True) == ""
