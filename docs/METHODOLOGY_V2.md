@@ -357,3 +357,40 @@ Carried forward from v1 and still binding:
 - The `manuscript-memory-engine` "Graph 0.816 vs Long-Context 0.653" comparison
   is **invalid** — the graph reads gold PDNC speaker labels for neighbouring
   quotes while the baselines read raw prose. Do not cite it.
+
+---
+
+## 9. Open issues
+
+### 9.1 The violation checker misattributes facts across characters `[observed]`
+
+`CanonFact.check` (`dsg/generate/canon.py`) flags a violation when a
+contradicting value appears within 220 characters of *any* mention of the
+fact's subject. It never asks whose attribute the value is. When another
+character's description sits near the subject's name, that character's
+attribute is charged to the subject.
+
+Seen in the prose smoke run `gen-qwen7b-prose-smoke` (2026-10-09), story00,
+whose canon gives Hesper grey eyes and Odell amber eyes:
+
+- Classic, chapter 1: `s00f00` (Hesper's grey eyes) flagged on *"Hesper
+  nodded, her eyes narrowing … Odell, with his amber eyes and mysterious
+  demeanor"*. The amber eyes are Odell's, and that is correct canon.
+- Prose, chapter 2: `s00f00` flagged on *"Silas stood up, his amber eyes
+  reflecting the same melancholy"*. The amber eyes are given to Silas, which is
+  wrong but contradicts no planted fact; Hesper is merely named nearby.
+
+This is not specific to the prose template. **Every published generation
+result uses the same checker**, so its violation rates include false positives
+of this kind. Any condition whose prose packs several characters into a short
+span is penalised more. A planted cast that shares a vocabulary (two
+characters with eye-colour facts, as every premise has) makes the collision
+routine, not rare.
+
+Not yet measured: the false-positive rate. A fix would bind each value to the
+nearest named subject, or to the subject of its clause, and should be scored
+against a small hand-labelled sample before any published number is restated.
+Until then, the published rates are not upper bounds either: these false
+positives inflate them, while contradictions outside the closed vocabularies
+are never counted at all. The net direction is unknown, so compare conditions
+only with this shared bias in mind.

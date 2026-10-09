@@ -213,6 +213,60 @@ def _fmt(value: float, metric: str) -> str:
     return f"{value:,.0f}" if metric.startswith("words_per_beat") else f"{value:.3f}"
 
 
+# A budget counts as followed only when writing lands within this band of what
+# was asked AND small beats come out clearly shorter than large ones.
+BUDGET_BAND = (0.8, 1.2)
+SIZE_SPREAD = 0.8   # small-beat words must be <= 80% of large-beat words
+
+
+def budget_finding(payload: dict) -> dict:
+    """What the model did with the word budgets, per template, from the records."""
+    from dsg.generate.canon import beat_size
+    from dsg.generate.score import word_count
+
+    beats = {p["story_id"]: p["beats"] for p in payload["premises"]}
+    ratios: dict[str, list[float]] = {}
+    sized: dict[str, list[int]] = {}
+    for rec in payload["records"]:
+        if not rec.get("word_budget") or not rec.get("text"):
+            continue
+        n = word_count(rec["text"])
+        template = rec.get("template", "classic")
+        ratios.setdefault(template, []).append(n / rec["word_budget"])
+        if template == "prose":
+            story_beats = beats[rec["story_id"]]
+            size = beat_size(story_beats[(rec["chapter"] - 1) % len(story_beats)])
+            sized.setdefault(size, []).append(n)
+    mean = {t: sum(v) / len(v) for t, v in ratios.items()}
+    words = {k: sum(v) / len(v) for k, v in sized.items()}
+    prose = mean.get("prose")
+    in_band = prose is not None and BUDGET_BAND[0] <= prose <= BUDGET_BAND[1]
+    spread = (
+        words["small"] <= SIZE_SPREAD * words["large"]
+        if "small" in words and "large" in words else None
+    )
+    return {"budget_ratio": mean, "prose_words_by_size": words,
+            "followed": bool(in_band and spread)}
+
+
+def _budget_paragraph(payload: dict) -> str:
+    found = budget_finding(payload)
+    ratio = found["budget_ratio"]
+    sizes = ", ".join(f"{k} {v:,.0f}" for k, v in sorted(found["prose_words_by_size"].items()))
+    cited = (
+        f"`budget_ratio` (words written / words asked): prose "
+        f"{ratio.get('prose', float('nan')):.2f}, classic {ratio.get('classic', float('nan')):.2f}"
+        f"; prose words per chapter by beat size: {sizes or 'n/a'}."
+    )
+    if found["followed"]:
+        return f"**Word budgets were roughly followed.** {cited}"
+    return (
+        "**The model did not follow the word budget.** " + cited + " Per-beat budgets "
+        "were requested, not achieved, so this run does not test them: length "
+        "differences below are what the model wrote, not what it was asked for."
+    )
+
+
 def _prose_section(payload: dict, comparisons: dict) -> str:
     meta = payload["meta"]
     example = meta.get("example_sha256") or ""
@@ -225,6 +279,12 @@ def _prose_section(payload: dict, comparisons: dict) -> str:
         f"Beat rotation: {meta.get('beat_rotation', 0)}. Every comparison is "
         "paired within story; with few stories the intervals are wide, and the "
         "blinded human read is the outcome these numbers explain.",
+        "",
+        "Chapter sampling (both arms): " + ", ".join(
+            f"{k} {v}" for k, v in meta.get("chapter_sampling", {"max_tokens": 900}).items()
+        ) + ".",
+        "",
+        _budget_paragraph(payload),
     ]
     continuity: dict[str, dict[str, int]] = {}
     for rec in payload["records"]:

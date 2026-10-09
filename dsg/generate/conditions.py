@@ -115,6 +115,21 @@ PROSE_LADDER = (
 )
 
 
+# Chapter sampling. The published ladders keep exactly what they ran with. The
+# prose ladder raises the cap for BOTH of its arms -- the smoke run showed the
+# 7B writes 570-700 words whatever it is asked, so 900 tokens cut over half
+# the chapters mid-sentence -- and adds a mild repetition penalty, because both
+# arms looped lines of dialogue. Recorded in each run's meta.
+CHAPTER_SAMPLING: dict[str, float] = {"max_tokens": 900}
+LADDER_SAMPLING: dict[str, dict[str, float]] = {
+    "prose": {"max_tokens": 1400, "repetition_penalty": 1.1},
+}
+
+
+def chapter_sampling(ladder: str) -> dict[str, float]:
+    return dict(LADDER_SAMPLING.get(ladder, CHAPTER_SAMPLING))
+
+
 def parse_selection(condition: str) -> tuple[int, str]:
     """How many candidates to draw for this condition, and how to pick one.
 

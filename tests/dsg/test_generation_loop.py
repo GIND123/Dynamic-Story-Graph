@@ -38,8 +38,11 @@ class _Tokenizer:
 
 
 class _SamplingParams:
+    made: list[dict] = []
+
     def __init__(self, **kw):
         self.n = kw.get("n", 1)
+        type(self).made.append(kw)
 
 
 class _LLM:
@@ -111,11 +114,13 @@ CONDITIONS = PROSE_LADDER + ("base:dsg-hybrid-repair~prose",)
 EXAMPLE = " ".join(["word"] * 200)
 
 
-def _run(loop, conditions=CONDITIONS, example=EXAMPLE, chapters=3):
+def _run(loop, conditions=CONDITIONS, example=EXAMPLE, chapters=3, sampling=None):
+    _SamplingParams.made = []
     premises = rotate_beats(build_premises(n=2), 2)
     payload = loop._run_generation(
         [p.to_json() for p in premises], "stub-model", conditions, chapters=chapters,
         words=500, max_model_len=4096, run_id="t", example=example, beat_rotation=2,
+        sampling=sampling,
     )
     return premises, payload
 
@@ -190,3 +195,29 @@ def test_best_of_k_keeps_the_chosen_candidates_truncation_flag(loop):
         picks.add(pick)
         assert rec["truncated"] is bool(pick % 2), (rec["chapter"], pick)
     assert {p % 2 for p in picks} == {0, 1}, "the run must pick both kinds to prove it"
+
+
+def _chapter_params():
+    """Sampling built for chapters and repairs: temperature 0.8, unlike the aux calls."""
+    return [kw for kw in _SamplingParams.made if kw.get("temperature") == 0.8]
+
+
+def test_the_prose_ladder_samples_chapters_with_its_own_cap_and_penalty(loop):
+    from dsg.generate.conditions import chapter_sampling
+
+    _, payload = _run(loop, sampling=chapter_sampling("prose"))
+    assert payload["meta"]["chapter_sampling"] == {"max_tokens": 1400, "repetition_penalty": 1.1}
+    made = _chapter_params()
+    assert made and all(
+        kw["max_tokens"] == 1400 and kw["repetition_penalty"] == 1.1 for kw in made
+    ), "every chapter and repair call, both arms"
+    aux = [kw for kw in _SamplingParams.made if kw.get("temperature") == 0.0]
+    assert aux and all("repetition_penalty" not in kw for kw in aux), "read-backs unchanged"
+
+
+def test_published_ladders_keep_their_exact_sampling(loop):
+    _, payload = _run(loop)
+    assert payload["meta"]["chapter_sampling"] == {"max_tokens": 900}
+    assert all(
+        kw["max_tokens"] == 900 and "repetition_penalty" not in kw for kw in _chapter_params()
+    )

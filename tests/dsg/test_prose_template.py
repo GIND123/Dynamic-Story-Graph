@@ -105,6 +105,7 @@ def test_chapter_one_is_never_told_both_to_show_and_not_to_restate():
     first = _prose(chapter=1, canon="- Hesper has grey eyes.")[1]["content"]
     later = _prose()[1]["content"]
     assert "Bring each of the facts above in once" in first
+    assert "Keep each fact attached to its own person or object." in first
     assert "Do not restate" not in first
     assert "Never contradict what earlier chapters established" in later
     assert "facts above" not in later
@@ -491,3 +492,21 @@ def test_a_prose_run_never_loses_its_example_by_accident(tmp_path):
     assert resolve_example(BASE_LADDER) == "", "classic runs need nothing"
     with pytest.raises(ValueError, match="only applies"):
         resolve_example(BASE_LADDER, str(voice))
+
+
+def test_the_continuity_cue_asks_for_a_new_moment_not_a_restaged_ending():
+    assert "starts after the previous chapter's final line" in CONTINUE_CUE
+    assert "Do not reuse any sentence or line of dialogue" in CONTINUE_CUE
+    user = _prose(memory="The previous chapter:\nA.\n\nB.", previous="A.\n\nB.")[1]["content"]
+    assert CONTINUE_CUE in user
+
+
+def test_only_the_prose_ladder_changes_chapter_sampling():
+    from dsg.generate.conditions import CHAPTER_SAMPLING, chapter_sampling
+
+    assert CHAPTER_SAMPLING == {"max_tokens": 900}, "published ladders are unchanged"
+    for ladder in ("base", "retrieval", "selection", "all", "unknown"):
+        assert chapter_sampling(ladder) == {"max_tokens": 900}
+    assert chapter_sampling("prose") == {"max_tokens": 1400, "repetition_penalty": 1.1}
+    chapter_sampling("prose")["max_tokens"] = 1
+    assert chapter_sampling("prose")["max_tokens"] == 1400, "callers get a copy"

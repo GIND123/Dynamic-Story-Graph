@@ -98,7 +98,7 @@ Begin chapter {chapter}."""
 # drift into restating it. One rule each, so the two never contradict.
 CANON_RULES = {
     "introduce": "Bring each of the facts above in once, inside the action, and do not "
-    "repeat them.",
+    "repeat them. Keep each fact attached to its own person or object.",
     "background": "Never contradict what earlier chapters established. Do not restate "
     "it unless this scene needs it.",
 }
@@ -261,7 +261,13 @@ def previous_tail(text: str, max_paragraphs: int = 3, max_chars: int = 1200) -> 
 
 
 TAIL_HEADER = "The previous chapter ended:"
-CONTINUE_CUE = "Pick up where the previous chapter above ends, in the same voice. Do not repeat it."
+# The smoke run showed "pick up where it ends" read as "restage the ending":
+# chapter 2 reopened on chapter 1's last exchange, mostly verbatim.
+CONTINUE_CUE = (
+    "This chapter starts after the previous chapter's final line. Open on a new "
+    "moment (later in time, a new place, or the next action). Do not reuse any "
+    "sentence or line of dialogue from the previous chapter."
+)
 
 
 def tail_block(previous: str, memory: str = "") -> str:

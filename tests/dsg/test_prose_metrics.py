@@ -188,3 +188,44 @@ def test_the_report_adds_a_prose_section_only_for_prose_runs(tmp_path):
     text = build_report(source, tmp_path / "without").read_text()
     assert "Prose template" not in text
     assert not (tmp_path / "without" / "prose.json").exists()
+
+
+def _with_lengths(prose_words, classic_words):
+    """Prose budgets 300 (small beat) and 600 (large beat); classic asks 500."""
+    premise = build_premises(1)[0]
+    premise.beats = ["An alliance shifts.", "A last reckoning between the two who began it."]
+    records = []
+    for chapter, budget in ((1, 300), (2, 600)):
+        for template, n, asked in (("prose", prose_words[chapter - 1], budget),
+                                   ("classic", classic_words, 500)):
+            records.append({"story_id": premise.story_id, "chapter": chapter,
+                            "template": template, "word_budget": asked,
+                            "text": " ".join(["word"] * n)})
+    return {"premises": [premise.to_json()], "records": records}
+
+
+def test_a_budget_counts_as_followed_only_when_length_tracks_it():
+    from dsg.generate.report import budget_finding
+
+    followed = budget_finding(_with_lengths((310, 590), 500))
+    assert followed["followed"] and followed["budget_ratio"]["prose"] == pytest.approx(
+        (310 / 300 + 590 / 600) / 2
+    )
+    flat = budget_finding(_with_lengths((640, 650), 650))   # writes the same length anyway
+    assert not flat["followed"]
+    assert flat["prose_words_by_size"] == {"small": 640, "large": 650}
+
+
+def test_the_report_says_when_the_budget_was_ignored(tmp_path):
+    from dsg.generate.report import build_report
+
+    payload = _payload()
+    for rec in payload["records"]:          # everyone writes ~6x the budget
+        rec["text"] = " ".join([rec["text"]] * 10)
+    payload["meta"]["chapter_sampling"] = {"max_tokens": 1400, "repetition_penalty": 1.1}
+    source = tmp_path / "generation.json"
+    source.write_text(json.dumps(payload))
+    section = build_report(source, tmp_path / "r").read_text().split("## Prose template")[1]
+    assert "**The model did not follow the word budget.**" in section
+    assert "`budget_ratio`" in section and "does not test them" in section
+    assert "Chapter sampling (both arms): max_tokens 1400, repetition_penalty 1.1." in section

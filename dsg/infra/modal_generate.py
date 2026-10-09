@@ -90,7 +90,7 @@ def _advance_shadow(state, run, raw: str) -> None:
     state.close_step()
 
 
-def _generate_candidates(llm, prompts, runs, chapter, lora_path, max_tokens):
+def _generate_candidates(llm, prompts, runs, chapter, lora_path, sampling):
     """Draw k candidates per run, grouped so vLLM returns them in one pass.
 
     Returns the cleaned texts and, alongside, whether each one hit the token
@@ -111,7 +111,7 @@ def _generate_candidates(llm, prompts, runs, chapter, lora_path, max_tokens):
     request = LoRARequest("dsg-writer", 1, lora_path) if lora_path else None
     for (tuned, k), idx in groups.items():
         params = SamplingParams(
-            temperature=0.8, top_p=0.95, max_tokens=max_tokens, n=k, seed=chapter
+            temperature=0.8, top_p=0.95, n=k, seed=chapter, **sampling
         )
         results = llm.generate(
             [prompts[i] for i in idx], params, use_tqdm=False,
@@ -166,6 +166,7 @@ def _run_generation(
     checkpoint_every: int = 1,
     example: str = "",
     beat_rotation: int = 0,
+    sampling: dict | None = None,
 ) -> dict:
     import hashlib
 
@@ -174,6 +175,7 @@ def _run_generation(
 
     from dsg.generate.canon import Premise
     from dsg.generate.conditions import (
+        CHAPTER_SAMPLING,
         chapter_budget,
         check_conditions,
         parse_selection,
@@ -206,6 +208,7 @@ def _run_generation(
             hashlib.sha256(example.encode()).hexdigest() if example.strip() else ""
         ),
         "beat_rotation": beat_rotation,
+        "chapter_sampling": dict(sampling or CHAPTER_SAMPLING),
     }
 
     # The tuned conditions are served by the same base weights plus a LoRA, so
@@ -240,7 +243,8 @@ def _run_generation(
         gpu_memory_utilization=0.90, disable_log_stats=True,
         enable_lora=bool(lora_path), max_lora_rank=64,
     )
-    chapter_params = SamplingParams(temperature=0.8, top_p=0.95, max_tokens=900, seed=0)
+    sampling = dict(sampling or CHAPTER_SAMPLING)
+    chapter_params = SamplingParams(temperature=0.8, top_p=0.95, seed=0, **sampling)
     aux_params = SamplingParams(temperature=0.0, max_tokens=420)
 
     def chat(prompts: list[str]) -> list[str]:
@@ -321,7 +325,7 @@ def _run_generation(
         prompt_sizes = [(len(a), len(tokenizer(a).input_ids)) for a in asked]
         continuity = [continuity_of(p) for p in prompts]
         candidates, cut_off = _generate_candidates(
-            llm, chat_messages(prompts), runs, chapter, lora_path, max_tokens=900
+            llm, chat_messages(prompts), runs, chapter, lora_path, sampling
         )
 
         # Where a condition draws more than one candidate, read each into a
@@ -474,11 +478,11 @@ def _run_generation(
 
 
 def _entry(premise_dicts, model_id, conditions, chapters, words, max_model_len,
-           run_id, lora_repo="", example="", beat_rotation=0):
+           run_id, lora_repo="", example="", beat_rotation=0, sampling=None):
     payload = _run_generation(
         premise_dicts, model_id, tuple(conditions), chapters, words,
         max_model_len, lora_repo, run_id,
-        example=example, beat_rotation=beat_rotation,
+        example=example, beat_rotation=beat_rotation, sampling=sampling,
     )
     out = RESULTS_DIR / f"{run_id}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -499,9 +503,9 @@ def _entry(premise_dicts, model_id, conditions, chapters, words, max_model_len,
 def generate_a10g(premise_dicts: list[dict], model_id: str, conditions: list[str],
                   chapters: int, words: int, max_model_len: int, run_id: str,
                   lora_repo: str = "", example: str = "",
-                  beat_rotation: int = 0) -> dict:
+                  beat_rotation: int = 0, sampling: dict | None = None) -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id, lora_repo, example, beat_rotation)
+                  max_model_len, run_id, lora_repo, example, beat_rotation, sampling)
 
 
 @app.function(image=image, gpu="L4", timeout=60 * 60 * 5, volumes=_VOLUMES,
@@ -509,9 +513,9 @@ def generate_a10g(premise_dicts: list[dict], model_id: str, conditions: list[str
 def generate_l4(premise_dicts: list[dict], model_id: str, conditions: list[str],
                 chapters: int, words: int, max_model_len: int, run_id: str,
                 lora_repo: str = "", example: str = "",
-                beat_rotation: int = 0) -> dict:
+                beat_rotation: int = 0, sampling: dict | None = None) -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id, lora_repo, example, beat_rotation)
+                  max_model_len, run_id, lora_repo, example, beat_rotation, sampling)
 
 
 @app.function(image=image, gpu="A100-40GB", timeout=60 * 60 * 5, volumes=_VOLUMES,
@@ -519,9 +523,9 @@ def generate_l4(premise_dicts: list[dict], model_id: str, conditions: list[str],
 def generate_a100(premise_dicts: list[dict], model_id: str, conditions: list[str],
                   chapters: int, words: int, max_model_len: int, run_id: str,
                   lora_repo: str = "", example: str = "",
-                  beat_rotation: int = 0) -> dict:
+                  beat_rotation: int = 0, sampling: dict | None = None) -> dict:
     return _entry(premise_dicts, model_id, conditions, chapters, words,
-                  max_model_len, run_id, lora_repo, example, beat_rotation)
+                  max_model_len, run_id, lora_repo, example, beat_rotation, sampling)
 
 
 _FNS = {"A10G": generate_a10g, "L4": generate_l4, "A100-40GB": generate_a100}
@@ -573,6 +577,7 @@ def main(
         PROSE_LADDER,
         RETRIEVAL_LADDER,
         SELECTION_LADDER,
+        chapter_sampling,
         check_conditions,
         resolve_example,
     )
@@ -602,6 +607,7 @@ def main(
     payload = _FNS[gpu_name].remote(
         [p.to_json() for p in premises], model_id, list(conditions),
         chapters, words, max_model_len, run_id, lora_repo, example, beat_rotation,
+        chapter_sampling(ladder),
     )
     print(f"[local] wrote {_write_local(payload, out_dir, run_id)}")
     print(f"[local] {json.dumps(payload['meta'])}")
