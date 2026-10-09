@@ -95,6 +95,31 @@ class CanonFact:
             return True, " ".join(span[max(0, hit.start() - 90) : hit.end() + 90].split())
         return False, ""
 
+    def locate(self, text: str) -> tuple[int, int, int, int] | None:
+        """Where the violation ``check`` reports sits: (subject start, subject
+        end, flagged-word start, flagged-word end), or None.
+
+        Mirrors ``check`` step for step -- same subject mentions, same window,
+        same first contradicting hit, same nearby-correction escape -- so a
+        flagged span can be shown to a person. ``check`` itself is left exactly
+        as published; a test holds the two in agreement.
+        """
+        subject_re = re.compile(rf"(?<!\w){re.escape(self.subject)}(?!\w)", re.IGNORECASE)
+        bad = self._pattern(self.contradictions())
+        good = self._pattern(_forms(self.value))
+        for m in subject_re.finditer(text):
+            lo = max(0, m.start() - self.window)
+            hi = min(len(text), m.end() + self.window)
+            span = text[lo:hi]
+            hit = bad.search(span)
+            if hit is None:
+                continue
+            near = span[max(0, hit.start() - 40) : hit.end() + 40]
+            if good.search(near):
+                continue
+            return m.start(), m.end(), lo + hit.start(), lo + hit.end()
+        return None
+
     def mentioned(self, text: str) -> bool:
         """Whether the story restates the fact correctly at all."""
         subject_re = re.compile(rf"(?<!\w){re.escape(self.subject)}(?!\w)", re.IGNORECASE)

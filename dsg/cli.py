@@ -118,6 +118,30 @@ def _gen_unblind(args: argparse.Namespace) -> int:
     return 0
 
 
+def _gen_handcheck(args: argparse.Namespace) -> int:
+    import json
+
+    from dsg.generate.handcheck import build_sheet
+
+    payload = json.loads(Path(args.generation).read_text())
+    path = build_sheet(payload, Path(args.out), per_arm=args.per_arm, seed=args.seed)
+    print(f"hand-check sheet -> {path}  (keep {path.parent / 'HANDCHECK_KEY.json'} "
+          f"from the rater)")
+    return 0
+
+
+def _gen_handcheck_unblind(args: argparse.Namespace) -> int:
+    import json
+
+    from dsg.generate.handcheck import summary_markdown, unblind_sheet
+
+    result = unblind_sheet(Path(args.sheet), Path(args.key))
+    print(summary_markdown(result))
+    if args.out:
+        Path(args.out).write_text(json.dumps(result, indent=2))
+    return 0
+
+
 def _compare(args: argparse.Namespace) -> int:
     from dsg.experiments.compare_runs import build
 
@@ -189,6 +213,20 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--key", required=True)
     p.add_argument("--out", default="", help="also write the summary as JSON")
     p.set_defaults(func=_gen_unblind)
+
+    p = sub.add_parser("gen-handcheck", help="blind sheet of flagged violation spans")
+    p.add_argument("--generation", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--per-arm", type=int, default=40)
+    p.add_argument("--seed", type=int, default=0)
+    p.set_defaults(func=_gen_handcheck)
+
+    p = sub.add_parser("gen-handcheck-unblind",
+                       help="false-positive rate and corrected violation rate per arm")
+    p.add_argument("--sheet", required=True)
+    p.add_argument("--key", required=True)
+    p.add_argument("--out", default="", help="also write the result as JSON")
+    p.set_defaults(func=_gen_handcheck_unblind)
 
     p = sub.add_parser("compare", help="cross-corpus and cross-scale comparison")
     p.add_argument("--results-root", default="artifacts/results")
