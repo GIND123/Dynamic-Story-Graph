@@ -12,11 +12,13 @@ import matplotlib.pyplot as plt
 
 from dsg.experiments.report import CONTEXT, INK, INK_SOFT, _save, _style
 from dsg.generate.score import (
+    COPY_FLAG,
     DIAGNOSTICS,
     PROSE_METRICS,
     compare,
     compare_leakage,
     compare_templates,
+    copy_check,
     curves,
     example_name_check,
     score_runs,
@@ -200,15 +202,56 @@ def _examples(payload: dict, limit: int = 12) -> str:
     return "\n".join(lines)
 
 
-BUNDLE_NOTE = (
-    "**Prose is a bundled treatment.** Its arm differs from classic in all of: "
-    "a system voice (replacing the backbone's default assistant prompt), the "
-    "example passage, canon framed as background in plain wording, the previous "
-    "chapter's end (quoted, or a cue when the memory already carries it), a word "
-    "budget sized to the beat (chapter 1 never below medium), a hint of the next "
-    "beat, and instructions against summarised feelings and listed traits. A "
-    "difference between the arms is the bundle's, not any one part's."
-)
+def bundle_note(meta: dict) -> str:
+    """What this run's prose arm actually differs in, read from its meta."""
+    parts = ["a system voice (replacing the backbone's default assistant prompt)"]
+    if meta.get("example_sha256"):
+        parts.append("an example passage in the system turn")
+    parts += [
+        "canon framed as background in plain wording",
+        "the previous chapter's end (quoted, or a cue when the memory already carries it)",
+        "a word budget sized to the beat (chapter 1 never below medium)",
+        "a hint of the next beat",
+        "instructions against summarised feelings and listed traits",
+    ]
+    absent = "" if meta.get("example_sha256") else " This run used no example passage."
+    return (
+        "**Prose is a bundled treatment.** Its arm differs from classic in all of: "
+        + ", ".join(parts[:-1]) + ", and " + parts[-1] + "." + absent
+        + " A difference between the arms is the bundle's, not any one part's."
+    )
+
+
+def _copy_paragraph(payload: dict) -> str:
+    found = copy_check(payload)
+    has_example = any(arm["example"] is not None for arm in found.values())
+    lines = [
+        f"**Verbatim copying** -- per chapter, the longest run of words shared with "
+        f"{'the example passage and ' if has_example else ''}the arm's own previous "
+        f"chapter; runs of {COPY_FLAG}+ words are flagged. Both classic and prose "
+        "memories here carry the previous chapter in full; only prose is told not "
+        "to reuse its lines.",
+        "",
+        "| arm | chapters | vs example: longest | flagged | vs previous chapter: longest "
+        "| flagged |",
+        "|---|---|---|---|---|---|",
+    ]
+    for condition, arm in found.items():
+        ex = arm["example"]
+        lines.append(
+            f"| `{condition}` | {arm['chapters']} | {ex['max'] if ex else 'n/a'} | "
+            f"{len(ex['flagged']) if ex else 'n/a'} | {arm['previous']['max']} | "
+            f"{len(arm['previous']['flagged'])} |"
+        )
+    flagged = [
+        f"`{condition}` {name} {story} ch{chapter} ({run} words)"
+        for condition, arm in found.items()
+        for name in ("example", "previous")
+        if arm[name]
+        for story, chapter, run in arm[name]["flagged"]
+    ]
+    lines += ["", "Flagged: " + ("; ".join(flagged) if flagged else "none") + "."]
+    return "\n".join(lines)
 
 
 def _fmt(value: float, metric: str) -> str:
@@ -290,6 +333,9 @@ def _budget_paragraph(payload: dict) -> str:
 
 
 def _leakage_paragraph(payload: dict) -> str:
+    meta = payload.get("meta", {})
+    if not meta.get("example_sha256") and not meta.get("example"):
+        return "Example leakage: not applicable (this run used no example passage)."
     leaks = compare_leakage(payload)
     if not leaks:
         return "Example leakage: not measured (no example text recorded for this run)."
@@ -339,7 +385,7 @@ def _prose_section(payload: dict, comparisons: dict) -> str:
     lines = [
         "## Prose template vs classic",
         "",
-        BUNDLE_NOTE,
+        bundle_note(meta),
         "",
         f"Example passage: {'sha256 `' + example[:12] + '…`' if example else 'none'}. "
         f"Beat rotation: {meta.get('beat_rotation', 0)}. Every comparison is "
@@ -353,6 +399,8 @@ def _prose_section(payload: dict, comparisons: dict) -> str:
         _budget_paragraph(payload),
         "",
         _leakage_paragraph(payload),
+        "",
+        _copy_paragraph(payload),
     ]
     continuity: dict[str, dict[str, int]] = {}
     for rec in payload["records"]:

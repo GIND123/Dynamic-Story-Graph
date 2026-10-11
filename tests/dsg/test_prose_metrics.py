@@ -294,6 +294,8 @@ def test_no_example_means_no_leakage_section(tmp_path):
 
     payload = _leak_payload(["x"], ["y"], example="")
     assert compare_leakage(payload) == {}
+    assert "not applicable (this run used no example passage)" in _leakage_paragraph(payload)
+    payload["meta"]["example_sha256"] = "ab" * 32          # had one, text not recorded
     assert "not measured" in _leakage_paragraph(payload)
     shown = _leakage_paragraph(_leak_payload(["knife apron"], ["quay"]))
     assert "| `base:last-chapter~prose` | sharp |" in shown
@@ -342,3 +344,64 @@ def test_the_leakage_section_shows_the_name_check():
     assert "FLAG -- **Nell** in 1 chapter (" in _leakage_paragraph(leaky)
     clean = _leak_payload(["She cut the loaf."], ["She walked."], example="She cut the loaf.")
     assert "- `base:last-chapter~prose`: none" in _leakage_paragraph(clean)
+
+
+# -------------------------------------------------------------- copy + bundle
+
+def test_longest_shared_run_counts_consecutive_words():
+    from dsg.generate.score import longest_shared_run
+
+    assert longest_shared_run("The rain came down on the quay.", "rain came down on the") == 5
+    assert longest_shared_run("One two three.", "four five six.") == 0
+    assert longest_shared_run("She Cut THE heel", "she cut the heel off") == 4, "case-folded"
+
+
+def test_copy_check_flags_eight_word_runs_against_example_and_previous():
+    from dsg.generate.score import copy_check
+
+    example = "She cut the heel off the loaf and pushed the rest across the table."
+    premise = build_premises(1)[0]
+    one = "Hesper walked to the quay and waited for the boats to come in at last."
+    recital = "She cut the heel off the loaf and pushed the rest across. Hesper left."
+    reuse = "Hesper walked to the quay and waited for the boats. Then rain."
+    records = [
+        {"story_id": premise.story_id, "condition": c, "chapter": ch, "text": t}
+        for c, ch, t in (
+            ("base:last-chapter~prose", 1, one), ("base:last-chapter~prose", 2, recital),
+            ("base:last-chapter", 1, one), ("base:last-chapter", 2, reuse),
+        )
+    ]
+    found = copy_check({"meta": {"example": example}, "records": records})
+    prose, classic = found["base:last-chapter~prose"], found["base:last-chapter"]
+    assert prose["example"]["flagged"] == [[premise.story_id, 2, 12]]
+    assert prose["previous"]["flagged"] == []
+    assert classic["previous"]["flagged"] == [[premise.story_id, 2, 10]]
+    assert copy_check({"meta": {}, "records": records})["base:last-chapter"]["example"] is None
+
+
+def test_the_bundle_note_lists_the_example_only_when_the_run_had_one():
+    from dsg.generate.report import bundle_note
+
+    with_example = bundle_note({"example_sha256": "ab" * 32})
+    without = bundle_note({"example_sha256": ""})
+    assert "an example passage in the system turn" in with_example
+    assert "example passage in the system turn" not in without
+    assert "This run used no example passage." in without
+    for note in (with_example, without):
+        assert note.startswith("**Prose is a bundled treatment.**")
+        assert "a system voice" in note and "a hint of the next beat" in note
+
+
+def test_the_report_shows_the_copy_check(tmp_path):
+    from dsg.generate.report import build_report
+
+    payload = _payload()
+    payload["meta"]["example_sha256"] = ""
+    source = tmp_path / "generation.json"
+    source.write_text(json.dumps(payload))
+    section = build_report(source, tmp_path / "r").read_text().split("## Prose template")[1]
+    assert "This run used no example passage." in section
+    assert "Example leakage: not applicable" in section
+    assert "**Verbatim copying**" in section and "| vs example: longest |" in section
+    # The stand-in chapters repeat word for word, so the previous-chapter check fires.
+    assert "Flagged: `base:" in section

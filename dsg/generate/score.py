@@ -532,3 +532,62 @@ def example_name_check(payload: dict) -> dict[str, dict[str, list]]:
             if word not in in_classic and pat.search(rec.get("text", "")):
                 arm.setdefault(word, []).append((rec["story_id"], rec["chapter"]))
     return {arm: words for arm, words in sorted(out.items())}
+
+
+# ------------------------------------------------------------ verbatim copying
+#
+# The share and name checks can both pass while a chapter recites its source:
+# v2 had one prose chapter reproduce the example nearly line for line, under
+# its own beat. A run of shared words cannot hide that.
+
+COPY_FLAG = 8   # a shared run of this many words or more is flagged
+
+
+def _grams(tokens: list[str], n: int) -> set[tuple[str, ...]]:
+    return {tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)}
+
+
+def longest_shared_run(a: str, b: str) -> int:
+    """The longest run of consecutive words (case-folded) that ``a`` and ``b`` share.
+
+    Sharing a run of n words implies sharing one of every shorter length, so
+    the length is found by binary search over n-gram sets.
+    """
+    x, y = words(a), words(b)
+    lo, hi = 0, min(len(x), len(y))
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if _grams(x, mid) & _grams(y, mid):
+            lo = mid
+        else:
+            hi = mid - 1
+    return lo
+
+
+def copy_check(payload: dict) -> dict[str, dict]:
+    """Per arm: the longest run each chapter shares with the example passage
+    (when the run had one) and with its own previous chapter, and which
+    chapters reach ``COPY_FLAG`` words.
+    """
+    example = payload.get("meta", {}).get("example", "")
+    texts = {(r["condition"], r["story_id"], r["chapter"]): r.get("text", "")
+             for r in payload["records"]}
+    out: dict[str, dict] = {}
+    for (condition, story, chapter), text in sorted(texts.items()):
+        arm = out.setdefault(condition, {
+            "chapters": 0,
+            "example": {"max": 0, "flagged": []} if example else None,
+            "previous": {"max": 0, "flagged": []},
+        })
+        arm["chapters"] += 1
+        sources = [("previous", texts.get((condition, story, chapter - 1)))]
+        if example:
+            sources.append(("example", example))
+        for name, source in sources:
+            if not source:
+                continue
+            run = longest_shared_run(text, source)
+            arm[name]["max"] = max(arm[name]["max"], run)
+            if run >= COPY_FLAG:
+                arm[name]["flagged"].append([story, chapter, run])
+    return out
