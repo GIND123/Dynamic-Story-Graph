@@ -530,3 +530,26 @@ def test_the_quoted_tail_carries_the_same_new_moment_instruction():
     shared = "Open on a new moment (later in time, a new place, or the next action). "
     shared += "Do not reuse any sentence or line of dialogue from the previous chapter."
     assert shared in TAIL_CUE and shared in CONTINUE_CUE
+
+
+def test_mid_sentence_capitals_find_names_but_not_sentence_starts():
+    from dsg.generate.prompt import mid_sentence_capitals
+
+    text = ('She went in. "You said noon," she told Theo, who had come from Ravensmoor.\n\n'
+            '"I\'ll try," he said. Her brother laughed. "If so, I go."')
+    assert mid_sentence_capitals(text) == ["Ravensmoor", "Theo"]
+    assert mid_sentence_capitals("Nell cut the loaf. Tomas watched.") == [], (
+        "a name that only opens sentences is left to the report's name check"
+    )
+
+
+def test_load_example_warns_on_a_mid_sentence_name(tmp_path):
+    named = tmp_path / "named.txt"
+    named.write_text(("She handed the bread to Tomas without a word. " * 20).strip())
+    with pytest.warns(UserWarning, match="Tomas"):
+        load_example(named)
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert load_example(_SHIPPED), "the shipped passage loads with no warning"

@@ -18,6 +18,7 @@ from dsg.generate.score import (
     compare_leakage,
     compare_templates,
     curves,
+    example_name_check,
     score_runs,
     summarize,
 )
@@ -227,45 +228,65 @@ def budget_finding(payload: dict) -> dict:
 
     beats = {p["story_id"]: p["beats"] for p in payload["premises"]}
     ratios: dict[str, list[float]] = {}
-    sized: dict[str, list[int]] = {}
+    sized: dict[str, dict[str, list[int]]] = {}
     for rec in payload["records"]:
         if not rec.get("word_budget") or not rec.get("text"):
             continue
         n = word_count(rec["text"])
         template = rec.get("template", "classic")
         ratios.setdefault(template, []).append(n / rec["word_budget"])
-        if template == "prose":
-            story_beats = beats[rec["story_id"]]
-            size = beat_size(story_beats[(rec["chapter"] - 1) % len(story_beats)])
-            sized.setdefault(size, []).append(n)
+        story_beats = beats[rec["story_id"]]
+        size = beat_size(story_beats[(rec["chapter"] - 1) % len(story_beats)])
+        sized.setdefault(template, {}).setdefault(size, []).append(n)
     mean = {t: sum(v) / len(v) for t, v in ratios.items()}
-    words = {k: sum(v) / len(v) for k, v in sized.items()}
+    words = {
+        t: {k: sum(v) / len(v) for k, v in by_size.items()} for t, by_size in sized.items()
+    }
     prose = mean.get("prose")
     in_band = prose is not None and BUDGET_BAND[0] <= prose <= BUDGET_BAND[1]
-    spread = (
-        words["small"] <= SIZE_SPREAD * words["large"]
-        if "small" in words and "large" in words else None
+    prose_words = words.get("prose", {})
+    tracks = (
+        prose_words["small"] <= SIZE_SPREAD * prose_words["large"]
+        if "small" in prose_words and "large" in prose_words else None
     )
-    return {"budget_ratio": mean, "prose_words_by_size": words,
-            "followed": bool(in_band and spread)}
+    return {"budget_ratio": mean, "prose_words_by_size": prose_words,
+            "classic_words_by_size": words.get("classic", {}),
+            "absolute_followed": bool(in_band), "relative_followed": tracks,
+            "followed": bool(in_band and tracks)}
+
+
+def _sizes(by_size: dict[str, float]) -> str:
+    order = [s for s in ("small", "medium", "large") if s in by_size]
+    return " / ".join(f"{by_size[s]:,.0f}" for s in order) + f" ({' / '.join(order)})"
 
 
 def _budget_paragraph(payload: dict) -> str:
+    """Absolute and relative budget-following, reported separately.
+
+    The two can part: the full run wrote about 1.5x every budget in both arms,
+    yet the prose arm's small beats still came out well short of its large
+    ones while classic stayed flat.
+    """
     found = budget_finding(payload)
     ratio = found["budget_ratio"]
-    sizes = ", ".join(f"{k} {v:,.0f}" for k, v in sorted(found["prose_words_by_size"].items()))
-    cited = (
+    absolute = (
         f"`budget_ratio` (words written / words asked): prose "
-        f"{ratio.get('prose', float('nan')):.2f}, classic {ratio.get('classic', float('nan')):.2f}"
-        f"; prose words per chapter by beat size: {sizes or 'n/a'}."
+        f"{ratio.get('prose', float('nan')):.2f}, classic "
+        f"{ratio.get('classic', float('nan')):.2f}."
     )
-    if found["followed"]:
-        return f"**Word budgets were roughly followed.** {cited}"
-    return (
-        "**The model did not follow the word budget.** " + cited + " Per-beat budgets "
-        "were requested, not achieved, so this run does not test them: length "
-        "differences below are what the model wrote, not what it was asked for."
-    )
+    head = ("**Absolute budgets were roughly followed.** " if found["absolute_followed"]
+            else "**Absolute budgets were ignored.** ")
+    prose_sizes, classic_sizes = found["prose_words_by_size"], found["classic_words_by_size"]
+    if found["relative_followed"] is None:
+        relative = "Relative length by beat size: not measurable (no small and large beats)."
+    else:
+        verb = "followed" if found["relative_followed"] else "did not follow"
+        relative = (
+            f"Relative length {verb} beat size in the prose arm: words per chapter "
+            f"{_sizes(prose_sizes)}, against classic's {_sizes(classic_sizes)}, which "
+            "asks every beat for the same length."
+        )
+    return head + absolute + " " + relative
 
 
 def _leakage_paragraph(payload: dict) -> str:
@@ -295,6 +316,20 @@ def _leakage_paragraph(payload: dict) -> str:
     for prose, entry in leaks.items():
         found = ", ".join(entry.get("prose_only_words", [])) or "none"
         lines.append(f"Example words only `{prose}` used: {found}.")
+    lines += ["", "**Name check** -- capitalised words from the example that a prose "
+              "arm wrote and the classic arm never did (case-sensitive, whole word):", ""]
+    names = example_name_check(payload)
+    for prose in leaks:
+        flagged = names.get(prose, {})
+        if not flagged:
+            lines.append(f"- `{prose}`: none")
+            continue
+        detail = "; ".join(
+            f"**{w}** in {len(at)} chapter{'s' if len(at) != 1 else ''} "
+            f"({', '.join(f'{s} ch{c}' for s, c in at)})"
+            for w, at in sorted(flagged.items())
+        )
+        lines.append(f"- `{prose}`: FLAG -- {detail}")
     return "\n".join(lines)
 
 

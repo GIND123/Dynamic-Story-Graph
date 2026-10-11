@@ -16,6 +16,7 @@ It is a bundle, so a difference between them is the bundle's, not any one part's
 from __future__ import annotations
 
 import re
+import warnings
 from pathlib import Path
 
 WRITER_PROMPT = """You are writing chapter {chapter} of a novel. Write prose only.
@@ -371,6 +372,31 @@ def with_note(messages: list[dict], note: str) -> list[dict]:
     raise ValueError("no user turn to append to")
 
 
+_CAPITALISED = re.compile(r"\b[A-Z][a-z'\u2019]*\b")
+_ALWAYS_CAPITAL = frozenset({"I", "I'll", "I'd", "I'm", "I've", "I\u2019ll", "I\u2019d",
+                             "I\u2019m", "I\u2019ve"})
+
+
+def mid_sentence_capitals(text: str) -> list[str]:
+    """Capitalised words not at the start of a sentence: likely names or places.
+
+    A word is sentence-initial when only quotes and whitespace separate it from
+    the start of the text or from a preceding . ! or ?. "I" and its forms are
+    always capitalised and never count. A name that only ever opens sentences
+    is not caught here; the report's name check covers that downstream.
+    """
+    found = []
+    for match in _CAPITALISED.finditer(text):
+        word = match.group(0)
+        if word in _ALWAYS_CAPITAL:
+            continue
+        before = text[: match.start()].rstrip(" \t\r\n\"'\u201c\u201d\u2018\u2019")
+        if not before or before[-1] in ".!?":
+            continue
+        found.append(word)
+    return sorted(set(found))
+
+
 def load_example(path: str | Path | None) -> str:
     """The example passage, or "" when none is configured.
 
@@ -386,4 +412,11 @@ def load_example(path: str | Path | None) -> str:
     lo, hi = EXAMPLE_WORDS
     if not lo <= n <= hi:
         raise ValueError(f"example passage is {n} words; it must be {lo}-{hi}")
+    names = mid_sentence_capitals(text)
+    if names:
+        warnings.warn(
+            f"example passage has capitalised words mid-sentence ({', '.join(names)}); "
+            "names and places in the example tend to leak into the stories",
+            stacklevel=2,
+        )
     return text

@@ -226,8 +226,9 @@ def test_the_report_says_when_the_budget_was_ignored(tmp_path):
     source = tmp_path / "generation.json"
     source.write_text(json.dumps(payload))
     section = build_report(source, tmp_path / "r").read_text().split("## Prose template")[1]
-    assert "**The model did not follow the word budget.**" in section
-    assert "`budget_ratio`" in section and "does not test them" in section
+    assert "**Absolute budgets were ignored.**" in section and "`budget_ratio`" in section
+    # The stock beats 1-3 have no small beat, so relative length cannot be read.
+    assert "Relative length by beat size: not measurable" in section
     assert "Chapter sampling (both arms): max_tokens 1400, repetition_penalty 1.1." in section
 
 
@@ -297,3 +298,47 @@ def test_no_example_means_no_leakage_section(tmp_path):
     shown = _leakage_paragraph(_leak_payload(["knife apron"], ["quay"]))
     assert "| `base:last-chapter~prose` | sharp |" in shown
     assert "Example words only `base:last-chapter~prose` used: apron, knife." in shown
+
+
+def test_absolute_and_relative_budget_following_are_reported_separately():
+    from dsg.generate.report import _budget_paragraph, budget_finding
+
+    # Prose writes ~1.5x every budget but keeps small beats short; classic is flat.
+    payload = _with_lengths((450, 900), 750)
+    found = budget_finding(payload)
+    assert not found["absolute_followed"] and found["relative_followed"]
+    text = _budget_paragraph(payload)
+    assert text.startswith("**Absolute budgets were ignored.**")
+    assert "Relative length followed beat size in the prose arm" in text
+    assert "450 / 900 (small / large)" in text and "750 / 750 (small / large)" in text
+
+    flat = _budget_paragraph(_with_lengths((640, 650), 650))
+    assert "Relative length did not follow beat size" in flat
+    on_target = _budget_paragraph(_with_lengths((310, 590), 500))
+    assert on_target.startswith("**Absolute budgets were roughly followed.**")
+
+
+def test_the_name_check_flags_example_names_only_prose_wrote():
+    from dsg.generate.score import example_name_check
+
+    example = "Nell cut the loaf. Tomas watched. She said nothing, and He left."
+    payload = _leak_payload(
+        ["Nell walked to the quay. She waited.", "Tomas and Nell argued. He left."],
+        ["Hesper walked to the quay. She waited.", "Jarrow argued. He left."],
+        example=example,
+    )
+    flagged = example_name_check(payload)["base:last-chapter~prose"]
+    assert set(flagged) == {"Nell", "Tomas"}, "She and He also appear in classic"
+    assert len(flagged["Nell"]) == 2 and len(flagged["Tomas"]) == 1
+    assert example_name_check(_leak_payload(["x"], ["y"], example="")) == {}
+
+
+def test_the_leakage_section_shows_the_name_check():
+    from dsg.generate.report import _leakage_paragraph
+
+    leaky = _leak_payload(["Nell cut the loaf by the hedge."], ["Hesper walked."],
+                          example="Nell cut the loaf by the hedge.")
+    assert "**Name check**" in _leakage_paragraph(leaky)
+    assert "FLAG -- **Nell** in 1 chapter (" in _leakage_paragraph(leaky)
+    clean = _leak_payload(["She cut the loaf."], ["She walked."], example="She cut the loaf.")
+    assert "- `base:last-chapter~prose`: none" in _leakage_paragraph(clean)

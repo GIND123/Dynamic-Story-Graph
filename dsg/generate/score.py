@@ -499,3 +499,36 @@ def compare_leakage(payload: dict) -> dict:
                                            for s in stories))
                 entry["prose_only_words"] = sorted(only_prose)
     return out
+
+
+def example_name_check(payload: dict) -> dict[str, dict[str, list]]:
+    """Capitalised example words a prose arm wrote and the classic arm never did.
+
+    The distinctive-word shares dilute a leaked name to almost nothing -- two
+    names among a hundred-odd words -- so names are checked on their own.
+    Case-sensitive and whole-word; classic, which never sees the example, is
+    the baseline across every one of its chapters in the run. Returns, per
+    prose arm, each flagged word and the (story, chapter) places it appears.
+    """
+    from dsg.generate.conditions import template_of
+
+    example = payload.get("meta", {}).get("example", "")
+    if not example:
+        return {}
+    capitals = sorted(set(re.findall(r"\b[A-Z][a-z'\u2019]+\b", example)))
+    patterns = {w: re.compile(rf"(?<![\w'\u2019]){re.escape(w)}(?![\w'\u2019])")
+                for w in capitals}
+    classic_text = " ".join(
+        r.get("text", "") for r in payload["records"]
+        if template_of(r["condition"]) == "classic"
+    )
+    in_classic = {w for w, pat in patterns.items() if pat.search(classic_text)}
+    out: dict[str, dict[str, list]] = {}
+    for rec in payload["records"]:
+        if template_of(rec["condition"]) != "prose":
+            continue
+        arm = out.setdefault(rec["condition"], {})
+        for word, pat in patterns.items():
+            if word not in in_classic and pat.search(rec.get("text", "")):
+                arm.setdefault(word, []).append((rec["story_id"], rec["chapter"]))
+    return {arm: words for arm, words in sorted(out.items())}
