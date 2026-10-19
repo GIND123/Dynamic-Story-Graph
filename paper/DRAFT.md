@@ -111,6 +111,9 @@ normalisation. To our knowledge, this paper is the first to supply those four.
 knowledge base, when the world changes, from revising it, when new information
 arrives about a world that did not; the AGM postulates (Alchourrón, Gärdenfors &
 Makinson, 1985) describe only the second. `SUPERSEDE` and `REVISE` are that pair.
+Dupin de Saint-Cyr & Lang (2011) formalise the step between them: from
+time-stamped observations and an inertia assumption, decide whether a conflict is
+a change in the world or an earlier error.
 Graphiti/Zep (Rasmussen et al., 2025) records when a fact held and when it was
 learned, and on a contradiction closes the old fact's interval, treating every
 conflict as a change in the world. Our contribution here is the classifier that
@@ -207,6 +210,8 @@ Core positioning:
   Narratives. arXiv:2605.02475.
 - Saifullah et al. (2026). Narrative World Model: Narratology-Grounded Writer
   Memory for Long-Form Fiction. arXiv:2607.05577.
+- Dupin de Saint-Cyr & Lang (2011). Belief Extrapolation (or How to Reason about
+  Observations and Unpredicted Change). Artificial Intelligence 175(2), 760–790.
 - Katsuno & Mendelzon (1991). On the Difference between Updating a Knowledge Base
   and Revising It. KR'91, 387–394.
 - Rasmussen et al. (2025). Zep: A Temporal Knowledge Graph Architecture for Agent

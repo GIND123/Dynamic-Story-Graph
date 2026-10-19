@@ -105,7 +105,7 @@ One JSON object per line:
 | --- | --- | --- |
 | `doc_key` | str | e.g. `o_pioneers!_24` |
 | `gutenberg_key` | str | source book id |
-| `sentences` | list[list[str]] | tokens per sentence; reconstructed at load time (30K–67K tokens/book) |
+| `sentences` | list[list[str]] | tokens per sentence; reconstructed at load time (30,610–689,400 tokens per book: Martinelli et al. 2025, Table 8; the local `gutenberg_lengths.json` gives the same range over its 52 Gutenberg books, and *Animal Farm*, in test, is not from Gutenberg) |
 | `clusters` | list | coreference clusters, one per character (9–12 per book) |
 | `characters` | list | character names, aligned 1:1 with `clusters` |
 

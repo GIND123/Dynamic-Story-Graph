@@ -90,3 +90,79 @@ def test_merge_refuses_incomplete_files(tmp_path):
     _fill(tmp_path, "annotator_01")
     with pytest.raises(SystemExit):
         labels.merge(tmp_path)
+
+
+def _merged(tmp_path):
+    return {r["item_id"]: r for r in csv.DictReader((tmp_path / "labels_merged.csv").open())}
+
+
+def _set_adjudication(tmp_path, values, note="agreed on re-reading"):
+    path = tmp_path / "labels_merged.csv"
+    with path.open(newline="") as fh:
+        reader = csv.DictReader(fh)
+        cols, rows = reader.fieldnames, list(reader)
+    for r in rows:
+        if r["item_id"] in values:
+            r["real_violation_adjudicated"] = values[r["item_id"]]
+            r["adjudication_notes"] = note
+    with path.open("w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols)
+        w.writeheader()
+        w.writerows(rows)
+
+
+def test_merge_opens_an_adjudication_slot_only_where_annotators_disagree(tmp_path):
+    labels.split(_sheet(tmp_path), 2, seed=1)
+    _fill(tmp_path, "annotator_01", "yes")
+    _fill(tmp_path, "annotator_02", "no")
+    labels.merge(tmp_path)
+    rows = _merged(tmp_path)
+    doubled = {i for i, r in rows.items() if r["annotator_b"]}
+    assert all(rows[i]["real_violation_adjudicated"] == "" for i in doubled)
+    single = [r for i, r in rows.items() if i not in doubled]
+    assert all(r["real_violation_adjudicated"] == "n/a" for r in single)
+    # real_restatement is n/a for both annotators, so it never needs adjudicating.
+    assert all(r["real_restatement_adjudicated"] == "n/a" for r in rows.values())
+
+
+def test_finalize_refuses_until_every_disagreement_is_adjudicated(tmp_path):
+    labels.split(_sheet(tmp_path), 2, seed=1)
+    _fill(tmp_path, "annotator_01", "yes")
+    _fill(tmp_path, "annotator_02", "no")
+    labels.merge(tmp_path)
+    problems, path = labels.finalize(tmp_path)
+    assert path is None and len(problems) == 4
+    doubled = [i for i, r in _merged(tmp_path).items() if r["annotator_b"]]
+    _set_adjudication(tmp_path, {i: "No" for i in doubled})
+    problems, path = labels.finalize(tmp_path)
+    assert problems == []
+    final = {r["item_id"]: r for r in csv.DictReader(path.open())}
+    assert all(final[i]["real_violation"] == "no" for i in doubled)
+    assert all(final[i]["real_violation_source"] == "adjudicated" for i in doubled)
+    single = [i for i in final if i not in doubled]
+    assert all(final[i]["real_violation_source"] == "single" for i in single)
+
+
+def test_finalize_requires_a_note_and_an_allowed_value(tmp_path):
+    labels.split(_sheet(tmp_path), 2, seed=1)
+    _fill(tmp_path, "annotator_01", "yes")
+    _fill(tmp_path, "annotator_02", "no")
+    labels.merge(tmp_path)
+    doubled = [i for i, r in _merged(tmp_path).items() if r["annotator_b"]]
+    _set_adjudication(tmp_path, {doubled[0]: "maybe", **{i: "yes" for i in doubled[1:]}}, note="")
+    problems, _ = labels.finalize(tmp_path)
+    assert any("'maybe' not in" in p for p in problems)
+    assert any("needs a note" in p for p in problems)
+
+
+def test_remerge_keeps_adjudications_whose_originals_did_not_change(tmp_path):
+    labels.split(_sheet(tmp_path), 2, seed=1)
+    _fill(tmp_path, "annotator_01", "yes")
+    _fill(tmp_path, "annotator_02", "no")
+    labels.merge(tmp_path)
+    doubled = [i for i, r in _merged(tmp_path).items() if r["annotator_b"]]
+    _set_adjudication(tmp_path, {i: "yes" for i in doubled})
+    labels.merge(tmp_path)
+    rows = _merged(tmp_path)
+    assert all(rows[i]["real_violation_adjudicated"] == "yes" for i in doubled)
+    assert all(rows[i]["adjudication_notes"] for i in doubled)

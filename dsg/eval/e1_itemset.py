@@ -24,6 +24,7 @@ from pathlib import Path
 
 from dsg.eval.attribution import score_attribution
 from dsg.eval.attribution_run import parse_answer
+from dsg.eval.multiplicity import ALPHA, N_BOOT, _draws, _interval, bootstrap_p
 from dsg.eval.provenance import record as provenance
 
 # Added in PDNC's June 2023 release (Michel et al. 2024, Table 5, middle block).
@@ -68,7 +69,18 @@ def rescore(raw: dict, pdnc_root: Path, condition: str) -> dict:
     out = {}
     for name in per:
         novels = per[name]
+        # Non-explicit minus explicit, paired over novels: the inversion test.
+        keep = sorted(n for n, v in novels.items()
+                      if v["accuracy_explicit"] is not None
+                      and v["accuracy_non_explicit"] is not None)
+        delta, means = _draws([novels[n]["accuracy_non_explicit"] for n in keep],
+                              [novels[n]["accuracy_explicit"] for n in keep])
+        out_delta = {"n_novels": len(keep), "mean_delta": float(delta.mean()),
+                     "ci": list(_interval(means, ALPHA)), "p": bootstrap_p(means),
+                     "novels_non_explicit_higher": int((delta > 0).sum()),
+                     "novels_explicit_higher": int((delta < 0).sum()), "n_boot": N_BOOT}
         out[name] = {
+            "non_explicit_minus_explicit": out_delta,
             "novels": len(novels), "quotes": sum(v["n"] for v in novels.values()),
             "macro": {m: sum(v[m] for v in novels.values()) / len(novels) for m in METRICS},
             "micro": {
@@ -106,6 +118,10 @@ def main(argv: list[str] | None = None) -> int:
         print(name, r["novels"], "novels", r["quotes"], "quotes | macro",
               {k: round(v, 4) for k, v in r["macro"].items()}, "| micro",
               {k: round(v, 4) for k, v in r["micro"].items()})
+        d = r["non_explicit_minus_explicit"]
+        print("   non-explicit - explicit (per-novel, paired):", round(d["mean_delta"], 4),
+              [round(x, 4) for x in d["ci"]], "p", round(d["p"], 4),
+              f"{d['novels_non_explicit_higher']}-{d['novels_explicit_higher']} novels")
     return 0
 
 

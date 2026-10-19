@@ -425,3 +425,7 @@ Until then, the published rates are not upper bounds either: these false
 positives inflate them, while contradictions outside the closed vocabularies
 are never counted at all. The net direction is unknown, so compare conditions
 only with this shared bias in mind.
+
+The measurement is now set up, not done: labelling sheets and the
+other-subject bound are in `audit/detector/`, and the analysis rules are fixed in
+`audit/ANALYSIS_PLAN.md`; labels are pending.

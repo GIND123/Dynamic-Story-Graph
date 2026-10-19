@@ -9,6 +9,13 @@ that comes back with an edited passage is caught rather than merged.
     python -m dsg.eval.labels split --sheet audit/detector --annotators 3
     python -m dsg.eval.labels check --sheet audit/detector
     python -m dsg.eval.labels merge --sheet audit/detector
+    python -m dsg.eval.labels finalize --sheet audit/detector
+
+Disagreements follow ``audit/ANALYSIS_PLAN.md``: agreement is computed on the
+two independent labels first; the annotators then fill ``<label>_adjudicated``
+(with ``adjudication_notes``) on every overlap row where they disagree, keeping
+both originals; ``finalize`` takes the adjudicated label there, the shared label
+where they agreed, and the single annotator's label elsewhere.
 """
 
 from __future__ import annotations
@@ -45,6 +52,8 @@ OPTIONAL = {"correct_value_text", "notes"}
 # Answers that the guides say must carry a note.
 NEEDS_NOTE = {"unsure", "UNSURE"}
 NOT_ASKED = "n/a"
+ADJ = "_adjudicated"
+NOTES = "adjudication_notes"
 HIDDEN = ("double_annotate",)    # in the blind sheet, never in an annotator file
 
 
@@ -180,28 +189,94 @@ def check(sheet_dir: Path, partial: bool = False) -> tuple[list[str], dict[str, 
     return problems, cleaned
 
 
+def decision_columns(schema: dict[str, tuple[str, ...] | None]) -> list[str]:
+    """Label columns with a closed set of values: the ones that get adjudicated."""
+    return [c for c, allowed in schema.items() if allowed is not None]
+
+
+def _norm(value: str) -> str:
+    return (value or "").strip().lower()
+
+
 def merge(sheet_dir: Path) -> Path:
-    """One row per item: the primary's labels, and the second's with suffix _b."""
+    """One row per item: both annotators' labels, and a slot to adjudicate.
+
+    ``<label>_adjudicated`` is blank where the two labels disagree and must be
+    filled by the annotators jointly; it is ``n/a`` where there is nothing to
+    adjudicate. Re-merging keeps adjudications already written, as long as the
+    two original labels they resolved have not changed.
+    """
     problems, cleaned = check(sheet_dir)
     if problems:
         raise SystemExit("refusing to merge:\n  " + "\n  ".join(problems))
     plan = json.loads((sheet_dir / "annotators" / "assignment.json").read_text())
     columns, blind = _read(sheet_dir / plan["sheet"])
     schema = SCHEMAS[schema_of(columns)]
+    decisions = decision_columns(schema)
+    path = sheet_dir / "labels_merged.csv"
+    previous = {r["item_id"]: r for r in _read(path)[1]} if path.exists() else {}
     by_who = {w: {r["item_id"]: r for r in rows} for w, rows in cleaned.items()}
-    merged = []
+    merged, dropped = [], []
     for r in blind:
         who = plan["assignment"][r["item_id"]]
         row = {"item_id": r["item_id"], "annotator_a": who[0]}
         row.update({c: by_who[who[0]][r["item_id"]].get(c, "") for c in schema})
+        old = previous.get(r["item_id"], {})
         if len(who) > 1:
             row["annotator_b"] = who[1]
             row.update({f"{c}_b": by_who[who[1]][r["item_id"]].get(c, "") for c in schema})
+        for c in decisions:
+            if len(who) < 2 or _norm(row[c]) == _norm(row[f"{c}_b"]):
+                row[c + ADJ] = NOT_ASKED
+                continue
+            kept = (old.get(c + ADJ, "") if _norm(old.get(c)) == _norm(row[c])
+                    and _norm(old.get(f"{c}_b")) == _norm(row[f"{c}_b"]) else "")
+            if old.get(c + ADJ, "") not in ("", NOT_ASKED) and not kept:
+                dropped.append(f"{r['item_id']}:{c}")
+            row[c + ADJ] = kept
+        row[NOTES] = old.get(NOTES, "") if any(row[c + ADJ] not in ("", NOT_ASKED)
+                                               for c in decisions) else ""
         merged.append(row)
-    out_cols = ["item_id", "annotator_a", *schema, "annotator_b", *(f"{c}_b" for c in schema)]
-    path = sheet_dir / "labels_merged.csv"
+    out_cols = ["item_id", "annotator_a", *schema, "annotator_b", *(f"{c}_b" for c in schema),
+                *(c + ADJ for c in decisions), NOTES]
     _write(path, out_cols, merged)
+    if dropped:
+        print("adjudications dropped because an original label changed: " + ", ".join(dropped))
     return path
+
+
+def finalize(sheet_dir: Path) -> tuple[list[str], Path | None]:
+    """Problems, and the final-label file once there are none."""
+    columns, rows = _read(sheet_dir / "labels_merged.csv")
+    schema = SCHEMAS[schema_of(columns)]
+    decisions = decision_columns(schema)
+    problems: list[str] = []
+    final = []
+    for r in rows:
+        out = {"item_id": r["item_id"]}
+        for c in decisions:
+            adj = (r.get(c + ADJ) or "").strip()
+            if not r.get("annotator_b"):
+                out[c], out[f"{c}_source"] = r[c], "single"
+            elif adj == NOT_ASKED:
+                out[c], out[f"{c}_source"] = r[c], "agreed"
+            elif not adj:
+                problems.append(f"{r['item_id']}: {c} disagreement not adjudicated "
+                                f"('{r[c]}' vs '{r[f'{c}_b']}')")
+            else:
+                value = _canonical(adj, schema[c]) if adj != NOT_ASKED else None
+                if value is None:
+                    problems.append(f"{r['item_id']}: {c}{ADJ}='{adj}' not in {list(schema[c])}")
+                    continue
+                if not (r.get(NOTES) or "").strip():
+                    problems.append(f"{r['item_id']}: adjudication needs a note")
+                out[c], out[f"{c}_source"] = value, "adjudicated"
+        final.append(out)
+    if problems:
+        return problems, None
+    path = sheet_dir / "labels_final.csv"
+    _write(path, ["item_id", *(x for c in decisions for x in (c, f"{c}_source"))], final)
+    return [], path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -216,6 +291,8 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("--partial", action="store_true", help="allow unlabelled rows")
     m = sub.add_parser("merge")
     m.add_argument("--sheet", required=True)
+    f = sub.add_parser("finalize", help="final labels once disagreements are adjudicated")
+    f.add_argument("--sheet", required=True)
     args = p.parse_args(argv)
     sheet = Path(args.sheet)
     if args.cmd == "split":
@@ -225,6 +302,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "check":
         problems, _ = check(sheet, partial=args.partial)
         print("\n".join(problems) if problems else "ok")
+        return 1 if problems else 0
+    if args.cmd == "finalize":
+        problems, path = finalize(sheet)
+        print("\n".join(problems) if problems else f"final labels -> {path}")
         return 1 if problems else 0
     print(f"merged -> {merge(sheet)}")
     return 0
