@@ -190,6 +190,22 @@ def has_revelation_marker(text: str | None) -> bool:
     return bool(text) and _REVELATION_RE.search(text or "") is not None
 
 
+_REVELATION_RES: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
+    (pattern, re.compile(pattern, re.IGNORECASE)) for pattern in _REVELATION_PATTERNS
+)
+
+
+def revelation_markers(text: str | None) -> list[str]:
+    """Each revelation pattern that occurs in ``text``, in table order.
+
+    For auditing which marker drove a decision; the classifier itself still
+    uses ``has_revelation_marker``.
+    """
+    if not text:
+        return []
+    return [pattern for pattern, rx in _REVELATION_RES if rx.search(text)]
+
+
 def is_underspecified(value: str | None) -> bool:
     v = (value or "").strip().lower()
     return v in UNDERSPECIFIED_OBJECTS

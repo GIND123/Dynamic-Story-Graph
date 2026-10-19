@@ -1,0 +1,4095 @@
+{
+  "seed": 20261018,
+  "runs": [
+    "gen-qwen3b-s30-c20",
+    "gen-qwen7b-prose-s10-c5-r2-v2",
+    "gen-qwen7b-prose-s10-c5-r2-v3",
+    "gen-qwen7b-prose-s10-c5-r2",
+    "gen-qwen7b-prose-smoke",
+    "gen-qwen7b-prose-smoke2",
+    "gen-qwen7b-prose-smoke3",
+    "gen-v3-hybrid",
+    "gen-v4-retrieval",
+    "gen-v5-selection"
+  ],
+  "population": {
+    "flagged_violation": 13958,
+    "flagged_restatement": 30796,
+    "unflagged_mention": 440688
+  },
+  "sampled": {
+    "flagged_violation": 300,
+    "flagged_restatement": 100,
+    "unflagged_mention": 150
+  },
+  "design": {
+    "flagged_violation": [
+      {
+        "stratum": [
+          "base:append-only-state",
+          "eyes"
+        ],
+        "population": 382,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "hair"
+        ],
+        "population": 38,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "metal"
+        ],
+        "population": 236,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "trade"
+        ],
+        "population": 328,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "eyes"
+        ],
+        "population": 406,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "hair"
+        ],
+        "population": 1,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "metal"
+        ],
+        "population": 138,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "trade"
+        ],
+        "population": 72,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "eyes"
+        ],
+        "population": 430,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "hair"
+        ],
+        "population": 2,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "metal"
+        ],
+        "population": 112,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "trade"
+        ],
+        "population": 74,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "eyes"
+        ],
+        "population": 278,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "hair"
+        ],
+        "population": 31,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "metal"
+        ],
+        "population": 161,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "trade"
+        ],
+        "population": 108,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "eyes"
+        ],
+        "population": 494,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "hair"
+        ],
+        "population": 36,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "metal"
+        ],
+        "population": 240,
+        "sampled": 5
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "trade"
+        ],
+        "population": 195,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "eyes"
+        ],
+        "population": 456,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "hair"
+        ],
+        "population": 23,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "metal"
+        ],
+        "population": 207,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "trade"
+        ],
+        "population": 192,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "eyes"
+        ],
+        "population": 85,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "hair"
+        ],
+        "population": 5,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "metal"
+        ],
+        "population": 40,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "trade"
+        ],
+        "population": 25,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "eyes"
+        ],
+        "population": 742,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "hair"
+        ],
+        "population": 126,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "metal"
+        ],
+        "population": 389,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "trade"
+        ],
+        "population": 499,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "eyes"
+        ],
+        "population": 1584,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "hair"
+        ],
+        "population": 39,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "metal"
+        ],
+        "population": 772,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "trade"
+        ],
+        "population": 779,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "eyes"
+        ],
+        "population": 813,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "hair"
+        ],
+        "population": 50,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "metal"
+        ],
+        "population": 653,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "trade"
+        ],
+        "population": 428,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "eyes"
+        ],
+        "population": 134,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "hair"
+        ],
+        "population": 12,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "metal"
+        ],
+        "population": 103,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "trade"
+        ],
+        "population": 46,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "eyes"
+        ],
+        "population": 93,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "hair"
+        ],
+        "population": 28,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "metal"
+        ],
+        "population": 60,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "trade"
+        ],
+        "population": 37,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "eyes"
+        ],
+        "population": 48,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "hair"
+        ],
+        "population": 6,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "metal"
+        ],
+        "population": 27,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "trade"
+        ],
+        "population": 25,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:none",
+          "eyes"
+        ],
+        "population": 227,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:none",
+          "hair"
+        ],
+        "population": 47,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:none",
+          "metal"
+        ],
+        "population": 210,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:none",
+          "trade"
+        ],
+        "population": 403,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "eyes"
+        ],
+        "population": 196,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "hair"
+        ],
+        "population": 23,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "metal"
+        ],
+        "population": 177,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "trade"
+        ],
+        "population": 222,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "eyes"
+        ],
+        "population": 29,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "hair"
+        ],
+        "population": 13,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "metal"
+        ],
+        "population": 5,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "trade"
+        ],
+        "population": 14,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "eyes"
+        ],
+        "population": 24,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "hair"
+        ],
+        "population": 9,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "metal"
+        ],
+        "population": 7,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "trade"
+        ],
+        "population": 12,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "eyes"
+        ],
+        "population": 5,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "hair"
+        ],
+        "population": 11,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "metal"
+        ],
+        "population": 7,
+        "sampled": 4
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "trade"
+        ],
+        "population": 29,
+        "sampled": 4
+      }
+    ],
+    "flagged_restatement": [
+      {
+        "stratum": [
+          "base:append-only-state",
+          "eyes"
+        ],
+        "population": 671,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "hair"
+        ],
+        "population": 412,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "home"
+        ],
+        "population": 81,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "metal"
+        ],
+        "population": 237,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "trade"
+        ],
+        "population": 542,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "eyes"
+        ],
+        "population": 776,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "hair"
+        ],
+        "population": 228,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "home"
+        ],
+        "population": 56,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "metal"
+        ],
+        "population": 325,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "trade"
+        ],
+        "population": 308,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "eyes"
+        ],
+        "population": 756,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "hair"
+        ],
+        "population": 251,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "home"
+        ],
+        "population": 87,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "metal"
+        ],
+        "population": 274,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "trade"
+        ],
+        "population": 278,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "eyes"
+        ],
+        "population": 392,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "hair"
+        ],
+        "population": 164,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "home"
+        ],
+        "population": 52,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "metal"
+        ],
+        "population": 147,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "trade"
+        ],
+        "population": 141,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "eyes"
+        ],
+        "population": 946,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "hair"
+        ],
+        "population": 478,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "home"
+        ],
+        "population": 181,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "metal"
+        ],
+        "population": 473,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "trade"
+        ],
+        "population": 422,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "eyes"
+        ],
+        "population": 845,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "hair"
+        ],
+        "population": 430,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "home"
+        ],
+        "population": 101,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "metal"
+        ],
+        "population": 388,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "trade"
+        ],
+        "population": 340,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "eyes"
+        ],
+        "population": 126,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "hair"
+        ],
+        "population": 68,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "home"
+        ],
+        "population": 36,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "metal"
+        ],
+        "population": 104,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "trade"
+        ],
+        "population": 44,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "eyes"
+        ],
+        "population": 1292,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "hair"
+        ],
+        "population": 631,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "home"
+        ],
+        "population": 142,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "metal"
+        ],
+        "population": 478,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "trade"
+        ],
+        "population": 807,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "eyes"
+        ],
+        "population": 3019,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "hair"
+        ],
+        "population": 1181,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "home"
+        ],
+        "population": 862,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "metal"
+        ],
+        "population": 1481,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "trade"
+        ],
+        "population": 1589,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "eyes"
+        ],
+        "population": 1607,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "hair"
+        ],
+        "population": 558,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "home"
+        ],
+        "population": 539,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "metal"
+        ],
+        "population": 1053,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "trade"
+        ],
+        "population": 711,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "eyes"
+        ],
+        "population": 222,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "hair"
+        ],
+        "population": 77,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "home"
+        ],
+        "population": 111,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "metal"
+        ],
+        "population": 152,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "trade"
+        ],
+        "population": 116,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "eyes"
+        ],
+        "population": 254,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "hair"
+        ],
+        "population": 47,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "home"
+        ],
+        "population": 97,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "metal"
+        ],
+        "population": 115,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "trade"
+        ],
+        "population": 85,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "eyes"
+        ],
+        "population": 73,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "hair"
+        ],
+        "population": 38,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "home"
+        ],
+        "population": 28,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "metal"
+        ],
+        "population": 68,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "trade"
+        ],
+        "population": 38,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "eyes"
+        ],
+        "population": 207,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "hair"
+        ],
+        "population": 102,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "home"
+        ],
+        "population": 65,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "metal"
+        ],
+        "population": 150,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "trade"
+        ],
+        "population": 187,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "eyes"
+        ],
+        "population": 351,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "hair"
+        ],
+        "population": 123,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "home"
+        ],
+        "population": 151,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "metal"
+        ],
+        "population": 327,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "trade"
+        ],
+        "population": 322,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "eyes"
+        ],
+        "population": 13,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "hair"
+        ],
+        "population": 5,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "home"
+        ],
+        "population": 1,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "metal"
+        ],
+        "population": 3,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "trade"
+        ],
+        "population": 11,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "eyes"
+        ],
+        "population": 10,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "hair"
+        ],
+        "population": 8,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "home"
+        ],
+        "population": 5,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "metal"
+        ],
+        "population": 6,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "trade"
+        ],
+        "population": 19,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "eyes"
+        ],
+        "population": 4,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "hair"
+        ],
+        "population": 20,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "home"
+        ],
+        "population": 44,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "metal"
+        ],
+        "population": 2,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "trade"
+        ],
+        "population": 29,
+        "sampled": 1
+      }
+    ],
+    "unflagged_mention": [
+      {
+        "stratum": [
+          "base:append-only-state",
+          "eyes"
+        ],
+        "population": 3595,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "hair"
+        ],
+        "population": 2733,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "home"
+        ],
+        "population": 1731,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "metal"
+        ],
+        "population": 1921,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:append-only-state",
+          "trade"
+        ],
+        "population": 4836,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "eyes"
+        ],
+        "population": 3983,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "hair"
+        ],
+        "population": 2830,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "home"
+        ],
+        "population": 2008,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "metal"
+        ],
+        "population": 3047,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid",
+          "trade"
+        ],
+        "population": 6760,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "eyes"
+        ],
+        "population": 3749,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "hair"
+        ],
+        "population": 3062,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "home"
+        ],
+        "population": 1816,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "metal"
+        ],
+        "population": 3570,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-hybrid-repair",
+          "trade"
+        ],
+        "population": 6921,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "eyes"
+        ],
+        "population": 4380,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "hair"
+        ],
+        "population": 3584,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "home"
+        ],
+        "population": 1441,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "metal"
+        ],
+        "population": 1760,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:beat-retrieval",
+          "trade"
+        ],
+        "population": 7231,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "eyes"
+        ],
+        "population": 5219,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "hair"
+        ],
+        "population": 2885,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "home"
+        ],
+        "population": 2882,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "metal"
+        ],
+        "population": 4208,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid",
+          "trade"
+        ],
+        "population": 7909,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "eyes"
+        ],
+        "population": 3228,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "hair"
+        ],
+        "population": 2404,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "home"
+        ],
+        "population": 2040,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "metal"
+        ],
+        "population": 3623,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid-repair",
+          "trade"
+        ],
+        "population": 5905,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "eyes"
+        ],
+        "population": 1437,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "hair"
+        ],
+        "population": 792,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "home"
+        ],
+        "population": 846,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "metal"
+        ],
+        "population": 498,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-hybrid~prose",
+          "trade"
+        ],
+        "population": 1947,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "eyes"
+        ],
+        "population": 7684,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "hair"
+        ],
+        "population": 5345,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "home"
+        ],
+        "population": 3486,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "metal"
+        ],
+        "population": 3778,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:dsg-state",
+          "trade"
+        ],
+        "population": 11083,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "eyes"
+        ],
+        "population": 15359,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "hair"
+        ],
+        "population": 11275,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "home"
+        ],
+        "population": 8046,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "metal"
+        ],
+        "population": 11838,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:full-context",
+          "trade"
+        ],
+        "population": 24793,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "eyes"
+        ],
+        "population": 21103,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "hair"
+        ],
+        "population": 11409,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "home"
+        ],
+        "population": 9353,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "metal"
+        ],
+        "population": 11565,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter",
+          "trade"
+        ],
+        "population": 29629,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "eyes"
+        ],
+        "population": 4846,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "hair"
+        ],
+        "population": 3569,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "home"
+        ],
+        "population": 2260,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "metal"
+        ],
+        "population": 3208,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-graph",
+          "trade"
+        ],
+        "population": 6026,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "eyes"
+        ],
+        "population": 6319,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "hair"
+        ],
+        "population": 2688,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "home"
+        ],
+        "population": 2758,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "metal"
+        ],
+        "population": 3246,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter@bo4-random",
+          "trade"
+        ],
+        "population": 6803,
+        "sampled": 2
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "eyes"
+        ],
+        "population": 1705,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "hair"
+        ],
+        "population": 717,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "home"
+        ],
+        "population": 682,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "metal"
+        ],
+        "population": 349,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:last-chapter~prose",
+          "trade"
+        ],
+        "population": 1924,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "eyes"
+        ],
+        "population": 17902,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "hair"
+        ],
+        "population": 8863,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "home"
+        ],
+        "population": 4274,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "metal"
+        ],
+        "population": 3523,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:none",
+          "trade"
+        ],
+        "population": 19224,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "eyes"
+        ],
+        "population": 4702,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "hair"
+        ],
+        "population": 3292,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "home"
+        ],
+        "population": 2361,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "metal"
+        ],
+        "population": 3406,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "base:rolling-summary",
+          "trade"
+        ],
+        "population": 5579,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "eyes"
+        ],
+        "population": 1985,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "hair"
+        ],
+        "population": 854,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "home"
+        ],
+        "population": 591,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "metal"
+        ],
+        "population": 506,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-repair",
+          "trade"
+        ],
+        "population": 2571,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "eyes"
+        ],
+        "population": 1925,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "hair"
+        ],
+        "population": 924,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "home"
+        ],
+        "population": 567,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "metal"
+        ],
+        "population": 484,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:dsg-state",
+          "trade"
+        ],
+        "population": 2202,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "eyes"
+        ],
+        "population": 1876,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "hair"
+        ],
+        "population": 709,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "home"
+        ],
+        "population": 529,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "metal"
+        ],
+        "population": 438,
+        "sampled": 1
+      },
+      {
+        "stratum": [
+          "tuned:full-context",
+          "trade"
+        ],
+        "population": 1774,
+        "sampled": 1
+      }
+    ]
+  },
+  "overlap_by_condition": {
+    "base:append-only-state": {
+      "flags": 984,
+      "other_subject_value": 661,
+      "other_subject_value_share": 0.6717479674796748,
+      "other_subject_value_and_nearby": 433,
+      "inside_hyphenated_word": 63
+    },
+    "base:beat-hybrid": {
+      "flags": 617,
+      "other_subject_value": 482,
+      "other_subject_value_share": 0.7811993517017828,
+      "other_subject_value_and_nearby": 419,
+      "inside_hyphenated_word": 10
+    },
+    "base:beat-hybrid-repair": {
+      "flags": 618,
+      "other_subject_value": 529,
+      "other_subject_value_share": 0.8559870550161812,
+      "other_subject_value_and_nearby": 419,
+      "inside_hyphenated_word": 40
+    },
+    "base:beat-retrieval": {
+      "flags": 578,
+      "other_subject_value": 243,
+      "other_subject_value_share": 0.4204152249134948,
+      "other_subject_value_and_nearby": 120,
+      "inside_hyphenated_word": 49
+    },
+    "base:dsg-hybrid": {
+      "flags": 965,
+      "other_subject_value": 721,
+      "other_subject_value_share": 0.7471502590673575,
+      "other_subject_value_and_nearby": 577,
+      "inside_hyphenated_word": 57
+    },
+    "base:dsg-hybrid-repair": {
+      "flags": 878,
+      "other_subject_value": 661,
+      "other_subject_value_share": 0.7528473804100227,
+      "other_subject_value_and_nearby": 548,
+      "inside_hyphenated_word": 61
+    },
+    "base:dsg-hybrid~prose": {
+      "flags": 155,
+      "other_subject_value": 108,
+      "other_subject_value_share": 0.6967741935483871,
+      "other_subject_value_and_nearby": 89,
+      "inside_hyphenated_word": 2
+    },
+    "base:dsg-state": {
+      "flags": 1756,
+      "other_subject_value": 1091,
+      "other_subject_value_share": 0.6212984054669703,
+      "other_subject_value_and_nearby": 705,
+      "inside_hyphenated_word": 186
+    },
+    "base:full-context": {
+      "flags": 3174,
+      "other_subject_value": 2461,
+      "other_subject_value_share": 0.7753623188405797,
+      "other_subject_value_and_nearby": 1825,
+      "inside_hyphenated_word": 119
+    },
+    "base:last-chapter": {
+      "flags": 1944,
+      "other_subject_value": 1357,
+      "other_subject_value_share": 0.698045267489712,
+      "other_subject_value_and_nearby": 941,
+      "inside_hyphenated_word": 99
+    },
+    "base:last-chapter@bo4-graph": {
+      "flags": 295,
+      "other_subject_value": 221,
+      "other_subject_value_share": 0.7491525423728813,
+      "other_subject_value_and_nearby": 140,
+      "inside_hyphenated_word": 11
+    },
+    "base:last-chapter@bo4-random": {
+      "flags": 218,
+      "other_subject_value": 115,
+      "other_subject_value_share": 0.5275229357798165,
+      "other_subject_value_and_nearby": 78,
+      "inside_hyphenated_word": 12
+    },
+    "base:last-chapter~prose": {
+      "flags": 106,
+      "other_subject_value": 76,
+      "other_subject_value_share": 0.7169811320754716,
+      "other_subject_value_and_nearby": 60,
+      "inside_hyphenated_word": 2
+    },
+    "base:none": {
+      "flags": 887,
+      "other_subject_value": 229,
+      "other_subject_value_share": 0.25817361894024804,
+      "other_subject_value_and_nearby": 137,
+      "inside_hyphenated_word": 22
+    },
+    "base:rolling-summary": {
+      "flags": 618,
+      "other_subject_value": 459,
+      "other_subject_value_share": 0.7427184466019418,
+      "other_subject_value_and_nearby": 376,
+      "inside_hyphenated_word": 32
+    },
+    "tuned:dsg-repair": {
+      "flags": 61,
+      "other_subject_value": 18,
+      "other_subject_value_share": 0.29508196721311475,
+      "other_subject_value_and_nearby": 7,
+      "inside_hyphenated_word": 1
+    },
+    "tuned:dsg-state": {
+      "flags": 52,
+      "other_subject_value": 18,
+      "other_subject_value_share": 0.34615384615384615,
+      "other_subject_value_and_nearby": 10,
+      "inside_hyphenated_word": 2
+    },
+    "tuned:full-context": {
+      "flags": 52,
+      "other_subject_value": 35,
+      "other_subject_value_share": 0.6730769230769231,
+      "other_subject_value_and_nearby": 5,
+      "inside_hyphenated_word": 11
+    }
+  },
+  "overlap_by_kind": {
+    "eyes": {
+      "flags": 6426,
+      "other_subject_value": 5124,
+      "other_subject_value_share": 0.7973856209150327
+    },
+    "hair": {
+      "flags": 500,
+      "other_subject_value": 0,
+      "other_subject_value_share": 0.0
+    },
+    "metal": {
+      "flags": 3544,
+      "other_subject_value": 1698,
+      "other_subject_value_share": 0.4791196388261851
+    },
+    "trade": {
+      "flags": 3488,
+      "other_subject_value": 2663,
+      "other_subject_value_share": 0.7634747706422018
+    }
+  },
+  "overlap_in_sample": {
+    "base:append-only-state": {
+      "flags": 20,
+      "other_subject_value": 7,
+      "other_subject_value_share": 0.35,
+      "other_subject_value_and_nearby": 6,
+      "inside_hyphenated_word": 3
+    },
+    "base:beat-hybrid": {
+      "flags": 16,
+      "other_subject_value": 13,
+      "other_subject_value_share": 0.8125,
+      "other_subject_value_and_nearby": 10,
+      "inside_hyphenated_word": 0
+    },
+    "base:beat-hybrid-repair": {
+      "flags": 17,
+      "other_subject_value": 14,
+      "other_subject_value_share": 0.8235294117647058,
+      "other_subject_value_and_nearby": 7,
+      "inside_hyphenated_word": 0
+    },
+    "base:beat-retrieval": {
+      "flags": 20,
+      "other_subject_value": 6,
+      "other_subject_value_share": 0.3,
+      "other_subject_value_and_nearby": 3,
+      "inside_hyphenated_word": 2
+    },
+    "base:dsg-hybrid": {
+      "flags": 19,
+      "other_subject_value": 11,
+      "other_subject_value_share": 0.5789473684210527,
+      "other_subject_value_and_nearby": 11,
+      "inside_hyphenated_word": 2
+    },
+    "base:dsg-hybrid-repair": {
+      "flags": 16,
+      "other_subject_value": 8,
+      "other_subject_value_share": 0.5,
+      "other_subject_value_and_nearby": 7,
+      "inside_hyphenated_word": 1
+    },
+    "base:dsg-hybrid~prose": {
+      "flags": 16,
+      "other_subject_value": 7,
+      "other_subject_value_share": 0.4375,
+      "other_subject_value_and_nearby": 6,
+      "inside_hyphenated_word": 1
+    },
+    "base:dsg-state": {
+      "flags": 16,
+      "other_subject_value": 7,
+      "other_subject_value_share": 0.4375,
+      "other_subject_value_and_nearby": 6,
+      "inside_hyphenated_word": 3
+    },
+    "base:full-context": {
+      "flags": 16,
+      "other_subject_value": 7,
+      "other_subject_value_share": 0.4375,
+      "other_subject_value_and_nearby": 6,
+      "inside_hyphenated_word": 1
+    },
+    "base:last-chapter": {
+      "flags": 16,
+      "other_subject_value": 9,
+      "other_subject_value_share": 0.5625,
+      "other_subject_value_and_nearby": 6,
+      "inside_hyphenated_word": 2
+    },
+    "base:last-chapter@bo4-graph": {
+      "flags": 16,
+      "other_subject_value": 11,
+      "other_subject_value_share": 0.6875,
+      "other_subject_value_and_nearby": 8,
+      "inside_hyphenated_word": 3
+    },
+    "base:last-chapter@bo4-random": {
+      "flags": 16,
+      "other_subject_value": 9,
+      "other_subject_value_share": 0.5625,
+      "other_subject_value_and_nearby": 7,
+      "inside_hyphenated_word": 0
+    },
+    "base:last-chapter~prose": {
+      "flags": 16,
+      "other_subject_value": 10,
+      "other_subject_value_share": 0.625,
+      "other_subject_value_and_nearby": 9,
+      "inside_hyphenated_word": 1
+    },
+    "base:none": {
+      "flags": 16,
+      "other_subject_value": 1,
+      "other_subject_value_share": 0.0625,
+      "other_subject_value_and_nearby": 1,
+      "inside_hyphenated_word": 0
+    },
+    "base:rolling-summary": {
+      "flags": 16,
+      "other_subject_value": 10,
+      "other_subject_value_share": 0.625,
+      "other_subject_value_and_nearby": 8,
+      "inside_hyphenated_word": 1
+    },
+    "tuned:dsg-repair": {
+      "flags": 16,
+      "other_subject_value": 4,
+      "other_subject_value_share": 0.25,
+      "other_subject_value_and_nearby": 2,
+      "inside_hyphenated_word": 0
+    },
+    "tuned:dsg-state": {
+      "flags": 16,
+      "other_subject_value": 5,
+      "other_subject_value_share": 0.3125,
+      "other_subject_value_and_nearby": 1,
+      "inside_hyphenated_word": 2
+    },
+    "tuned:full-context": {
+      "flags": 16,
+      "other_subject_value": 8,
+      "other_subject_value_share": 0.5,
+      "other_subject_value_and_nearby": 1,
+      "inside_hyphenated_word": 4
+    }
+  },
+  "exposure_mentions_per_chapter": [
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:append-only-state",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 28.22833333333333
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:dsg-state",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 28.07
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:full-context",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 31.298333333333332
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:last-chapter",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 29.15
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:none",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 24.311666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:rolling-summary",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 32.45333333333333
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-repair",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 8.231666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-state",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 8.055
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:full-context",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 6.78
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 29.24
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid~prose",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 32.78
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 27.6
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter~prose",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 30.26
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 30.92
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid~prose",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 30.92
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 28.3
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter~prose",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 27.96
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 30.34
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid~prose",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 33.14
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 28.6
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter~prose",
+      "chapters": 50,
+      "subject_mentions_per_chapter": 29.3
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 31.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid~prose",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 36.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 35.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter~prose",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 35.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 20.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid~prose",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 32.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 24.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter~prose",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 32.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 20.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid~prose",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 31.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 23.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter~prose",
+      "chapters": 4,
+      "subject_mentions_per_chapter": 28.25
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 31.12
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid-repair",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 30.926666666666666
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-state",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 28.388333333333332
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:full-context",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 32.67666666666667
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:last-chapter",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 31.201666666666668
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:none",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 24.136666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 30.593333333333334
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid-repair",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 31.211666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-retrieval",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 28.471666666666668
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:full-context",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 31.165
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:last-chapter",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 31.075
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:none",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 24.468333333333334
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:full-context",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 29.885
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 28.601666666666667
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-graph",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 29.893333333333334
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-random",
+      "chapters": 600,
+      "subject_mentions_per_chapter": 31.335
+    }
+  ],
+  "exposure_by_kind": [
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:append-only-state",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.641666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:append-only-state",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.891666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:append-only-state",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.885
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:append-only-state",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.6466666666666665
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:append-only-state",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.603333333333333
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:dsg-state",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.836666666666666
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:dsg-state",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.085
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:dsg-state",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.8116666666666665
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:dsg-state",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.025
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:dsg-state",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.716666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:full-context",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 12.178333333333333
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:full-context",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.916666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:full-context",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.6216666666666666
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:full-context",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 7.183333333333334
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:full-context",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.396666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.423333333333334
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 3.87
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.98
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 6.546666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.488333333333333
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:none",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.025
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:none",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.111666666666666
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:none",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.3183333333333334
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:none",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 2.695
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:none",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.073333333333334
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:rolling-summary",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.671666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:rolling-summary",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.738333333333333
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:rolling-summary",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.935
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:rolling-summary",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 7.3966666666666665
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "base:rolling-summary",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.133333333333333
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-repair",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 3.5633333333333335
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-repair",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 1.515
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-repair",
+      "kind": "home",
+      "subject_mentions_per_chapter": 0.985
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-repair",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 0.8866666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-repair",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 4.363333333333333
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-state",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 3.4283333333333332
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-state",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 1.6383333333333334
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-state",
+      "kind": "home",
+      "subject_mentions_per_chapter": 0.945
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-state",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 0.8616666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:dsg-state",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 3.8583333333333334
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:full-context",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 3.171666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:full-context",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 1.2033333333333334
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:full-context",
+      "kind": "home",
+      "subject_mentions_per_chapter": 0.8816666666666667
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:full-context",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 0.82
+    },
+    {
+      "run": "gen-qwen3b-s30-c20",
+      "condition": "tuned:full-context",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 3.0116666666666667
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 12.76
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.7
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.48
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 4.78
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.84
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 14.52
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.9
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 5.16
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 3.66
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 14.76
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.3
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.26
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.86
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 4.22
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 11.12
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 14.14
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.8
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 4.28
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 2.82
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2",
+      "condition": "base:last-chapter~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.52
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 13.7
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.84
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.76
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.8
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.1
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 13.2
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.44
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 5.42
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 3.0
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.58
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 12.62
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.16
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 4.02
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 3.4
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.44
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 12.86
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.64
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.9
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 2.06
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v2",
+      "condition": "base:last-chapter~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.38
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 12.18
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.08
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid",
+      "kind": "home",
+      "subject_mentions_per_chapter": 4.18
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.28
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 11.64
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 13.46
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.88
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 5.02
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 4.68
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.42
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 12.4
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.62
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.36
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 3.86
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.2
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 12.7
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.26
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 4.56
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 2.64
+    },
+    {
+      "run": "gen-qwen7b-prose-s10-c5-r2-v3",
+      "condition": "base:last-chapter~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.38
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 3.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid",
+      "kind": "home",
+      "subject_mentions_per_chapter": 5.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 9.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 11.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 17.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 3.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 4.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 8.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 11.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 14.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 10.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 11.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 16.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 4.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 7.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke",
+      "condition": "base:last-chapter~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 11.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 9.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 2.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 2.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 9.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 13.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 6.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 4.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 9.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 4.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 10.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 15.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 6.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 3.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke2",
+      "condition": "base:last-chapter~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 9.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 2.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 2.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 9.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 9.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 7.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 6.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 6.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:dsg-hybrid~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 9.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 9.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.0
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 4.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 9.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter~prose",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 8.25
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter~prose",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 8.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter~prose",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.5
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter~prose",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.75
+    },
+    {
+      "run": "gen-qwen7b-prose-smoke3",
+      "condition": "base:last-chapter~prose",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 8.25
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.905
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 3.6866666666666665
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.7783333333333333
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 7.848333333333334
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.476666666666667
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid-repair",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.678333333333333
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid-repair",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.071666666666666
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid-repair",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.4
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid-repair",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 8.165
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-hybrid-repair",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.385
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-state",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.06
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-state",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.991666666666666
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-state",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.9983333333333335
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-state",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.035
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:dsg-state",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.978333333333333
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:full-context",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.691666666666666
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:full-context",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.6866666666666665
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:full-context",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.671666666666667
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:full-context",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 7.683333333333334
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:full-context",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.94
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.911666666666667
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.88
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.8866666666666667
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 6.605
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.2
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:none",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.916666666666666
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:none",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.05
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:none",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.2666666666666666
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:none",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 2.5183333333333335
+    },
+    {
+      "run": "gen-v3-hybrid",
+      "condition": "base:none",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.283333333333333
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.506666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.723333333333334
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.3466666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 6.235
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.538333333333334
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid-repair",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.746666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid-repair",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.116666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid-repair",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.026666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid-repair",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 6.595
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-hybrid-repair",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.536666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-retrieval",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.246666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-retrieval",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 6.338333333333333
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-retrieval",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.401666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-retrieval",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 4.456666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:beat-retrieval",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.381666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:full-context",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.285
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:full-context",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.216666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:full-context",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.4266666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:full-context",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 6.235
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:full-context",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.906666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.496666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.553333333333334
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 4.253333333333333
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.925
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 13.216666666666667
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:none",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.816666666666666
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:none",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.088333333333333
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:none",
+      "kind": "home",
+      "subject_mentions_per_chapter": 2.5383333333333336
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:none",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 2.615
+    },
+    {
+      "run": "gen-v4-retrieval",
+      "condition": "base:none",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.121666666666666
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:full-context",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.595
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:full-context",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.495
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:full-context",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.69
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:full-context",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.706666666666667
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:full-context",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 12.643333333333333
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 10.258333333333333
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 5.116666666666666
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.466666666666667
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 5.155
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 11.91
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-graph",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 9.768333333333333
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-graph",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 6.095
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-graph",
+      "kind": "home",
+      "subject_mentions_per_chapter": 3.7666666666666666
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-graph",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 6.441666666666666
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-graph",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 10.596666666666666
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-random",
+      "kind": "eyes",
+      "subject_mentions_per_chapter": 11.798333333333334
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-random",
+      "kind": "hair",
+      "subject_mentions_per_chapter": 4.755
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-random",
+      "kind": "home",
+      "subject_mentions_per_chapter": 4.596666666666667
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-random",
+      "kind": "metal",
+      "subject_mentions_per_chapter": 6.008333333333334
+    },
+    {
+      "run": "gen-v5-selection",
+      "condition": "base:last-chapter@bo4-random",
+      "kind": "trade",
+      "subject_mentions_per_chapter": 11.901666666666667
+    }
+  ]
+}

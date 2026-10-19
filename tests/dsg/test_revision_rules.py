@@ -10,23 +10,31 @@ until the classifier is fixed.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from dsg.schemas import Certainty, Op, Span
 from dsg.store import POLICIES, CandidateAssertion, NarrativeState
 
+RULE_VERSIONS = ("v1", "v2")
 
-def _state() -> NarrativeState:
-    s = NarrativeState(POLICIES["dsg-full"])
+_V2_NOT_BUILT = pytest.mark.xfail(
+    strict=True, raises=NotImplementedError, reason="revision rules v2 are built in phase 4c"
+)
+
+
+def _state(version: str = "v1", policy: str = "dsg-full") -> NarrativeState:
+    s = NarrativeState(replace(POLICIES[policy], revision_rules=version))
     s.step(0, 10_000)
     return s
 
 
 def _two_step(
     surface: str, predicate: str, before: tuple[str, str], after: tuple[str, str],
-    *, certainty_before: Certainty = Certainty.NARRATED,
+    *, certainty_before: Certainty = Certainty.NARRATED, version: str = "v1",
 ) -> tuple[Op, NarrativeState]:
-    s = _state()
+    s = _state(version)
     e = s.observe_entity(surface, Span(0, len(surface)))
     s.apply_assertion(
         CandidateAssertion(e, predicate, before[0], evidence=before[1],
@@ -35,6 +43,21 @@ def _two_step(
     s.step(1, 10_000)
     op = s.apply_assertion(CandidateAssertion(e, predicate, after[0], evidence=after[1]))
     return op, s
+
+
+def _by_version(cases: list, v1_defect: bool) -> list:
+    params = []
+    for case in cases:
+        for version in RULE_VERSIONS:
+            marks = []
+            if version == "v1" and v1_defect:
+                marks.append(pytest.mark.xfail(
+                    strict=True, reason="v1: any revelation marker forces REVISE"
+                ))
+            if version == "v2":
+                marks.append(_V2_NOT_BUILT)
+            params.append(pytest.param(version, *case, marks=marks, id=f"{version}-{case[0]}"))
+    return params
 
 
 # (surface, predicate, (earlier object, evidence), (later object, evidence)):
@@ -56,21 +79,33 @@ WORLD_CHANGES = [
 
 
 @pytest.mark.parametrize(
-    ("surface", "predicate", "before", "after"),
-    [
-        pytest.param(
-            *c,
-            marks=pytest.mark.xfail(
-                strict=True, reason="v1: any revelation marker forces REVISE"
-            ),
-        )
-        for c in WORLD_CHANGES
-    ],
-    ids=[c[0] for c in WORLD_CHANGES],
+    ("version", "surface", "predicate", "before", "after"),
+    _by_version(WORLD_CHANGES, v1_defect=True),
 )
-def test_v1_news_of_a_world_change_supersedes(surface, predicate, before, after):
-    op, _ = _two_step(surface, predicate, before, after)
+def test_news_of_a_world_change_supersedes(version, surface, predicate, before, after):
+    op, _ = _two_step(surface, predicate, before, after, version=version)
     assert op is Op.SUPERSEDE
+
+
+# Corrections that must stay REVISE under every rule version.
+CORRECTIONS = [
+    ("Pip", "location", ("the forge", "at the forge"),
+     ("London", "in fact he had never left London"), Certainty.NARRATED),
+    ("Pip", "location", ("Cairo", "he claimed"), ("Marseille", "he was"), Certainty.REPORTED),
+    ("Estella", "parent_of", ("Miss Havisham", "her mother"),
+     ("Magwitch", "her real father"), Certainty.NARRATED),
+]
+
+
+@pytest.mark.parametrize(
+    ("version", "surface", "predicate", "before", "after", "certainty_before"),
+    _by_version(CORRECTIONS, v1_defect=False),
+)
+def test_a_correction_revises(version, surface, predicate, before, after, certainty_before):
+    op, _ = _two_step(
+        surface, predicate, before, after, certainty_before=certainty_before, version=version
+    )
+    assert op is Op.REVISE
 
 
 @pytest.mark.parametrize(
@@ -144,8 +179,7 @@ def test_first_assertion_and_reinforcement_are_logged():
 
 
 def test_a_policy_that_cannot_revise_still_logs_the_rule_it_needed():
-    s = NarrativeState(POLICIES["append-only"])
-    s.step(0, 10_000)
+    s = _state(policy="append-only")
     e = s.observe_entity("Estella", Span(0, 7))
     s.apply_assertion(CandidateAssertion(e, "parent_of", "Miss Havisham", evidence="x"))
     s.step(1, 10_000)

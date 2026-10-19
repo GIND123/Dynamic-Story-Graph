@@ -1,0 +1,171 @@
+{
+  "runs": {
+    "pdnc": "artifacts/hub/proposals/pdnc-qwen7b-w3200",
+    "litbank": "artifacts/hub/proposals/litbank-qwen7b-w1200"
+  },
+  "policy": "dsg-full",
+  "census": {
+    "pdnc": {
+      "assert|": 7699,
+      "assert|assert:open-slot": 20063,
+      "elaborate|": 1306,
+      "elaborate|elaborate:provisional": 1263,
+      "elaborate|elaborate:refines": 4,
+      "elaborate|elaborate:underspecified": 9,
+      "merge_provisional|": 126,
+      "noop|": 73,
+      "noop|noop:reinforced": 2954,
+      "revise|revise:immutable": 43,
+      "revise|revise:reported-to-narrated": 27,
+      "revise|revise:revelation-marker": 3,
+      "supersede|supersede:mutable": 765,
+      "supersede|supersede:post-merge": 8
+    },
+    "litbank": {
+      "assert|": 2904,
+      "assert|assert:open-slot": 4197,
+      "elaborate|": 543,
+      "elaborate|elaborate:provisional": 61,
+      "merge_provisional|": 60,
+      "noop|": 8,
+      "noop|noop:reinforced": 146,
+      "revise|revise:immutable": 5,
+      "supersede|supersede:mutable": 83
+    }
+  },
+  "seed": 20261018,
+  "population_by_rule": {
+    "elaborate:provisional": 1324,
+    "supersede:mutable": 848,
+    "elaborate:underspecified": 9,
+    "revise:immutable": 48,
+    "revise:reported-to-narrated": 27,
+    "elaborate:refines": 4,
+    "revise:revelation-marker": 3
+  },
+  "population_by_corpus_rule": {
+    "litbank|elaborate:provisional": 61,
+    "litbank|revise:immutable": 5,
+    "litbank|supersede:mutable": 83,
+    "pdnc|elaborate:provisional": 1263,
+    "pdnc|elaborate:refines": 4,
+    "pdnc|elaborate:underspecified": 9,
+    "pdnc|revise:immutable": 43,
+    "pdnc|revise:reported-to-narrated": 27,
+    "pdnc|revise:revelation-marker": 3,
+    "pdnc|supersede:mutable": 765
+  },
+  "sampled_by_rule": {
+    "revise:immutable": 48,
+    "supersede:mutable": 122,
+    "elaborate:provisional": 37,
+    "elaborate:refines": 4,
+    "revise:reported-to-narrated": 27,
+    "elaborate:underspecified": 9,
+    "revise:revelation-marker": 3
+  },
+  "sampled_by_corpus": {
+    "pdnc": 200,
+    "litbank": 50
+  },
+  "sampled_by_reason": {
+    "census": 87,
+    "supersede": 115,
+    "marker": 35,
+    "provisional": 13
+  },
+  "provisional_share": 0.148,
+  "double_annotate": 50,
+  "double_by_rule": {
+    "revise:immutable": 10,
+    "supersede:mutable": 24,
+    "elaborate:provisional": 7,
+    "elaborate:underspecified": 2,
+    "revise:revelation-marker": 1,
+    "revise:reported-to-narrated": 5,
+    "elaborate:refines": 1
+  },
+  "markers": {
+    "\\bactually\\b": {
+      "population": 2,
+      "sampled": 2,
+      "provisional_group": "found_out"
+    },
+    "\\badmitted\\b": {
+      "population": 2,
+      "sampled": 2,
+      "provisional_group": "found_out"
+    },
+    "\\bconfess(?:ed|es)\\b": {
+      "population": 3,
+      "sampled": 3,
+      "provisional_group": "found_out"
+    },
+    "\\bdiscover(?:ed|s)\\b": {
+      "population": 5,
+      "sampled": 5,
+      "provisional_group": "found_out"
+    },
+    "\\bhad (?:always|never) been\\b": {
+      "population": 6,
+      "sampled": 6,
+      "provisional_group": "never_true"
+    },
+    "\\bin fact\\b": {
+      "population": 3,
+      "sampled": 3,
+      "provisional_group": "never_true"
+    },
+    "\\bmistaken\\b": {
+      "population": 3,
+      "sampled": 3,
+      "provisional_group": "never_true"
+    },
+    "\\bpretend(?:ed|ing)\\b": {
+      "population": 2,
+      "sampled": 2,
+      "provisional_group": "never_true"
+    },
+    "\\brealis(?:ed|es)\\b": {
+      "population": 2,
+      "sampled": 2,
+      "provisional_group": "found_out"
+    },
+    "\\breally was\\b": {
+      "population": 1,
+      "sampled": 1,
+      "provisional_group": "never_true"
+    },
+    "\\brevealed?\\b": {
+      "population": 1,
+      "sampled": 1,
+      "provisional_group": "found_out"
+    },
+    "\\bthe truth (?:was|is)\\b": {
+      "population": 2,
+      "sampled": 2,
+      "provisional_group": "never_true"
+    },
+    "\\bturn(?:ed|s) out\\b": {
+      "population": 2,
+      "sampled": 2,
+      "provisional_group": "never_true"
+    },
+    "\\bwas (?:never|not really)\\b": {
+      "population": 2,
+      "sampled": 2,
+      "provisional_group": "never_true"
+    }
+  },
+  "new_match_in_sample": {
+    "not_found": 88,
+    "exact": 150,
+    "fuzzy": 12
+  },
+  "old_match_in_sample": {
+    "not_found": 119,
+    "exact": 120,
+    "fuzzy": 11
+  },
+  "books_in_sample": 68
+}

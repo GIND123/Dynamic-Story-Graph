@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from dsg.generate.canon import CanonFact
+from dsg.generate.canon import DETECTOR_VERSIONS, CanonFact
 
 FACTS: dict[str, CanonFact] = {
     "miriam_eyes": CanonFact("f0", "Miriam", "eyes", "green", "Miriam has green eyes."),
@@ -77,34 +77,44 @@ RESTATED: list[tuple[str, str]] = [
 _V1_DEFECT = pytest.mark.xfail(
     strict=True, reason="v1 counts any vocabulary word inside the window"
 )
-
-
-def _ids(cases: list[tuple[str, str]]) -> list[str]:
-    return [f"{fact}:{text[:32]}" for fact, text in cases]
-
-
-@pytest.mark.parametrize(
-    ("fact", "text"), [pytest.param(*c, marks=_V1_DEFECT) for c in INNOCENT], ids=_ids(INNOCENT)
+# Removed when v2 lands; strict, so a v2 that passes forces its removal.
+_V2_NOT_BUILT = pytest.mark.xfail(
+    strict=True, raises=NotImplementedError, reason="detector v2 is built in phase 1c"
 )
-def test_v1_innocent_text_is_not_a_violation(fact, text):
-    violated, evidence = FACTS[fact].check(text)
+
+
+def _by_version(cases: list[tuple[str, str]], v1_defect: bool) -> list:
+    """Every case under every version: v1 may carry the known defect, v2 may not."""
+    params = []
+    for fact, text in cases:
+        for version in DETECTOR_VERSIONS:
+            marks = []
+            if version == "v1" and v1_defect:
+                marks.append(_V1_DEFECT)
+            if version == "v2":
+                marks.append(_V2_NOT_BUILT)
+            params.append(
+                pytest.param(version, fact, text, marks=marks, id=f"{version}-{fact}:{text[:32]}")
+            )
+    return params
+
+
+@pytest.mark.parametrize(("version", "fact", "text"), _by_version(INNOCENT, v1_defect=True))
+def test_innocent_text_is_not_a_violation(version, fact, text):
+    violated, evidence = FACTS[fact].check(text, version)
     assert not violated, evidence
 
 
-@pytest.mark.parametrize(("fact", "text"), VIOLATIONS, ids=_ids(VIOLATIONS))
-def test_v1_a_clear_violation_is_flagged(fact, text):
-    assert FACTS[fact].check(text)[0]
+@pytest.mark.parametrize(("version", "fact", "text"), _by_version(VIOLATIONS, v1_defect=False))
+def test_a_clear_violation_is_flagged(version, fact, text):
+    assert FACTS[fact].check(text, version)[0]
 
 
-@pytest.mark.parametrize(
-    ("fact", "text"),
-    [pytest.param(*c, marks=_V1_DEFECT) for c in NOT_RESTATED],
-    ids=_ids(NOT_RESTATED),
-)
-def test_v1_an_unrelated_use_of_the_true_value_is_not_a_restatement(fact, text):
-    assert not FACTS[fact].mentioned(text)
+@pytest.mark.parametrize(("version", "fact", "text"), _by_version(NOT_RESTATED, v1_defect=True))
+def test_an_unrelated_use_of_the_true_value_is_not_a_restatement(version, fact, text):
+    assert not FACTS[fact].mentioned(text, version)
 
 
-@pytest.mark.parametrize(("fact", "text"), RESTATED, ids=_ids(RESTATED))
-def test_v1_a_restatement_is_detected(fact, text):
-    assert FACTS[fact].mentioned(text)
+@pytest.mark.parametrize(("version", "fact", "text"), _by_version(RESTATED, v1_defect=False))
+def test_a_restatement_is_detected(version, fact, text):
+    assert FACTS[fact].mentioned(text, version)

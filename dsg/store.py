@@ -73,6 +73,9 @@ class PolicyConfig:
     weak_threshold: float = 0.3
     # How close the runner-up must be for the match to count as contested.
     ambiguity_margin: float = 0.15
+    # Which SUPERSEDE/REVISE rule set ``_classify`` applies. v1 is the rule set
+    # every published reading-study number used, kept unchanged.
+    revision_rules: str = "v1"
 
 
 POLICIES: dict[str, PolicyConfig] = {
@@ -476,6 +479,10 @@ class NarrativeState:
         self, existing: Assertion, obj: str, cand: CandidateAssertion, predicate: str
     ) -> tuple[Op, str]:
         """``_classify`` plus the name of the rule that decided, for the log."""
+        if self.policy.revision_rules == "v2":
+            raise NotImplementedError("revision rules v2 are built in audit phase 4c")
+        if self.policy.revision_rules != "v1":
+            raise ValueError(f"unknown revision rules {self.policy.revision_rules!r}")
         if is_underspecified(existing.object):
             return Op.ELABORATE, "elaborate:underspecified"
         if refines(existing.object, obj):

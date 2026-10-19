@@ -48,6 +48,18 @@ def _forms(value: str) -> tuple[str, ...]:
     return (value,) + _ALIASES.get(value, ())
 
 
+# Detector versions. v1 is the proximity test every published number used; it is
+# kept unchanged so those numbers stay reproducible.
+DETECTOR_VERSIONS: tuple[str, ...] = ("v1", "v2")
+
+
+def _require_version(version: str) -> None:
+    if version not in DETECTOR_VERSIONS:
+        raise ValueError(f"unknown detector version {version!r}")
+    if version == "v2":
+        raise NotImplementedError("detector v2 is built in audit phase 1c")
+
+
 @dataclass(frozen=True, slots=True)
 class CanonFact:
     """One planted, checkable fact."""
@@ -71,13 +83,14 @@ class CanonFact:
         alt = "|".join(re.escape(w) for w in words)
         return re.compile(rf"(?<!\w)({alt})(?!\w)", re.IGNORECASE)
 
-    def check(self, text: str) -> tuple[bool, str]:
+    def check(self, text: str, version: str = "v1") -> tuple[bool, str]:
         """Return (violated, evidence).
 
         A violation requires a contradicting value *near a mention of the
         subject*: proximity is what makes the test about this character rather
         than about the chapter's vocabulary at large.
         """
+        _require_version(version)
         subject_re = re.compile(rf"(?<!\w){re.escape(self.subject)}(?!\w)", re.IGNORECASE)
         bad = self._pattern(self.contradictions())
         good = self._pattern(_forms(self.value))
@@ -95,8 +108,9 @@ class CanonFact:
             return True, " ".join(span[max(0, hit.start() - 90) : hit.end() + 90].split())
         return False, ""
 
-    def mentioned(self, text: str) -> bool:
+    def mentioned(self, text: str, version: str = "v1") -> bool:
         """Whether the story restates the fact correctly at all."""
+        _require_version(version)
         subject_re = re.compile(rf"(?<!\w){re.escape(self.subject)}(?!\w)", re.IGNORECASE)
         good = self._pattern(_forms(self.value))
         for m in subject_re.finditer(text):
@@ -241,14 +255,16 @@ class CanonReport:
         return len(self.violations)
 
 
-def check_chapter(premise: Premise, text: str, chapter: int) -> CanonReport:
+def check_chapter(
+    premise: Premise, text: str, chapter: int, version: str = "v1"
+) -> CanonReport:
     violations, restated, evidence = [], [], {}
     for fact in premise.canon:
-        bad, why = fact.check(text)
+        bad, why = fact.check(text, version)
         if bad:
             violations.append(fact.fact_id)
             evidence[fact.fact_id] = why
-        if fact.mentioned(text):
+        if fact.mentioned(text, version):
             restated.append(fact.fact_id)
     return CanonReport(chapter=chapter, violations=violations,
                        restated=restated, evidence=evidence)
