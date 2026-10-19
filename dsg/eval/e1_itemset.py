@@ -8,10 +8,10 @@ rescores the stored replies -- no model is run -- on both item sets, with the
 same answer parser and scorer the run used, and checks that the all-items
 figures reproduce the reported ones.
 
-    python -m dsg.eval.e1_itemset \\
-        --raw ../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-full-raw.json \\
-        --scored ../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-full.json \\
-        --out audit/e1/published_itemset.json
+    python -m dsg.eval.e1_itemset --out audit/e1/published_itemset_v3.json
+
+``--raw`` and ``--scored`` take a path or a name from ``audit/e1/hub_manifest.json``
+(default: the v3 run), resolved by ``dsg.eval.e1_artifacts``.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from pathlib import Path
 
 from dsg.eval.attribution import score_attribution
 from dsg.eval.attribution_run import parse_answer
+from dsg.eval.e1_artifacts import resolve
 from dsg.eval.multiplicity import ALPHA, N_BOOT, _draws, _interval, bootstrap_p
 from dsg.eval.provenance import record as provenance
 
@@ -96,12 +97,14 @@ def rescore(raw: dict, pdnc_root: Path, condition: str) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="dsg.eval.e1_itemset", description=__doc__)
-    p.add_argument("--raw", type=Path, required=True)
-    p.add_argument("--scored", type=Path, required=True, help="the run's own scored file")
+    p.add_argument("--raw", default="e1-qwen7b-v3-raw.json",
+                   help="a path, or a name from audit/e1/hub_manifest.json")
+    p.add_argument("--scored", default="e1-qwen7b-v3.json", help="the run's own scored file")
     p.add_argument("--pdnc", type=Path, default=Path("data/pdnc/data"))
     p.add_argument("--condition", default="text-causal")
     p.add_argument("--out", type=Path, default=Path("audit/e1/published_itemset.json"))
     args = p.parse_args(argv)
+    args.raw, args.scored = resolve(args.raw), resolve(args.scored)
     raw = json.loads(args.raw.read_text())
     result = rescore(raw, args.pdnc, args.condition)
     scored = json.loads(args.scored.read_text())["per_novel"]

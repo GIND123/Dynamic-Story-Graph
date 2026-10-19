@@ -53,13 +53,19 @@ def score_raw(blob: dict) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--raw", type=Path, required=True)
+    ap.add_argument("--raw", required=True,
+                    help="a path, or a name from audit/e1/hub_manifest.json")
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
 
-    blob = json.loads(args.raw.read_text())
+    from dsg.eval.e1_artifacts import resolve
+
+    named = not Path(args.raw).exists()
+    raw_path = resolve(args.raw)
+    blob = json.loads(raw_path.read_text())
     scored = score_raw(blob)
-    dest = args.out or args.raw.with_name(args.raw.name.replace("-raw", ""))
+    stem = Path(args.raw).name.replace("-raw", "")
+    dest = args.out or (Path("artifacts/e1") / stem if named else raw_path.with_name(stem))
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(scored, indent=2))
 

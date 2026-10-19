@@ -1,0 +1,57 @@
+{
+  "repo": "GOVINDFROM/dsg-artifacts",
+  "repo_type": "model",
+  "revision": "d5608956ae87944a6a13c6967944b8f38eeed20a",
+  "uploaded": "2026-10-19",
+  "files": [
+    {
+      "name": "cloze-qwen7b.json",
+      "hub_path": "e1/cloze-qwen7b.json",
+      "bytes": 2190,
+      "sha256": "8e7120496c9acd2b71336e07a41e925ff414cd1c90d5988f17872bc8a888c4b4",
+      "mtime": "2026-09-08T20:53:04-04:00"
+    },
+    {
+      "name": "e1-qwen7b-full-raw.json",
+      "hub_path": "e1/e1-qwen7b-full-raw.json",
+      "bytes": 17198848,
+      "sha256": "8207b3123d6c6a3a28b735105eedd5f063812847c8061d1041c04d05c14e3b8c",
+      "mtime": "2026-09-08T21:16:03-04:00"
+    },
+    {
+      "name": "e1-qwen7b-full.json",
+      "hub_path": "e1/e1-qwen7b-full.json",
+      "bytes": 60905,
+      "sha256": "98074f7418994ce52efb078e777d91681459f4ef4e541ae908601f0756194b3a",
+      "mtime": "2026-09-08T21:16:22-04:00"
+    },
+    {
+      "name": "e1-qwen7b-v3-raw.json",
+      "hub_path": "e1/e1-qwen7b-v3-raw.json",
+      "bytes": 24674096,
+      "sha256": "c056ca548c14cd5f5f5017c757df4b94bcc59a7a22b08ad6ba64584eeedaa592",
+      "mtime": "2026-09-08T22:36:42-04:00"
+    },
+    {
+      "name": "e1-qwen7b-v3.json",
+      "hub_path": "e1/e1-qwen7b-v3.json",
+      "bytes": 85057,
+      "sha256": "1a77d1da20701711f2134930dce622d28a749e09dae0301a15a4f631b17c5102",
+      "mtime": "2026-09-08T22:36:57-04:00"
+    },
+    {
+      "name": "e1-smoke-raw.json",
+      "hub_path": "e1/e1-smoke-raw.json",
+      "bytes": 37981,
+      "sha256": "b8a7b766ab78bbcddcefa8cc39a940db3dca59989976be12495f018455737fac",
+      "mtime": "2026-09-08T20:25:03-04:00"
+    },
+    {
+      "name": "e1-smoke.json",
+      "hub_path": "e1/e1-smoke.json",
+      "bytes": 3987,
+      "sha256": "fffac0b06634c2fa7590ac9a9ae9cc3c488d1e3389695df3255cba55802ed1cb",
+      "mtime": "2026-09-08T20:25:13-04:00"
+    }
+  ]
+}

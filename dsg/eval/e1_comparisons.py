@@ -8,10 +8,10 @@ after the arms were seen; see FAMILY). Only pairs whose arms both exist in the r
 the family. Per-novel accuracies are rescored from the stored replies with the
 current parser and asserted equal to the run's own scored file.
 
-    python -m dsg.eval.e1_comparisons \\
-        --raw ../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-v3-raw.json \\
-        --scored ../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-v3.json \\
-        --out audit/e1/v3_comparisons.json
+    python -m dsg.eval.e1_comparisons --out audit/e1/v3_comparisons.json
+
+``--raw`` and ``--scored`` take a path or a name from ``audit/e1/hub_manifest.json``
+(default: the v3 run), resolved by ``dsg.eval.e1_artifacts``.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ import json
 from pathlib import Path
 
 from dsg.eval.attribution_score import score_raw
+from dsg.eval.e1_artifacts import resolve
 from dsg.eval.multiplicity import ALPHA, N_BOOT, SEED, _draws, _interval, bootstrap_p, holm
 from dsg.eval.provenance import record as provenance
 
@@ -91,10 +92,11 @@ def reply_identity(blob: dict, base: str = "text-causal") -> dict[str, float]:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="dsg.eval.e1_comparisons", description=__doc__)
-    p.add_argument("--raw", type=Path, required=True)
-    p.add_argument("--scored", type=Path, required=True)
+    p.add_argument("--raw", default="e1-qwen7b-v3-raw.json")
+    p.add_argument("--scored", default="e1-qwen7b-v3.json")
     p.add_argument("--out", type=Path, required=True)
     args = p.parse_args(argv)
+    args.raw, args.scored = resolve(args.raw), resolve(args.scored)
     blob = json.loads(args.raw.read_text())
     per_novel = score_raw(blob)["per_novel"]
     stored = json.loads(args.scored.read_text())["per_novel"]
