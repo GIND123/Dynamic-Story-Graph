@@ -3,7 +3,8 @@
 The family is the six contrasts ``dsg.eval.attribution_report.comparisons``
 defines, plus ``state-causal`` vs ``state-shuffled``: the placebo contrast
 METHODOLOGY_V2 §2.4 names as the one that isolates the state's content, which
-the report never computed. Only pairs whose arms both exist in the run are in
+the report never computed, and ``oracle-noncausal`` vs ``text-causal`` (added
+after the arms were seen; see FAMILY). Only pairs whose arms both exist in the run are in
 the family. Per-novel accuracies are rescored from the stored replies with the
 current parser and asserted equal to the run's own scored file.
 
@@ -31,6 +32,10 @@ FAMILY = (
     ("recency", "prior"),
     ("oracle-noncausal", "state-causal"),
     ("state-causal", "state-shuffled"),
+    # Added 2026-10-19, after the arms were seen: the report prices causality as
+    # oracle minus state-causal, which folds in the state penalty; oracle minus
+    # text-causal is the price with the evidence otherwise held equal.
+    ("oracle-noncausal", "text-causal"),
 )
 
 
