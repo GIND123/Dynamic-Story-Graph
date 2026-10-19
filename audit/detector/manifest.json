@@ -1,4 +1,27 @@
 {
+  "provenance": {
+    "command": "python -m dsg.eval.detector_audit export --generation artifacts/hub/generation --out audit/detector --seed 20261018",
+    "seeds": {
+      "sample": 20261018
+    },
+    "git": {
+      "commit": "5ffd3099cbbaf385ecc82a01185935500efe11e6",
+      "dsg_tree_dirty": false
+    },
+    "python": "3.13.9",
+    "inputs": {
+      "artifacts/hub/generation/gen-qwen3b-s30-c20.json": "8a278906faf6e4a5d6f87faf4d7bb164adf1a77bf062d9a3f09d033b1acdb541",
+      "artifacts/hub/generation/gen-qwen7b-prose-s10-c5-r2-v2.json": "879108ee8b653a649e8162b79f3d78111c3239032bf168626c0514702539ac79",
+      "artifacts/hub/generation/gen-qwen7b-prose-s10-c5-r2-v3.json": "67c5cad56109259fb40b2db6feb313577bc7de27bb0cfccf6240f1aa2b4d45e1",
+      "artifacts/hub/generation/gen-qwen7b-prose-s10-c5-r2.json": "caa84d6be238a801d3705b701c8119f06e360e0e89360b72afc4e76a7074d1b5",
+      "artifacts/hub/generation/gen-qwen7b-prose-smoke.json": "9fc89493c642821b54020b3bf7b049cab6a8442a8114baf9679dd511ad3b12e8",
+      "artifacts/hub/generation/gen-qwen7b-prose-smoke2.json": "4cb11f3f61ca0ff0e71cb029d4384cf0ae7bf036bab90c40938d762dcf478591",
+      "artifacts/hub/generation/gen-qwen7b-prose-smoke3.json": "6438b4f65fc05a9b36ce96f103a60e97af5db8c0899cd0dd43e2d9d7f9c772c7",
+      "artifacts/hub/generation/gen-v3-hybrid.json": "aa3edae56001f255208f63241662052d1c45a5d5d6a9825a579f3432b1322e9d",
+      "artifacts/hub/generation/gen-v4-retrieval.json": "08909964e5dfb1e35708555d071b61cabe90d4dad2cbb3c0a35537b636391779",
+      "artifacts/hub/generation/gen-v5-selection.json": "4f4123f1ef1beba6cf1b997944e67f342e23b796240155d2dca45286efa64321"
+    }
+  },
   "seed": 20261018,
   "runs": [
     "gen-qwen3b-s30-c20",
@@ -21,6 +44,34 @@
     "flagged_violation": 300,
     "flagged_restatement": 100,
     "unflagged_mention": 150
+  },
+  "recall_population": {
+    "attribute_cue": 47372,
+    "random": 386885,
+    "out_of_vocab_value": 5431,
+    "suppressed_by_true_value": 994,
+    "vocab_value_in_sentence": 6
+  },
+  "recall_population_by_kind": {
+    "eyes|attribute_cue": 27057,
+    "eyes|out_of_vocab_value": 1582,
+    "eyes|random": 81751,
+    "eyes|suppressed_by_true_value": 601,
+    "eyes|vocab_value_in_sentence": 6,
+    "hair|attribute_cue": 5518,
+    "hair|out_of_vocab_value": 1794,
+    "hair|random": 60605,
+    "hair|suppressed_by_true_value": 18,
+    "home|attribute_cue": 2887,
+    "home|random": 44784,
+    "metal|attribute_cue": 6076,
+    "metal|out_of_vocab_value": 1437,
+    "metal|random": 53134,
+    "metal|suppressed_by_true_value": 321,
+    "trade|attribute_cue": 5834,
+    "trade|out_of_vocab_value": 618,
+    "trade|random": 146611,
+    "trade|suppressed_by_true_value": 54
   },
   "design": {
     "flagged_violation": [
@@ -1326,723 +1377,122 @@
     "unflagged_mention": [
       {
         "stratum": [
-          "base:append-only-state",
-          "eyes"
+          "eyes",
+          "attribute_cue"
         ],
-        "population": 3595,
-        "sampled": 2
+        "population": 27057,
+        "sampled": 8
       },
       {
         "stratum": [
-          "base:append-only-state",
-          "hair"
+          "eyes",
+          "out_of_vocab_value"
         ],
-        "population": 2733,
-        "sampled": 2
+        "population": 1582,
+        "sampled": 8
       },
       {
         "stratum": [
-          "base:append-only-state",
-          "home"
+          "eyes",
+          "suppressed_by_true_value"
         ],
-        "population": 1731,
-        "sampled": 2
+        "population": 601,
+        "sampled": 8
       },
       {
         "stratum": [
-          "base:append-only-state",
-          "metal"
+          "eyes",
+          "vocab_value_in_sentence"
         ],
-        "population": 1921,
-        "sampled": 2
+        "population": 6,
+        "sampled": 6
       },
       {
         "stratum": [
-          "base:append-only-state",
-          "trade"
+          "hair",
+          "attribute_cue"
         ],
-        "population": 4836,
-        "sampled": 2
+        "population": 5518,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:beat-hybrid",
-          "eyes"
+          "hair",
+          "out_of_vocab_value"
         ],
-        "population": 3983,
-        "sampled": 2
+        "population": 1794,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:beat-hybrid",
-          "hair"
+          "hair",
+          "suppressed_by_true_value"
         ],
-        "population": 2830,
-        "sampled": 2
+        "population": 18,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:beat-hybrid",
-          "home"
+          "home",
+          "attribute_cue"
         ],
-        "population": 2008,
-        "sampled": 2
+        "population": 2887,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:beat-hybrid",
-          "metal"
+          "metal",
+          "attribute_cue"
         ],
-        "population": 3047,
-        "sampled": 2
+        "population": 6076,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:beat-hybrid",
-          "trade"
-        ],
-        "population": 6760,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-hybrid-repair",
-          "eyes"
-        ],
-        "population": 3749,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-hybrid-repair",
-          "hair"
-        ],
-        "population": 3062,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-hybrid-repair",
-          "home"
-        ],
-        "population": 1816,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-hybrid-repair",
-          "metal"
-        ],
-        "population": 3570,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-hybrid-repair",
-          "trade"
-        ],
-        "population": 6921,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-retrieval",
-          "eyes"
-        ],
-        "population": 4380,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-retrieval",
-          "hair"
-        ],
-        "population": 3584,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-retrieval",
-          "home"
-        ],
-        "population": 1441,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-retrieval",
-          "metal"
-        ],
-        "population": 1760,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:beat-retrieval",
-          "trade"
-        ],
-        "population": 7231,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid",
-          "eyes"
-        ],
-        "population": 5219,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid",
-          "hair"
-        ],
-        "population": 2885,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid",
-          "home"
-        ],
-        "population": 2882,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid",
-          "metal"
-        ],
-        "population": 4208,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid",
-          "trade"
-        ],
-        "population": 7909,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid-repair",
-          "eyes"
-        ],
-        "population": 3228,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid-repair",
-          "hair"
-        ],
-        "population": 2404,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid-repair",
-          "home"
-        ],
-        "population": 2040,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid-repair",
-          "metal"
-        ],
-        "population": 3623,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid-repair",
-          "trade"
-        ],
-        "population": 5905,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-hybrid~prose",
-          "eyes"
+          "metal",
+          "out_of_vocab_value"
         ],
         "population": 1437,
-        "sampled": 2
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:dsg-hybrid~prose",
-          "hair"
+          "metal",
+          "suppressed_by_true_value"
         ],
-        "population": 792,
-        "sampled": 2
+        "population": 321,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:dsg-hybrid~prose",
-          "home"
+          "trade",
+          "attribute_cue"
         ],
-        "population": 846,
-        "sampled": 2
+        "population": 5834,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:dsg-hybrid~prose",
-          "metal"
+          "trade",
+          "out_of_vocab_value"
         ],
-        "population": 498,
-        "sampled": 2
+        "population": 618,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:dsg-hybrid~prose",
-          "trade"
+          "trade",
+          "suppressed_by_true_value"
         ],
-        "population": 1947,
-        "sampled": 2
+        "population": 54,
+        "sampled": 7
       },
       {
         "stratum": [
-          "base:dsg-state",
-          "eyes"
+          "random"
         ],
-        "population": 7684,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-state",
-          "hair"
-        ],
-        "population": 5345,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-state",
-          "home"
-        ],
-        "population": 3486,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-state",
-          "metal"
-        ],
-        "population": 3778,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:dsg-state",
-          "trade"
-        ],
-        "population": 11083,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:full-context",
-          "eyes"
-        ],
-        "population": 15359,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:full-context",
-          "hair"
-        ],
-        "population": 11275,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:full-context",
-          "home"
-        ],
-        "population": 8046,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:full-context",
-          "metal"
-        ],
-        "population": 11838,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:full-context",
-          "trade"
-        ],
-        "population": 24793,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter",
-          "eyes"
-        ],
-        "population": 21103,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter",
-          "hair"
-        ],
-        "population": 11409,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter",
-          "home"
-        ],
-        "population": 9353,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter",
-          "metal"
-        ],
-        "population": 11565,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter",
-          "trade"
-        ],
-        "population": 29629,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-graph",
-          "eyes"
-        ],
-        "population": 4846,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-graph",
-          "hair"
-        ],
-        "population": 3569,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-graph",
-          "home"
-        ],
-        "population": 2260,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-graph",
-          "metal"
-        ],
-        "population": 3208,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-graph",
-          "trade"
-        ],
-        "population": 6026,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-random",
-          "eyes"
-        ],
-        "population": 6319,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-random",
-          "hair"
-        ],
-        "population": 2688,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-random",
-          "home"
-        ],
-        "population": 2758,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-random",
-          "metal"
-        ],
-        "population": 3246,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter@bo4-random",
-          "trade"
-        ],
-        "population": 6803,
-        "sampled": 2
-      },
-      {
-        "stratum": [
-          "base:last-chapter~prose",
-          "eyes"
-        ],
-        "population": 1705,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:last-chapter~prose",
-          "hair"
-        ],
-        "population": 717,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:last-chapter~prose",
-          "home"
-        ],
-        "population": 682,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:last-chapter~prose",
-          "metal"
-        ],
-        "population": 349,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:last-chapter~prose",
-          "trade"
-        ],
-        "population": 1924,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:none",
-          "eyes"
-        ],
-        "population": 17902,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:none",
-          "hair"
-        ],
-        "population": 8863,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:none",
-          "home"
-        ],
-        "population": 4274,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:none",
-          "metal"
-        ],
-        "population": 3523,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:none",
-          "trade"
-        ],
-        "population": 19224,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:rolling-summary",
-          "eyes"
-        ],
-        "population": 4702,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:rolling-summary",
-          "hair"
-        ],
-        "population": 3292,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:rolling-summary",
-          "home"
-        ],
-        "population": 2361,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:rolling-summary",
-          "metal"
-        ],
-        "population": 3406,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "base:rolling-summary",
-          "trade"
-        ],
-        "population": 5579,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-repair",
-          "eyes"
-        ],
-        "population": 1985,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-repair",
-          "hair"
-        ],
-        "population": 854,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-repair",
-          "home"
-        ],
-        "population": 591,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-repair",
-          "metal"
-        ],
-        "population": 506,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-repair",
-          "trade"
-        ],
-        "population": 2571,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-state",
-          "eyes"
-        ],
-        "population": 1925,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-state",
-          "hair"
-        ],
-        "population": 924,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-state",
-          "home"
-        ],
-        "population": 567,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-state",
-          "metal"
-        ],
-        "population": 484,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:dsg-state",
-          "trade"
-        ],
-        "population": 2202,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:full-context",
-          "eyes"
-        ],
-        "population": 1876,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:full-context",
-          "hair"
-        ],
-        "population": 709,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:full-context",
-          "home"
-        ],
-        "population": 529,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:full-context",
-          "metal"
-        ],
-        "population": 438,
-        "sampled": 1
-      },
-      {
-        "stratum": [
-          "tuned:full-context",
-          "trade"
-        ],
-        "population": 1774,
-        "sampled": 1
+        "population": 386885,
+        "sampled": 50
       }
     ]
   },

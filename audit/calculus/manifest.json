@@ -1,4 +1,145 @@
 {
+  "provenance": {
+    "command": "python -m dsg.eval.calculus_audit export --out audit/calculus --seed 20261018",
+    "seeds": {
+      "sample": 20261018
+    },
+    "git": {
+      "commit": "5ffd3099cbbaf385ecc82a01185935500efe11e6",
+      "dsg_tree_dirty": false
+    },
+    "python": "3.13.9",
+    "inputs": {
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1023_bleak_house_brat.jsonl": "48639d405c04cfadbc0b0516376943cc19fd4dbf1d869b66e39313f9b0d15750",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/105_persuasion_brat.jsonl": "7982374e741b3dad0439b7a0d0db60f7774550edbab437c4d7f4dcee3237e363",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1064_the_masque_of_the_red_death_brat.jsonl": "0795f770e1065d575354ba34805609cc6c718521ba8e50231699a39a2c5e9b28",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/110_tess_of_the_durbervilles_a_pure_woman_brat.jsonl": "ed3b0ddab417a8242d9ca2d4adaabcaa74600bea20a5a02cb7085e34c94dc6db",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/11231_bartleby_the_scrivener_a_story_of_wallstreet_brat.jsonl": "6a7c095c9e800f9c4cf5d0e3e19ccbd3f316726a2a10406e70c107e82538a07a",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/113_the_secret_garden_brat.jsonl": "95a560b35499a3077b65ffcca5fb49f1b0c8c0b4e900f65880d8a060fa3fae29",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1155_the_secret_adversary_brat.jsonl": "d163c82afd7ee0390ba38f06d014f67d6fdf9c5319b76af7cb8b8e3e7cf8e5d8",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/11_alices_adventures_in_wonderland_brat.jsonl": "8d3d486688b81f4f349ce2d3477791a597694be71b08adf9c2d67d6c023ef3c1",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1206_the_flying_u_ranch_brat.jsonl": "e1f8088cd320ecca10d8bf04921fd045211dd66c64f16042696aaf6f6e69d7ee",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/120_treasure_island_brat.jsonl": "1a8fb337858c14ef8673667bb2fd2edec714b61ccb854b7198cc6eb402ed8e72",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1245_night_and_day_brat.jsonl": "142f0b7dbca270d7bc86f2c2085f4e58598af3474ced33fb5da19f0b0856c4ff",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1260_jane_eyre_an_autobiography_brat.jsonl": "1d6fc352e940bb62ebda439a44ddd3183eb6bb687d0a8354445264d68f7873fb",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/12677_personality_plus_some_experiences_of_emma_mcchesney_and_her_son_jock_brat.jsonl": "72b3396f3c02bfbca9ce36f8b79b2c504d1606e7420bfd0a825f6358f533e736",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1327_elizabeth_and_her_german_garden_brat.jsonl": "8faab565107f9e39787690047d9ff1cb6890d28a7f8e85a6b27f35ab8c479aa3",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1342_pride_and_prejudice_brat.jsonl": "3a548d054922f3f6189c825ad65646cbe73e86f59865589075e815d511f112fc",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1400_great_expectations_brat.jsonl": "10f057b7f9fb58906c9ff2d251d7bebc385717681a45054ee1fea7ab1b6cb132",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/145_middlemarch_brat.jsonl": "025c29e0cf7fcddf002c450a948c07864b30988d85711222d8bd42a7838b57f7",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/15265_the_quest_of_the_silver_fleece_a_novel_brat.jsonl": "a63fa0331e556917d42642a796a36b2991e945cfa2f1b99a28aaef7d0ac6f11c",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/155_the_moonstone_brat.jsonl": "4e3a5a1aece41c75fdbe2db3438515e7e2807b25a4709101aa85312c05d08f3d",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/158_emma_brat.jsonl": "4426adda1afff0303bac06985e94ab056b5d0d533193fd3d108a75a54c13ab78",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/160_the_awakening_and_selected_short_stories_brat.jsonl": "d875d9a9eb665eb50ef0c5657a8df7f6cbf1284e8f3ae31ac1132b0f001b3e5e",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/16357_mary_a_fiction_brat.jsonl": "19b48f2a1da4f35283e6fa8f2071577a7083d124b347b8c2ef1e7e5054566e3b",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1661_the_adventures_of_sherlock_holmes_brat.jsonl": "fd0ae13b489b1a939f5eca48976ea2c66bc2171b4bc46c7376e6a45505e6d836",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/1695_the_man_who_was_thursday_a_nightmare_brat.jsonl": "fbdc2ec474a104001bf687ceefb5a1ef1c74d1683753ab2b5c32907b441c7d1d",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/171_charlotte_temple_brat.jsonl": "d91fbd91da7878f262c311d395b724b5b7ed5571c5d7a0f8f87221b6c36dbb1a",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/174_the_picture_of_dorian_gray_brat.jsonl": "c7ecb3419bca28d019165e137548b3ef5a5bc1caa5e0d0a43afc484a10392975",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/18581_adrift_in_new_york_tom_and_florence_braving_the_world_brat.jsonl": "f87a2796ea8adefdcc9fef33e82a8288e1d712146100b3f18b30dd662ed58eea",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2005_piccadilly_jim_brat.jsonl": "3cb6d61f6db4663b8eac5fb1a2211ee7d969c71856336a1152a7c2ab4ffa1727",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2084_the_way_of_all_flesh_brat.jsonl": "356d6125331b64b3acec2509a06b67229331c19d148894d71777b25a757f5ce7",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/208_daisy_miller_a_study_brat.jsonl": "ed9d4f93d1b966d108da4f3a4fa06f42b7f58733543b6c3bf570458208a9f08e",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2095_clotelle_a_tale_of_the_southern_states_brat.jsonl": "adae700cc0dd39301e15168dbc7f3e03a3e3718aae7a5aa5d24f3273faca5439",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/209_the_turn_of_the_screw_brat.jsonl": "8bae214e70947fc22121f111086c701d4a9f5fa7c78cf6c34a80433f334c990e",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/215_the_call_of_the_wild_brat.jsonl": "04fd6892e6b0fd18ca6380289e31383de42d8bb2495210ffe613be8ee3e5fd12",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2166_king_solomons_mines_brat.jsonl": "a128a2da49453bff174f40e09f04a719bc187ca3c2d37e9f593fd61e9b349a79",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/217_sons_and_lovers_brat.jsonl": "5e6c6642f46f64caa25f10090e3866c5a4d05f74a178f2f533a3e7d9d32d0964",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/219_heart_of_darkness_brat.jsonl": "fb18b42098a30df753985146edf1c7aba432c04f2357d0f221bbada2f3868ce2",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/233_sister_carrie_a_novel_brat.jsonl": "cb884906abf2bae7fbcfb478dd1fdc9c0f596d51bb3aa7e785245d81711ad9b0",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/238_dear_enemy_brat.jsonl": "17ee356f7fc50eda3793f9dce3203202bdef77765353266b35cb9a8accb06ef1",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2489_moby_dick_brat.jsonl": "ae297fdbc4bd8f1396b66f65eb799656b64bf5dfe1e1178dc4f275903bfdd4a8",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/24_o_pioneers_brat.jsonl": "c8ed2d1003cee9e12d1b1fe7eeb53aff2e610b9cdc4e93f15b8cd19d83e25b6f",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2641_a_room_with_a_view_brat.jsonl": "b00b9672023da0e710c50d1ef032d457bd97441dd5235aa662beb12bec22c999",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/271_black_beauty_brat.jsonl": "2bd1d17dcc3adebaa1f5486d196547d2515bb66e90d014929591c59e610e1aa3",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2775_the_good_soldier_brat.jsonl": "298ba3c18dec168653c4e85ada673a7735d8ec76cccc8f988f28137fc0733fbe",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/27_far_from_the_madding_crowd_brat.jsonl": "c5402b253e41f150b34313e438aeed3c0b37677197dd0f6bf67d6d40d34f93f8",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2807_to_have_and_to_hold_brat.jsonl": "9649510d4cd8da551b2392b33f53029b3d31e1e3b492ff3631b62b016faf85e3",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2814_dubliners_brat.jsonl": "4216ae429e458409220d0853f7f5ec422cdfbaa8c3a481a81193c4ea383bb37c",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2852_the_hound_of_the_baskervilles_brat.jsonl": "87a9dfb85e9d06eabc5fd5c0e722a35bfe9bfa7afdc010849fc0035c001439e9",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/2891_howards_end_brat.jsonl": "886f8a045ce855500ca1b8232d748238b110f6a132875716d6220102fee4586b",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/3268_the_mysteries_of_udolpho_brat.jsonl": "8c589c311fb37137ff161c97b97683e2048b742546b8ca44ef21d4c2827136b0",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/32_herland_brat.jsonl": "ddad32bccdda6d83a702ea3a8e49ba5e12b69e892064e181ea8c801df3583c6f",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/33_the_scarlet_letter_brat.jsonl": "d9fef09005bd937197a44954eee1abad46f83a47efbc7e783e3ba9a8e8a3a111",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/3457_the_man_of_the_forest_brat.jsonl": "517109dc91e0d031e323a01f93fde125dbb5bef7f97d6c052f121d9857311608",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/345_dracula_brat.jsonl": "08e8a0127070a46e4127e05ccb13e27a7b0a6226318b8c1af9b269028912176e",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/351_of_human_bondage_brat.jsonl": "aea4967f564664cf605702c5cb79f77acfe7667a8794aeb06922d32015ca0209",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/367_country_of_the_pointed_firs_brat.jsonl": "86cb58ba06388813538510f95a9a670381c36fbc55eb2acc524f03a5e7da2acb",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/36_the_war_of_the_worlds_brat.jsonl": "ca282075c7ea864a1419ed2012e6b5af7af81a91e32559532d09b468f8d32d2a",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/4051_lady_bridget_in_the_nevernever_land_a_story_of_australian_life_brat.jsonl": "5b50ff85801a12e10f591d82e913ff828c9db845c9c8513f5e287d4fc7d4e5f4",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/41286_miss_marjoribanks_brat.jsonl": "afa2fa7cb7f819e72ab130ee1d7a9fc8f8ef9e663fe2345f9c68ae326decfb17",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/41_the_legend_of_sleepy_hollow_brat.jsonl": "e2b50acd9b6dc3b5ca9f6079632181a71c27a963711a70df760d4ed5776ba95e",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/4217_a_portrait_of_the_artist_as_a_young_man_brat.jsonl": "5966acf62ebdaf81d49c38490d2c25de26549a8d6f9376c119fd32786349c30c",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/4276_north_and_south_brat.jsonl": "453321efed3a05b96482fd5e2aa7974fd75b72b02e076ad9cdc2641b0507e062",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/4300_ulysses_brat.jsonl": "da49823f5b291dcfd8459b1d63fd204ddfb270de0c176e8d8e04ef6377d44028",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/432_the_ambassadors_brat.jsonl": "1b3fd8e1e15ddf594c695e3775b22aa440e0a7b2f4e1776a97c87fd7076e70e7",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/434_the_circular_staircase_brat.jsonl": "26e90477df070aa093b38a7fdf7c3a63d4890e099b6e1d3e280feb26bd4dbc32",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/44_the_song_of_the_lark_brat.jsonl": "f9eade811b069210bf4e887cc27b183fd5b62cccbb91f3c025383c2fa5ca7c2c",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/45_anne_of_green_gables_brat.jsonl": "ff00be45d1c53c1f88ba73115ba8bc02d838883f969d22e2495fa3ecc8394390",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/472_the_house_behind_the_cedars_brat.jsonl": "b2fa7d07b6022f22c8772bd0b0bd0742ea6aec3b16543fe88582a1be37a040fd",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/502_desert_gold_brat.jsonl": "add27fa113ad732da653010d5c907891e5e9c0c263f6a4696acea2b6bf9e828d",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/514_little_women_brat.jsonl": "4c395bf720fdfe93fdc2ac418baf96e65a8f05a341c3f28dadc30f33973ee555",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/521_the_life_and_adventures_of_robinson_crusoe_brat.jsonl": "44a8ff452226bbd39da263ba06288170eb21ea03d076f6265b02864fcb89d19d",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/5230_the_invisible_man_a_grotesque_romance_brat.jsonl": "e882e0cd3e7df84273d744e99d32514534e84e80167eecbce4307b5e60bec990",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/5348_ragged_dick_or_street_life_in_new_york_with_the_bootblacks_brat.jsonl": "ffa86e6246f38e218f16039da4df20112ec4612846afa10b0a7327ce2fb8eb03",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/541_the_age_of_innocence_brat.jsonl": "938fa6e0f748843e709ef0bbda115eb42407fd0374214ea96228d8da0bcc388b",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/543_main_street_brat.jsonl": "0fba558cd1a0be147ae594a0b54bbc122bd4028f5583f55450cc098a69a3ae4e",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/550_silas_marner_brat.jsonl": "64f9c514d418c96e9aa6e818609cf2e9bf045b87ed118bd4cc7f1509568888e0",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/599_vanity_fair_brat.jsonl": "88e1241ad57ed7c351d5675ae43f74643307986ffd7727fbf8d0c6358d88f4c1",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/6053_evelina_or_the_history_of_a_young_ladys_entrance_into_the_world_brat.jsonl": "fa05adb5b4d3134c42340184275837d1854e54ee2c0323b4d02a6cdf70721d5c",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/60_the_scarlet_pimpernel_brat.jsonl": "d3eb067e6dc0b55f9df344b65d0eff1be256751e9e10c37fc0953cf1ce890026",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/62_a_princess_of_mars_brat.jsonl": "849d541d04754f45e0367ef969ccd28b7e46dcf9e6807f002900b2e29ac9dc3d",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/6593_history_of_tom_jones_a_foundling_brat.jsonl": "8cf3b9db54ca13e63862a8167d75655d2828e62f56d7032c35b77a77cb249db8",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/711_allan_quatermain_brat.jsonl": "2a0cf1c010219760e68325c62c109ba88a82018fb1e4a0732da42d72adae0def",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/730_oliver_twist_brat.jsonl": "888c61dc3e1edff95adef310d415c988db2561e09eb14d5c911330c234ccaa69",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/73_the_red_badge_of_courage_an_episode_of_the_american_civil_war_brat.jsonl": "4e4257ab2f63c21e43521836cd8590e5d2966f2e1ce4cf5d15da923a08dc7dc7",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/74_the_adventures_of_tom_sawyer_brat.jsonl": "20752ff0578bcbc74375f602e78746e021a213e01d8218bdf8e0c1105f560031",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/766_david_copperfield_brat.jsonl": "98ff9907728ce3ec43d8cb5b7c64883851ed3e082885394934c9c683529548ef",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/768_wuthering_heights_brat.jsonl": "fef3949bc174fb0e12b1e3b9feef26f1ddc875c14c2556b773ab90e3611d2a84",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/76_adventures_of_huckleberry_finn_brat.jsonl": "ca32b6fde96da256f2d7f832425d75e663df685da61b4135db1f8069bb390a3d",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/77_the_house_of_the_seven_gables_brat.jsonl": "630cdc5c726d911219c8c15c94a6c2c82ed0815bb6cc0ba37a2364197908b8d0",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/78_tarzan_of_the_apes_brat.jsonl": "854c6e4da4f41148aa02a2d1d9d8ec291f736492926105795e99e2cc27f64b31",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/805_this_side_of_paradise_brat.jsonl": "4bf9dda732446dd298771862abcbe272747b277043bdda3eb8fe1720b1779525",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/829_gullivers_travels_into_several_remote_nations_of_the_world_brat.jsonl": "7b2182caaf683df19f7a0c8650b2bb858704dd7b049bd2868703979491e2602c",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/84_frankenstein_or_the_modern_prometheus_brat.jsonl": "ccd4ae35b0bea5b69ed9c878b916cc066f544d5276fa076eb4bb70e005077b19",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/876_life_in_the_ironmills_or_the_korl_woman_brat.jsonl": "04656409bb52c5194924391e2ee416c2e2fb39d13a8741f0e678e34d99fd5cfe",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/8867_the_magnificent_ambersons_brat.jsonl": "6f0c95b08fb639eb053f41b9766b7df7c906d673d9ef963e97b451617fe097d9",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/932_the_fall_of_the_house_of_usher_brat.jsonl": "17a84efb180ce4b189ce45298d073b70f916d62e947f983c592ff9e8c2b9fd3b",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/940_the_last_of_the_mohicans_a_narrative_of_1757_brat.jsonl": "e8a1ee0b6c55650b48a5869d4d353f3978c8a0c16cbef62e12484b2e24f942de",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/95_the_prisoner_of_zenda_brat.jsonl": "705ee6c48fd86cc1b3bb6981891c3bfaed56018dcce09b09bfd33a8b23c4a267",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/969_the_tenant_of_wildfell_hall_brat.jsonl": "96b5bbc4697987ba95ed1b3369ae255c366d29ae4c16043a313465ba06046cbb",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/974_the_secret_agent_a_simple_tale_brat.jsonl": "bbc6d91f1ddbc1f0420c1fc0038dead14dbb047a633a2d027103ad652590e132",
+      "artifacts/hub/proposals/litbank-qwen7b-w1200/9830_the_beautiful_and_damned_brat.jsonl": "7f476ba39ee70e7a2fa736899d8565d1ebd6a3dab1b3c229d32546cdd10c9ea0",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/AHandfulOfDust.jsonl": "ea66d702733fd572569a71d67d79b49b6ad9297f479635fc7b9a669d802eee28",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/APassageToIndia.jsonl": "15f9bf7a4e44e6e87f412a82e8f6ceb349913882f1ee1eb2f6f836957b5ff2c9",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/ARoomWithAView.jsonl": "1998f7dd8247d82d55df7051258185ee9a3fbff8dc411f6d9a287155c63f6cdb",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/AlicesAdventuresInWonderland.jsonl": "5983862ec17021bfd9e14a61eeba8d957c6cd842d30eb72d031e0b4b963f3462",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/AnneOfGreenGables.jsonl": "cf3d6582f41cc8e5e46ed11208f319fe9a13380b7c52a9d5c3ed8c7c0e261a83",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/DaisyMiller.jsonl": "e5c05bd1c0fb8ca0d8222a3920ebbf8526a31ac9362ea758651a31dd8b5c250e",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/Emma.jsonl": "3f5218f7d8c2bd394e3a07e6770bad7c5b2264e5a7cdaf683a8b208dd0bb01e3",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/HardTimes.jsonl": "2dfaf827f7e06f5da16017c23eedd95af5085e71172bf98a6934f265e43fdaba",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/HowardsEnd.jsonl": "006649a72e152301cfea5bb1e55250c47fd2ae7e37bb50a97894351cbd53e5ac",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/MansfieldPark.jsonl": "d386e0d1501f584af0996b4dd3af3bb2d7da818f3382dc618392234f722286fc",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/NightAndDay.jsonl": "7cb7fac0c1a9fea6c601595ee2bf470b5af7292110f97b7c733cabe824e7d83a",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/NorthangerAbbey.jsonl": "4fee422efe9985ab7036b108ffa5df91bf3c81ccb2ee578f4990d35d5fa50084",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/OliverTwist.jsonl": "b1aa9ab6c40ecae174b750ca9d409557ff041d2b680ead06e099eed9ba32cf6d",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/Persuasion.jsonl": "9e1ad7200fc60131ac72ecf153c08d9e7f2ee047ee755238abc40425c7552878",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/PrideAndPrejudice.jsonl": "bf9c5788af6d9247de433a4d09b33dd21e0a120c706fbd5627626f8ea64568be",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/SenseAndSensibility.jsonl": "c95d9ecbbd617ecd86ccc4f08c74e7eb713a160599aadd0833d2b2cd7c24f307",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheAgeOfInnocence.jsonl": "c8f9adf0c12cb694fbb83e8e04df2900cee4dfb6f4350a3770db22b0f8c8e7bf",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheAwakening.jsonl": "612b649cc3ff0ca3735ea573846fa92e2f169ef4fb40cf0498db589a4d023176",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheGambler.jsonl": "a7399ac6b0b804150dd61cfaa8cfa67bd52d1b59f61923ce3b8dc297b32b06e8",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheInvisibleMan.jsonl": "87e2c261a3369302409b71f7e7a3c90f861207bd203bacd74bc99f3f19908ab7",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheManWhoWasThursday.jsonl": "d1be4ee7a99a074828f52308df3bb6ab6dc2e13188e6b6b6fef174bbcf220e34",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheMysteriousAffairAtStyles.jsonl": "6cd1a34113275eb92da1c8816fd4a229fa6c88bb831e6121b0621894cd317f6c",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/ThePictureOfDorianGray.jsonl": "5b97712d632933d04f2b243502d25d08143c64b79c604948e879c625235e4160",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheSignOfTheFour.jsonl": "e072297fb707a5857b51869c42dd2c53a51ec907dcbb8b4f396cf8c133c3fefb",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheSportOfTheGods.jsonl": "1cbb1e2d70fab22228edc71a53f3e26ac6390e2b841f9a84022b023d986aff56",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/TheSunAlsoRises.jsonl": "eae0e6faae05753fe0215532ebaefec11837087c3e781907c0ce0b2b2989a735",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/WhereAngelsFearToTread.jsonl": "d0be9ca6956c05851b0e001ed128752777753b0617b1e50d2c1317c9afcb4210",
+      "artifacts/hub/proposals/pdnc-qwen7b-w3200/WinnieThePooh.jsonl": "b8b7efb94c611c60d2edc8c068919693516871f30b10dbd96ab72ef7b9fa92b9"
+    }
+  },
   "runs": {
     "pdnc": "artifacts/hub/proposals/pdnc-qwen7b-w3200",
     "litbank": "artifacts/hub/proposals/litbank-qwen7b-w1200"
@@ -56,116 +197,129 @@
     "pdnc|supersede:mutable": 765
   },
   "sampled_by_rule": {
+    "elaborate:provisional": 90,
     "revise:immutable": 48,
-    "supersede:mutable": 122,
-    "elaborate:provisional": 37,
-    "elaborate:refines": 4,
+    "supersede:mutable": 69,
     "revise:reported-to-narrated": 27,
     "elaborate:underspecified": 9,
+    "elaborate:refines": 4,
     "revise:revelation-marker": 3
   },
   "sampled_by_corpus": {
-    "pdnc": 200,
-    "litbank": 50
+    "pdnc": 197,
+    "litbank": 53
   },
   "sampled_by_reason": {
-    "census": 87,
-    "supersede": 115,
-    "marker": 35,
-    "provisional": 13
+    "provisional": 90,
+    "census": 91,
+    "supersede": 69
   },
-  "provisional_share": 0.148,
+  "provisional_share": 0.36,
   "double_annotate": 50,
   "double_by_rule": {
+    "elaborate:provisional": 17,
     "revise:immutable": 10,
-    "supersede:mutable": 24,
-    "elaborate:provisional": 7,
+    "revise:reported-to-narrated": 5,
+    "supersede:mutable": 14,
     "elaborate:underspecified": 2,
     "revise:revelation-marker": 1,
-    "revise:reported-to-narrated": 5,
     "elaborate:refines": 1
   },
   "markers": {
     "\\bactually\\b": {
       "population": 2,
-      "sampled": 2,
-      "provisional_group": "found_out"
+      "sampled": 0
     },
     "\\badmitted\\b": {
       "population": 2,
-      "sampled": 2,
-      "provisional_group": "found_out"
+      "sampled": 0
     },
     "\\bconfess(?:ed|es)\\b": {
       "population": 3,
-      "sampled": 3,
-      "provisional_group": "found_out"
+      "sampled": 0
     },
     "\\bdiscover(?:ed|s)\\b": {
       "population": 5,
-      "sampled": 5,
-      "provisional_group": "found_out"
+      "sampled": 0
     },
     "\\bhad (?:always|never) been\\b": {
       "population": 6,
-      "sampled": 6,
-      "provisional_group": "never_true"
+      "sampled": 1
     },
     "\\bin fact\\b": {
       "population": 3,
-      "sampled": 3,
-      "provisional_group": "never_true"
+      "sampled": 1
     },
     "\\bmistaken\\b": {
       "population": 3,
-      "sampled": 3,
-      "provisional_group": "never_true"
+      "sampled": 1
     },
     "\\bpretend(?:ed|ing)\\b": {
       "population": 2,
-      "sampled": 2,
-      "provisional_group": "never_true"
+      "sampled": 0
     },
     "\\brealis(?:ed|es)\\b": {
       "population": 2,
-      "sampled": 2,
-      "provisional_group": "found_out"
+      "sampled": 1
     },
     "\\breally was\\b": {
       "population": 1,
-      "sampled": 1,
-      "provisional_group": "never_true"
+      "sampled": 0
     },
     "\\brevealed?\\b": {
       "population": 1,
-      "sampled": 1,
-      "provisional_group": "found_out"
+      "sampled": 1
     },
     "\\bthe truth (?:was|is)\\b": {
       "population": 2,
-      "sampled": 2,
-      "provisional_group": "never_true"
+      "sampled": 0
     },
     "\\bturn(?:ed|s) out\\b": {
       "population": 2,
-      "sampled": 2,
-      "provisional_group": "never_true"
+      "sampled": 0
     },
     "\\bwas (?:never|not really)\\b": {
       "population": 2,
-      "sampled": 2,
-      "provisional_group": "never_true"
+      "sampled": 1
+    }
+  },
+  "evidence_not_found": {
+    "population": {
+      "rows": 2263,
+      "old_not_found": 716,
+      "old_not_found_rate": 0.3163941670349094,
+      "old_not_found_no_evidence": 553,
+      "old_not_found_real_evidence": 163,
+      "new_not_found": 719,
+      "new_not_found_rate": 0.3177198409191339,
+      "new_not_found_no_evidence": 549,
+      "new_not_found_real_evidence": 170,
+      "either_not_found": 1076,
+      "either_not_found_rate": 0.4754750331418471
+    },
+    "sample": {
+      "rows": 250,
+      "old_not_found": 84,
+      "old_not_found_rate": 0.336,
+      "old_not_found_no_evidence": 61,
+      "old_not_found_real_evidence": 23,
+      "new_not_found": 90,
+      "new_not_found_rate": 0.36,
+      "new_not_found_no_evidence": 65,
+      "new_not_found_real_evidence": 25,
+      "either_not_found": 125,
+      "either_not_found_rate": 0.5
     }
   },
   "new_match_in_sample": {
-    "not_found": 88,
-    "exact": 150,
-    "fuzzy": 12
+    "not_found": 90,
+    "fuzzy": 18,
+    "exact": 142
   },
   "old_match_in_sample": {
-    "not_found": 119,
-    "exact": 120,
-    "fuzzy": 11
+    "exact": 143,
+    "not_found": 84,
+    "fuzzy": 23
   },
-  "books_in_sample": 68
+  "books_in_sample": 71
 }
