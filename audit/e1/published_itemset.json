@@ -3,7 +3,7 @@
     "command": "python -m dsg.eval.e1_itemset --raw ../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-full-raw.json --scored ../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-full.json",
     "seeds": {},
     "git": {
-      "commit": "b316ad3628a3e0708943ac27437cfc321d949696",
+      "commit": "f22dd93c8354889f709bac6d6c69e263e508afa5",
       "dsg_tree_dirty": false
     },
     "python": "3.13.9",
@@ -24,6 +24,18 @@
   ],
   "reproduces_reported_macro": 0.5225701332911481,
   "all": {
+    "non_explicit_minus_explicit": {
+      "n_novels": 28,
+      "mean_delta": 0.03957246687743977,
+      "ci": [
+        0.010750087221416694,
+        0.06616132915196536
+      ],
+      "p": 0.008459915400845992,
+      "novels_non_explicit_higher": 21,
+      "novels_explicit_higher": 7,
+      "n_boot": 100000
+    },
     "novels": 28,
     "quotes": 35083,
     "macro": {
@@ -208,6 +220,18 @@
     }
   },
   "published": {
+    "non_explicit_minus_explicit": {
+      "n_novels": 22,
+      "mean_delta": 0.032821064890082276,
+      "ci": [
+        0.0008797464446181251,
+        0.06197320354562488
+      ],
+      "p": 0.04421955780442196,
+      "novels_non_explicit_higher": 16,
+      "novels_explicit_higher": 6,
+      "n_boot": 100000
+    },
     "novels": 22,
     "quotes": 24758,
     "macro": {
