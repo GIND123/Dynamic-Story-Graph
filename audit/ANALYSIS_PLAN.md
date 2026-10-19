@@ -31,6 +31,31 @@ Kappa is never reported alone: the sheets are skewed (most unflagged mentions
 are "no"), and kappa falls under skew even when raw agreement is near perfect.
 Per-stratum figures rest on few rows and are reported with their n.
 
+## Disagreements on overlap rows
+
+Fixed before any label is read.
+
+1. **Agreement first.** Agreement statistics are computed on the two
+   annotators' independent labels before anything else happens, and are then
+   frozen. Nothing below changes them.
+2. **Joint adjudication.** For every overlap row where the two labels differ
+   (including `unsure` against a definite label), the two annotators then
+   decide one label together. They see only their own sheets' columns, never
+   the run, condition, rule or overlap columns. The result goes in a new
+   `<label>_adjudicated` column, with a note saying why.
+3. **Both originals are kept.** `labels_merged.csv` keeps the first annotator's
+   label, the second annotator's label (`_b`) and the adjudicated label side by
+   side. Nothing is overwritten.
+4. **Which label enters the estimates.** On an overlap row, the adjudicated
+   label, or the shared label where the two agreed. On every other row, the
+   single annotator's label.
+5. **Unresolved rows.** If adjudication cannot reach a label, the final label
+   is `unsure`.
+6. **`unsure` in estimates.** Rows whose final label is `unsure` are left out of
+   precision and recall denominators and reported as a count per stratum. Each
+   estimate is also reported with the `unsure` rows counted both ways (all as
+   correct, all as incorrect) as a sensitivity bound.
+
 ## Estimates
 
 Precision and recall are weighted by stratum: each sampled row stands for

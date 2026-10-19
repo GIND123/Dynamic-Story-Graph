@@ -343,7 +343,7 @@ reading order destroys narrative order while preserving state growth exactly:
 | shuffled | +0.08 (p = 0.75) | **+0.69** (p = 8×10⁻⁴) |
 
 The revision trend largely survives shuffling, so most of it is state growth. The
-elaboration trend disappears, so that one is real. **The control reversed our
+elaboration trend disappears, so that one is real. *(Draft, pending audit phase 4c: at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites, which replace a value rather than refine it; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the trend is refinement depends on the 4c labels.)* **The control reversed our
 first reading of this result**, and the surviving signal is in the opposite
 operation from the one we expected to carry it.
 

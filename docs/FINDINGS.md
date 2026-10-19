@@ -98,7 +98,7 @@ growth rather than a property of the text; the honest residual is the gap
 between ρ = 0.82 and ρ = 0.69, which this design cannot cleanly separate. The
 elaboration trend **disappears** under shuffling. That one is real: refinement
 of underspecified structure is genuinely front-loaded in narrative order, and
-not explained by how much state has accumulated.
+not explained by how much state has accumulated. *(Draft, pending audit phase 4c: at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites, which replace a value rather than refine it; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the trend is refinement depends on the 4c labels.)*
 
 So the instrument has signal, but less than the uncontrolled numbers suggest,
 and in the opposite operation from the one we expected to carry it.
