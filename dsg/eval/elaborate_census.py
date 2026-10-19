@@ -9,6 +9,7 @@ splits every ELABORATE by what produced it:
 
 * ``entity:promotion`` -- a provisional node committed (``_maybe_promote``)
 * ``entity:named`` -- an underspecified node received its first proper name
+* ``entity:bind`` -- an identity link bound a description to a node (runner)
 * ``assertion:<rule>`` -- an assertion conflict the classifier called
   ELABORATE, by rule (``elaborate:provisional`` is the overwrite)
 
@@ -43,6 +44,8 @@ def kind(record) -> str:
         return "entity:promotion"
     if record.detail.startswith("underspecified node named"):
         return "entity:named"
+    if record.detail.startswith("bound "):
+        return "entity:bind"
     return "entity:other"
 
 
