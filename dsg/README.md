@@ -64,8 +64,7 @@ predicate mutability, evidential source and surface revelation markers. A
 language model never makes that call.
 
 Each assertion carries two clocks. Discourse time records while the reader held
-the belief. Story time records while the fact held in the world. A reveal moves
-the first without moving the second; a plot event moves the second.
+the belief. Story time records while the fact held in the world. Story time is represented but is currently set from reading position (`valid_from` = `d_open` = the window index, and `valid_to` is set on close the same way), so the two clocks do not yet differ; the difference between a plot event and a reveal is carried by the operation (`SUPERSEDE` vs `REVISE`), not by the clocks.
 
 Seven structural invariants are checked after every reading step, including
 prefix causality: no assertion may cite text the reader has not reached.
@@ -94,10 +93,10 @@ I1 = 0 is a postcondition the calculus enforces by construction. It holds on all
 measurement looks like. The 0.000 column is a conformance check and is reported
 as one.
 
-What is measured, and was not obvious in advance, is that enforcing consistency
-costs nothing: the accuracy metrics do not move across the revision rung. The
-natural worry is that aggressive revision discards correct facts, and it does
-not.
+The accuracy metrics do not move across the revision rung, but that is
+guaranteed rather than measured: identity and mention scoring never read fact
+assertions. Whether aggressive revision discards correct facts is untested; the
+first real test is correct-value scoring in audit phase 4d.
 
 Each rung of the policy ladder adds exactly one mechanism, so each is priced on
 its own. Every policy replays a byte identical cached proposal stream, so
@@ -108,7 +107,7 @@ variance.
 
 Reading the panels: persistent state buys a large amount of accuracy and at the
 same time introduces contradiction. Fact revision removes that contradiction on
-every book at no accuracy cost. Deferred commitment converts rollbacks into
+every book; its accuracy cost is untested. Deferred commitment converts rollbacks into
 monotone updates. Grey means the interval crosses zero.
 
 ![Reading results](../docs/figures/fig2-reading-main.png)
@@ -139,21 +138,25 @@ Five ways of using the graph at generation time were tested. None helps.
 | none, no memory at all | 0.487 | 112 | floor |
 | previous chapter, no graph | 0.312 to 0.354 | 1,017 | memory baseline |
 | full transcript, no graph | 0.254 to 0.400 | 5,362 | memory baseline, unstable |
-| carried: serialised state digest | 0.588 | 357 | worse than nothing |
-| carried plus recent text | 0.379 | 1,194 | loses to recent text alone |
-| queried: beat conditioned retrieval | 0.571 | 212 | worse than nothing |
+| carried: serialised state digest | 0.588 | 357 | worse before correction; not significant after correction |
+| carried plus recent text | 0.379 | 1,194 | worse before correction; not significant after correction (vs recent text alone) |
+| queried: beat conditioned retrieval | 0.571 | 212 | worse than no memory, significant after correction |
 | queried plus recent text | 0.317 | 1,098 | ties recent text alone |
 | used to rank four candidates | 0.300 | 1,017 | ties choosing blind |
 
-Paired bootstrap over stories, 95 percent intervals.
+Paired bootstrap over stories within each run, 100,000 resamples, 95 percent
+intervals, Holm correction over the 27 violation-rate comparisons
+(`audit/generation/holm.json`, family fixed in `audit/ANALYSIS_PLAN.md`).
 
-| comparison | difference | interval | excludes zero |
-|---|---|---|---|
-| serialised digest minus none | +0.083 | [+0.025, +0.142] | yes |
-| beat retrieval minus none | +0.083 | [+0.038, +0.125] | yes |
-| retrieval plus previous minus previous alone | +0.004 | [-0.042, +0.050] | no |
-| guard minus no guard | +0.000 | [-0.033, +0.038] | no |
-| **graph ranking minus choosing blind** | **+0.004** | [-0.058, +0.063] | **no** |
+| comparison | difference | raw interval | Holm-adjusted p | significant after correction |
+|---|---|---|---|---|
+| serialised digest minus none (hybrid run) | +0.083 | [+0.025, +0.142] | 0.090 | no |
+| serialised digest minus none (run 1) | +0.075 | [+0.008, +0.142] | 0.365 | no |
+| digest plus previous minus previous alone | +0.071 | [+0.021, +0.121] | 0.090 | no |
+| beat retrieval minus none | +0.083 | [+0.037, +0.125] | 0.004 | yes |
+| retrieval plus previous minus previous alone | +0.004 | [−0.042, +0.050] | 1.000 | no |
+| guard minus no guard | +0.000 | [−0.033, +0.037] | 1.000 | no |
+| **graph ranking minus choosing blind** | +0.004 | [−0.058, +0.062] | 1.000 | no |
 
 The last row is the one the project's own negatives predicted should succeed.
 Absolute contradiction counts are extractor dominated, relative comparisons on
@@ -172,19 +175,21 @@ Three things follow.
 at the moment of writing, half of it correctly, and conditioning on it still
 added nothing. Improving extraction would not have rescued the result.
 
-**It replicates a published negative.** The Narrative World Model paper reports
-serialised current state at 0.358 against query conditioned retrieval at 0.898.
-Our serialised digest is structurally their State Memory condition. We reproduce
-their failure with a 3B open model, and find that their success condition does
-not transfer.
+**It does not replicate a published negative.** The Narrative World Model's
+State Memory condition (0.358 against 0.898 for query conditioned retrieval) is a
+question-answering condition, not generation; it still beats RAG and GraphRAG,
+and the authors trace most of its misses to their evidence budget truncating the
+serialised store. It is a related design, not a replication.
 
 **One baseline ordering is not established, and an earlier claim here is
 withdrawn.** Across three runs the full transcript condition moves from 0.254 to
 0.400, a spread of 0.146 that is larger than almost every effect in this
 project. Its ranking against the previous chapter is unresolved at this sample
-size. What survives the variance is that no memory is clearly worst, and that
-every graph design lands at or below the memory baselines rather than above
-them. Conditions whose prompt grows without bound need several seeds before
+size. What survives the variance is that no memory is worse than both memory
+baselines in each run that has them, and that every graph design lands at or
+below the memory baselines rather than above them. No memory is not the worst
+condition overall: the digest and beat retrieval score above it, and in run 1
+the rolling summary ties it. Conditions whose prompt grows without bound need several seeds before
 effects below roughly 0.15 are reported.
 
 ### A false positive caught
@@ -285,7 +290,7 @@ a byte identical stream.
 
 | module | responsibility |
 |---|---|
-| `schemas.py` | assertions with two clocks, discourse time and story time |
+| `schemas.py` | assertions with two clocks, discourse time and story time (story time currently set from reading position) |
 | `lexicon.py` | predicate mutability, revelation markers, closed ranges |
 | `matching.py` | conservative surface matching, title aware |
 | `store.py` | the calculus, the policy ladder, the revision log |

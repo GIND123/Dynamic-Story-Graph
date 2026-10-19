@@ -17,7 +17,7 @@ multiset of surface forms observed for it, a commitment level
 a = ⟨subject, predicate, object, polarity, ε, κ, σ, c, [d_open, d_close], [v_from, v_to], prov⟩
 ```
 
-with two independent clocks:
+with two clocks:
 
 | Clock | Meaning |
 | --- | --- |
@@ -28,9 +28,9 @@ with two independent clocks:
 (`believed`, `superseded`, `retracted`, `merged_away`), `c` a confidence, and
 `prov` a character span in the text.
 
-Separating the two clocks is what lets the system record that a fact stopped
+Separating the two clocks would let the system record that a fact stopped
 being *true* at one point and stopped being *believed* at another — the
-difference between a plot event and a reveal.
+difference between a plot event and a reveal. Story time is represented but is currently set from reading position (`valid_from` = `d_open` = the window index, and `valid_to` is set on close the same way), so the two clocks do not yet differ; the difference between a plot event and a reveal is carried by the operation (`SUPERSEDE` vs `REVISE`), not by the clocks.
 
 **Log** `L_t`. Every update, typed, in order. The log is the object the process
 metrics and the humanities-facing profile are computed from.

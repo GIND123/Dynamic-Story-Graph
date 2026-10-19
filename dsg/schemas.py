@@ -125,10 +125,11 @@ class EntityNode:
 class Assertion:
     """One time-indexed belief about the story world.
 
-    Two clocks are tracked deliberately. ``d_open``/``d_close`` are *discourse*
-    time -- when the reader came to and stopped holding the belief. ``valid_from``
-    /``valid_to`` are *story* time -- when the fact held in the world. A reveal
-    moves the first without moving the second; a plot event moves the second.
+    Two clocks are represented. ``d_open``/``d_close`` are *discourse* time --
+    when the reader came to and stopped holding the belief. ``valid_from``
+    /``valid_to`` are *story* time -- when the fact held in the world. The store
+    currently sets story time from reading position, so the two do not yet
+    differ; plot events and reveals are told apart by the operation instead.
     """
 
     id: str

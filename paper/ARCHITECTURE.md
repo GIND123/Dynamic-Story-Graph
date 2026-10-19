@@ -56,7 +56,7 @@ the paper should state explicitly:
 
 | Plane | Module | Responsibility | Paper section |
 | --- | --- | --- | --- |
-| Contracts | `dsg/schemas.py` | `Assertion` with two clocks — discourse time `[d_open, d_close]` (while the reader held it) and story time `[valid_from, valid_to]` (while it held in the world); `EntityNode` with commitment level; `UpdateRecord`; `Violation`. | §3 Representation |
+| Contracts | `dsg/schemas.py` | `Assertion` with two clocks — discourse time `[d_open, d_close]` (while the reader held it) and story time `[valid_from, valid_to]` (while it held in the world; currently set from reading position, so the clocks do not yet differ); `EntityNode` with commitment level; `UpdateRecord`; `Violation`. | §3 Representation |
 | Contracts | `dsg/lexicon.py` | Predicate mutability (mutable / immutable / multi-valued), revelation markers, underspecified objects, person-denoting nouns, closed-range predicates. The arbiter of `SUPERSEDE` vs `REVISE`. | §3 Calculus |
 | Contracts | `dsg/matching.py` | Conservative surface matching. Title-aware: a shared surname never merges anyone, and two conflicting honorifics never match. | §4 Identity |
 | Reading | `dsg/windows.py` | Prefix-causal windowing; boundary snapping; lead-in that is always already-read text. | §4 System |
@@ -132,7 +132,7 @@ and the raw count as a companion.
 | Persistent state buys accuracy | `append-only` − `window-only`: +0.088 CoNLL, +0.310 mention linking | `artifacts/report/pdnc-qwen3b/results.md` |
 | …and manufactures contradiction | same contrast: +0.323 inconsistent slots | ″ |
 | Fact revision is the antidote | `dsg-eager` − `dsg-merge`: −0.433 inconsistent slots, 0–28 books | ″ |
-| …at no accuracy cost | same contrast: 0.000 on both accuracy metrics | ″ |
+| …with no change in either accuracy metric (guaranteed, not tested: identity and mention scoring never read fact assertions) | same contrast: 0.000 on both accuracy metrics; the first real test is correct-value scoring in audit phase 4d | ″ |
 | Merging without revision is harmful | `dsg-merge` − `append-only`: −0.016 mention linking | ″ |
 | Deferral converts rollbacks to monotone updates | `dsg-full` − `dsg-eager`: −2.57 rollbacks (3B), −5.50 (1.5B, 0–28), −0.60 (LitBank) | all three reports |
 | Causality has a price | `retrospective` − `dsg-full`: +0.031 mention linking (3B), +0.050 (1.5B) | ″ |
