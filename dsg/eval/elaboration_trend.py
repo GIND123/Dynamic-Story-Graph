@@ -94,12 +94,24 @@ def main(argv: list[str] | None = None) -> int:
         res = trends(Path(run_dir))
         published = json.loads((Path(args.results) / name / "results.json").read_text())
         inst = published["instrument"]
-        for label, key in (("narrative", "position_trend"), ("shuffled", "position_trend_shuffled")):
-            for op in ("elaboration", "revision"):
-                got, want = res["published"][label][op]["rho"], inst[key][op]["rho"]
-                assert abs(got - want) < 1e-9, (name, label, op, got, want)
+        # The narrative replay must reproduce the published trend exactly. The
+        # shuffled control need not: results.json predates commit 0be8e0d
+        # (occupation made multi-valued, refines() widened), which changes the
+        # non-causal replay slightly. Both are recorded; every variant is
+        # compared against the current-code baseline, never across versions.
+        for op in ("elaboration", "revision"):
+            got = res["published"]["narrative"][op]["rho"]
+            want = inst["position_trend"][op]["rho"]
+            assert abs(got - want) < 1e-9, (name, "narrative", op, got, want)
+        res["reported_in_results_json"] = {
+            label: {op: inst[key][op]["rho"] for op in ("elaboration", "revision")}
+            for label, key in (("narrative", "position_trend"),
+                               ("shuffled", "position_trend_shuffled"))}
         out["runs"][name] = res
         for v, r in res.items():
+            if v == "reported_in_results_json":
+                print(name, "reported", r)
+                continue
             print(name, f"{v:26}", {lab: {op: (round(x["rho"], 3), round(x["p_value"], 4))
                                           for op, x in ops.items()} for lab, ops in r.items()})
     Path(args.out).write_text(json.dumps(out, indent=2) + "\n")
