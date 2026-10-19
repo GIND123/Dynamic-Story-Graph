@@ -5,9 +5,18 @@ story. Canon is planted in chapter 1 and withheld afterwards; violations are
 deterministic string tests near a mention of the subject. No language model
 appears in any metric.
 
-**Summary. Five ways of using a narrative graph at generation time were tested.
-None of them helps. The fifth, ranking candidates, is the one the project's own
-negative results predicted should work, and it does not either.**
+> **Draft wording, pending the canon-detector audit (phase 1d).**
+
+**Summary. Five ways of using a narrative graph at generation time were tested,
+with Qwen2.5-3B as the writer, the graph supplied as a digest or a retrieved
+slice, a target of about 10K words, and a deterministic test against planted
+canon. None of them helped in that setup. The fifth, ranking candidates, is the
+one the project's own negative results predicted should work, and it does not
+either.** Stronger models judged by an LLM disagree: NSTAgent (Wan & Chen, 2026)
+finds an explicit narrative state beats a rolling summary at 10K words on
+DeepSeek-V4-Flash (instance CED −2.78, 95% CI [−3.65, −1.95], Holm p < 0.001,
+their Table 15) and from 20K to 100K words on both its backbones; it finds
+parity at 10K only on GPT-5.6 Luna.
 
 ## 1. What was tried
 
@@ -93,16 +102,44 @@ conclusion.
 
 ## 5. Why the conditioning line is closed
 
-Five designs, four runs, 18,600 chapters, each falsifier stated in advance.
+> **Draft wording, pending the canon-detector audit (phase 1d).**
+
+Five designs, four runs, 18,600 chapters. Four falsifiers were stated before the
+retrieval and selection runs, but after the first two runs (§6).
 Three separate controls each removed an apparent effect: `on_premise` removed a
 sevenfold win, the blind selection arm removed a 0.054 gain, and the cross run
 spread removed a baseline ordering.
 
 The state held 0.492 of the planted canon at the moment of writing and
 conditioning on it still added nothing, so this is not an extraction ceiling.
-The serialised digest result also replicates a published negative, the Narrative
-World Model paper's State Memory condition, with a 3B open model.
+The digest result resembles, but does not replicate, the Narrative World Model's
+State Memory condition: that is a question-answering condition, it beats RAG and
+GraphRAG, and its authors trace most of its misses to their evidence budget
+truncating the serialised store.
 
 The reading result in `METHODOLOGY.md` section 2 is unaffected. It compares
 policies on identical input, where a shared noise floor cancels, and it holds at
 three extractor sizes.
+
+## 6. Multiple comparisons (draft)
+
+> **Draft wording, pending the canon-detector audit (phase 1d).**
+
+No generation comparison was named before its run: the only generation
+falsifiers (commit `a34e751`, 4 September 2026, 23:46 UTC) were committed after
+runs 1 and 2 and name neither gap below. Every interval in this document is
+therefore re-read with Holm correction within each metric, over the 27
+violation-rate comparisons computed across the four runs
+(`python -m dsg.eval.multiplicity`, `audit/generation/holm.json`).
+
+| gap (within run) | Δ | raw 95% CI | Holm-adjusted p | Holm-level CI | survives |
+|---|---|---|---|---|---|
+| digest − no memory (hybrid run) | +0.083 | [+0.025, +0.142] | 0.076 | [−0.004, +0.163] | no |
+| beat retrieval − no memory (retrieval run) | +0.083 | [+0.038, +0.125] | 0.005 | [+0.017, +0.146] | yes |
+
+Both gaps also rest on a detector under audit. With the flags whose matched
+word is another planted subject's true value removed, neither interval excludes
+zero: the digest gap becomes −0.008 [−0.087, +0.071] and the retrieval gap
++0.050 [−0.004, +0.104] (`audit/detector/bound.json`). That is a bound on how
+far those coincidences can move the gaps, not a result; the labels will settle
+it.
