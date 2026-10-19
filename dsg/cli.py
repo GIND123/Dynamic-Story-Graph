@@ -91,6 +91,57 @@ def _gen_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _gen_blind(args: argparse.Namespace) -> int:
+    import json
+
+    from dsg.generate.blind import build_packet
+
+    payload = json.loads(Path(args.generation).read_text())
+    path = build_packet(
+        payload, Path(args.out), classic=args.memory, unit=args.unit,
+        max_pairs=args.max_pairs, seed=args.seed,
+    )
+    print(f"reading packet -> {path}  (keep {path.parent / 'KEY.json'} from reviewers; "
+          f"send each reviewer only their own ratings_R*.csv)")
+    return 0
+
+
+def _gen_unblind(args: argparse.Namespace) -> int:
+    import json
+
+    from dsg.generate.blind import summary_markdown, unblind
+
+    result = unblind([Path(r) for r in args.ratings], Path(args.key))
+    print(summary_markdown(result))
+    if args.out:
+        Path(args.out).write_text(json.dumps(result, indent=2))
+    return 0
+
+
+def _gen_handcheck(args: argparse.Namespace) -> int:
+    import json
+
+    from dsg.generate.handcheck import build_sheet
+
+    payload = json.loads(Path(args.generation).read_text())
+    path = build_sheet(payload, Path(args.out), per_arm=args.per_arm, seed=args.seed)
+    print(f"hand-check sheet -> {path}  (keep {path.parent / 'HANDCHECK_KEY.json'} "
+          f"from the rater)")
+    return 0
+
+
+def _gen_handcheck_unblind(args: argparse.Namespace) -> int:
+    import json
+
+    from dsg.generate.handcheck import summary_markdown, unblind_sheet
+
+    result = unblind_sheet(Path(args.sheet), Path(args.key))
+    print(summary_markdown(result))
+    if args.out:
+        Path(args.out).write_text(json.dumps(result, indent=2))
+    return 0
+
+
 def _compare(args: argparse.Namespace) -> int:
     from dsg.experiments.compare_runs import build
 
@@ -145,6 +196,37 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--generation", required=True)
     p.add_argument("--out", default="artifacts/report/generation")
     p.set_defaults(func=_gen_report)
+
+    p = sub.add_parser("gen-blind", help="blinded classic-vs-prose reading packet")
+    p.add_argument("--generation", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--memory", default="base:last-chapter",
+                   help="the classic condition; its ~prose twin is the other arm")
+    p.add_argument("--unit", choices=("chapter", "story"), default="chapter")
+    p.add_argument("--max-pairs", type=int, default=20)
+    p.add_argument("--seed", type=int, default=0)
+    p.set_defaults(func=_gen_blind)
+
+    p = sub.add_parser("gen-unblind", help="map reviewer ratings back to the arms")
+    p.add_argument("--ratings", required=True, nargs="+",
+                   help="one file per reviewer, e.g. ratings_R1.csv ratings_R2.csv")
+    p.add_argument("--key", required=True)
+    p.add_argument("--out", default="", help="also write the summary as JSON")
+    p.set_defaults(func=_gen_unblind)
+
+    p = sub.add_parser("gen-handcheck", help="blind sheet of flagged violation spans")
+    p.add_argument("--generation", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--per-arm", type=int, default=40)
+    p.add_argument("--seed", type=int, default=0)
+    p.set_defaults(func=_gen_handcheck)
+
+    p = sub.add_parser("gen-handcheck-unblind",
+                       help="false-positive rate and corrected violation rate per arm")
+    p.add_argument("--sheet", required=True)
+    p.add_argument("--key", required=True)
+    p.add_argument("--out", default="", help="also write the result as JSON")
+    p.set_defaults(func=_gen_handcheck_unblind)
 
     p = sub.add_parser("compare", help="cross-corpus and cross-scale comparison")
     p.add_argument("--results-root", default="artifacts/results")

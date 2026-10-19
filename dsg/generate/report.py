@@ -11,7 +11,19 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from dsg.experiments.report import CONTEXT, INK, INK_SOFT, _save, _style
-from dsg.generate.score import compare, curves, score_runs, summarize
+from dsg.generate.score import (
+    COPY_FLAG,
+    DIAGNOSTICS,
+    PROSE_METRICS,
+    compare,
+    compare_leakage,
+    compare_templates,
+    copy_check,
+    curves,
+    example_name_check,
+    score_runs,
+    summarize,
+)
 
 ORDER = (
     "base:none",
@@ -190,6 +202,263 @@ def _examples(payload: dict, limit: int = 12) -> str:
     return "\n".join(lines)
 
 
+def bundle_note(meta: dict) -> str:
+    """What this run's prose arm actually differs in, read from its meta."""
+    parts = ["a system voice (replacing the backbone's default assistant prompt)"]
+    if meta.get("example_sha256"):
+        parts.append("an example passage in the system turn")
+    parts += [
+        "canon framed as background in plain wording",
+        "the previous chapter's end (quoted, or a cue when the memory already carries it)",
+        "a word budget sized to the beat (chapter 1 never below medium)",
+        "a hint of the next beat",
+        "instructions against summarised feelings and listed traits",
+    ]
+    absent = "" if meta.get("example_sha256") else " This run used no example passage."
+    return (
+        "**Prose is a bundled treatment.** Its arm differs from classic in all of: "
+        + ", ".join(parts[:-1]) + ", and " + parts[-1] + "." + absent
+        + " A difference between the arms is the bundle's, not any one part's."
+    )
+
+
+def _copy_paragraph(payload: dict) -> str:
+    found = copy_check(payload)
+    has_example = any(arm["example"] is not None for arm in found.values())
+    lines = [
+        f"**Verbatim copying** -- per chapter, the longest run of words shared with "
+        f"{'the example passage and ' if has_example else ''}the arm's own previous "
+        f"chapter; runs of {COPY_FLAG}+ words are flagged. Both classic and prose "
+        "memories here carry the previous chapter in full; only prose is told not "
+        "to reuse its lines.",
+        "",
+        "| arm | chapters | vs example: longest | flagged | vs previous chapter: longest "
+        "| flagged |",
+        "|---|---|---|---|---|---|",
+    ]
+    for condition, arm in found.items():
+        ex = arm["example"]
+        lines.append(
+            f"| `{condition}` | {arm['chapters']} | {ex['max'] if ex else 'n/a'} | "
+            f"{len(ex['flagged']) if ex else 'n/a'} | {arm['previous']['max']} | "
+            f"{len(arm['previous']['flagged'])} |"
+        )
+    flagged = [
+        f"`{condition}` {name} {story} ch{chapter} ({run} words)"
+        for condition, arm in found.items()
+        for name in ("example", "previous")
+        if arm[name]
+        for story, chapter, run in arm[name]["flagged"]
+    ]
+    lines += ["", "Flagged: " + ("; ".join(flagged) if flagged else "none") + "."]
+    return "\n".join(lines)
+
+
+def _fmt(value: float, metric: str) -> str:
+    return f"{value:,.0f}" if metric.startswith("words_per_beat") else f"{value:.3f}"
+
+
+# A budget counts as followed only when writing lands within this band of what
+# was asked AND small beats come out clearly shorter than large ones.
+BUDGET_BAND = (0.8, 1.2)
+SIZE_SPREAD = 0.8   # small-beat words must be <= 80% of large-beat words
+
+
+def budget_finding(payload: dict) -> dict:
+    """What the model did with the word budgets, per template, from the records."""
+    from dsg.generate.canon import beat_size
+    from dsg.generate.score import word_count
+
+    beats = {p["story_id"]: p["beats"] for p in payload["premises"]}
+    ratios: dict[str, list[float]] = {}
+    sized: dict[str, dict[str, list[int]]] = {}
+    for rec in payload["records"]:
+        if not rec.get("word_budget") or not rec.get("text"):
+            continue
+        n = word_count(rec["text"])
+        template = rec.get("template", "classic")
+        ratios.setdefault(template, []).append(n / rec["word_budget"])
+        story_beats = beats[rec["story_id"]]
+        size = beat_size(story_beats[(rec["chapter"] - 1) % len(story_beats)])
+        sized.setdefault(template, {}).setdefault(size, []).append(n)
+    mean = {t: sum(v) / len(v) for t, v in ratios.items()}
+    words = {
+        t: {k: sum(v) / len(v) for k, v in by_size.items()} for t, by_size in sized.items()
+    }
+    prose = mean.get("prose")
+    in_band = prose is not None and BUDGET_BAND[0] <= prose <= BUDGET_BAND[1]
+    prose_words = words.get("prose", {})
+    tracks = (
+        prose_words["small"] <= SIZE_SPREAD * prose_words["large"]
+        if "small" in prose_words and "large" in prose_words else None
+    )
+    return {"budget_ratio": mean, "prose_words_by_size": prose_words,
+            "classic_words_by_size": words.get("classic", {}),
+            "absolute_followed": bool(in_band), "relative_followed": tracks,
+            "followed": bool(in_band and tracks)}
+
+
+def _sizes(by_size: dict[str, float]) -> str:
+    order = [s for s in ("small", "medium", "large") if s in by_size]
+    return " / ".join(f"{by_size[s]:,.0f}" for s in order) + f" ({' / '.join(order)})"
+
+
+def _budget_paragraph(payload: dict) -> str:
+    """Absolute and relative budget-following, reported separately.
+
+    The two can part: the full run wrote about 1.5x every budget in both arms,
+    yet the prose arm's small beats still came out well short of its large
+    ones while classic stayed flat.
+    """
+    found = budget_finding(payload)
+    ratio = found["budget_ratio"]
+    absolute = (
+        f"`budget_ratio` (words written / words asked): prose "
+        f"{ratio.get('prose', float('nan')):.2f}, classic "
+        f"{ratio.get('classic', float('nan')):.2f}."
+    )
+    head = ("**Absolute budgets were roughly followed.** " if found["absolute_followed"]
+            else "**Absolute budgets were ignored.** ")
+    prose_sizes, classic_sizes = found["prose_words_by_size"], found["classic_words_by_size"]
+    if found["relative_followed"] is None:
+        relative = "Relative length by beat size: not measurable (no small and large beats)."
+    else:
+        verb = "followed" if found["relative_followed"] else "did not follow"
+        relative = (
+            f"Relative length {verb} beat size in the prose arm: words per chapter "
+            f"{_sizes(prose_sizes)}, against classic's {_sizes(classic_sizes)}, which "
+            "asks every beat for the same length."
+        )
+    return head + absolute + " " + relative
+
+
+def _leakage_paragraph(payload: dict) -> str:
+    meta = payload.get("meta", {})
+    if not meta.get("example_sha256") and not meta.get("example"):
+        return "Example leakage: not applicable (this run used no example passage)."
+    leaks = compare_leakage(payload)
+    if not leaks:
+        return "Example leakage: not measured (no example text recorded for this run)."
+    lines = [
+        "**Example leakage** -- share of the example's distinctive content words "
+        "that appear in a story. Classic never sees the example, so it is the "
+        "baseline. *As specified*: stopwords and words the premise supplies are "
+        "excluded. *Sharp*: also excludes words the classic arm writes in other "
+        "stories, which this model uses with no example at all and which otherwise "
+        "swamp the few that betray it.",
+        "",
+        "| prose arm | measure | prose | classic baseline | Δ | 95% CI | n |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for prose, entry in leaks.items():
+        for name in ("as_specified", "sharp"):
+            stat = entry[name]
+            lines.append(
+                f"| `{prose}` | {name.replace('_', ' ')} | {stat['mean_a']:.3f} | "
+                f"{stat['mean_b']:.3f} | {stat['mean_delta']:+.3f} | "
+                f"[{stat['ci_low']:+.3f}, {stat['ci_high']:+.3f}] | {int(stat['n'])} |"
+            )
+    lines.append("")
+    for prose, entry in leaks.items():
+        found = ", ".join(entry.get("prose_only_words", [])) or "none"
+        lines.append(f"Example words only `{prose}` used: {found}.")
+    lines += ["", "**Name check** -- capitalised words from the example that a prose "
+              "arm wrote and the classic arm never did (case-sensitive, whole word):", ""]
+    names = example_name_check(payload)
+    for prose in leaks:
+        flagged = names.get(prose, {})
+        if not flagged:
+            lines.append(f"- `{prose}`: none")
+            continue
+        detail = "; ".join(
+            f"**{w}** in {len(at)} chapter{'s' if len(at) != 1 else ''} "
+            f"({', '.join(f'{s} ch{c}' for s, c in at)})"
+            for w, at in sorted(flagged.items())
+        )
+        lines.append(f"- `{prose}`: FLAG -- {detail}")
+    return "\n".join(lines)
+
+
+def _prose_section(payload: dict, comparisons: dict) -> str:
+    meta = payload["meta"]
+    example = meta.get("example_sha256") or ""
+    lines = [
+        "## Prose template vs classic",
+        "",
+        bundle_note(meta),
+        "",
+        f"Example passage: {'sha256 `' + example[:12] + '…`' if example else 'none'}. "
+        f"Beat rotation: {meta.get('beat_rotation', 0)}. Every comparison is "
+        "paired within story; with few stories the intervals are wide, and the "
+        "blinded human read is the outcome these numbers explain.",
+        "",
+        "Chapter sampling (both arms): " + ", ".join(
+            f"{k} {v}" for k, v in meta.get("chapter_sampling", {"max_tokens": 900}).items()
+        ) + ".",
+        "",
+        _budget_paragraph(payload),
+        "",
+        _leakage_paragraph(payload),
+        "",
+        _copy_paragraph(payload),
+    ]
+    continuity: dict[str, dict[str, int]] = {}
+    for rec in payload["records"]:
+        if rec.get("template") == "prose":
+            bucket = continuity.setdefault(rec["condition"], {})
+            device = rec.get("continuity", "none")
+            bucket[device] = bucket.get(device, 0) + 1
+    for entry in comparisons.values():
+        m = entry["metrics"]
+        lines += ["", f"### `{entry['prose']}` vs `{entry['classic']}` "
+                      f"({entry['n_stories']} stories)", "",
+                  "**Guards** (a prose gain counts only if both hold):", ""]
+        for metric, verdict in entry["guards"].items():
+            stat = m[metric]
+            side = "upper" if verdict["margin"] > 0 else "lower"
+            lines.append(
+                f"- `{metric}`: Δ {stat['mean_delta']:+.3f} "
+                f"[{stat['ci_low']:+.3f}, {stat['ci_high']:+.3f}] -- "
+                f"{'**holds**' if verdict['holds'] else '**not shown to hold**'} "
+                f"({side} bound vs margin {verdict['margin']:+.2f})"
+            )
+        capture = entry["canon_capture"]
+        if capture is None:
+            lines.append("- `canon_capture`: n/a (this memory carries no state)")
+        else:
+            flag = " -- **FLAG: arms differ by more than 0.10**" if capture["flagged"] else ""
+            lines.append(
+                f"- `canon_capture`: prose {capture['prose']:.3f}, "
+                f"classic {capture['classic']:.3f}{flag}"
+            )
+        lines += ["", "| metric | prose | classic | Δ | 95% CI | prose–classic wins | n |",
+                  "|---|---|---|---|---|---|---|"]
+        for metric in PROSE_METRICS + DIAGNOSTICS:
+            stat = m[metric]
+            if not stat["n"]:
+                lines.append(f"| {metric} | – | – | – | – | – | 0 |")
+                continue
+            label = f"{metric} (diagnostic)" if metric in DIAGNOSTICS else metric
+            lines.append(
+                f"| {label} | {_fmt(stat['mean_a'], metric)} | "
+                f"{_fmt(stat['mean_b'], metric)} | {stat['mean_delta']:+.3f} | "
+                f"[{stat['ci_low']:+.3f}, {stat['ci_high']:+.3f}] | "
+                f"{int(stat['wins_a'])}–{int(stat['wins_b'])} | {int(stat['n'])} |"
+            )
+        used = continuity.get(entry["prose"], {})
+        if used:
+            counts = ", ".join(f"{k} {v}" for k, v in sorted(used.items()))
+            lines += ["", f"Continuity device on the prose arm (chapters): {counts}."]
+        lines.append("")
+    lines += [
+        "Diagnostics carry no verdict: restating less is the intended effect, "
+        "and it also leaves fewer mentions for a contradiction to be found near, "
+        "so read `violation_rate` with them, never alone.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
 def build_report(generation_json: Path, out_dir: Path) -> Path:
     payload = json.loads(Path(generation_json).read_text())
     out_dir = Path(out_dir)
@@ -228,6 +497,10 @@ def build_report(generation_json: Path, out_dir: Path) -> Path:
         "![final](figures/gen2-final.png)",
         "",
     ]
+    templates = compare_templates(scores)
+    if templates:
+        (out_dir / "prose.json").write_text(json.dumps(templates, indent=2))
+        body += [_prose_section(payload, templates), ""]
     path = out_dir / "generation.md"
     path.write_text("\n".join(body))
     return path
