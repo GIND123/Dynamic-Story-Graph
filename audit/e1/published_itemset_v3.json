@@ -1,0 +1,382 @@
+{
+  "provenance": {
+    "command": "python -m dsg.eval.e1_itemset --raw ../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-v3-raw.json --scored ../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-v3.json --out audit/e1/published_itemset_v3.json",
+    "seeds": {},
+    "git": {
+      "commit": "d316eb6147f6b1e0fa7c05629743f88eb071de51",
+      "dsg_tree_dirty": false
+    },
+    "python": "3.13.9",
+    "inputs": {
+      "../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-v3-raw.json": "c056ca548c14cd5f5f5017c757df4b94bcc59a7a22b08ad6ba64584eeedaa592",
+      "../Dynamic-Story-Graph/artifacts/e1/e1-qwen7b-v3.json": "1a77d1da20701711f2134930dce622d28a749e09dae0301a15a4f631b17c5102"
+    }
+  },
+  "condition": "text-causal",
+  "min_quotes": 10,
+  "second_release_excluded": [
+    "APassageToIndia",
+    "HardTimes",
+    "MansfieldPark",
+    "OliverTwist",
+    "WhereAngelsFearToTread",
+    "WinnieThePooh"
+  ],
+  "reproduces_reported_macro": 0.5319262043717458,
+  "all": {
+    "non_explicit_minus_explicit": {
+      "n_novels": 28,
+      "mean_delta": 0.045142954592328075,
+      "ci": [
+        0.0169321441658013,
+        0.07154402009563128
+      ],
+      "p": 0.0021399786002139977,
+      "novels_non_explicit_higher": 21,
+      "novels_explicit_higher": 7,
+      "n_boot": 100000
+    },
+    "novels": 28,
+    "quotes": 35083,
+    "macro": {
+      "accuracy": 0.5319262043717458,
+      "accuracy_explicit": 0.5024223110633088,
+      "accuracy_non_explicit": 0.5475652656556369
+    },
+    "micro": {
+      "accuracy": 0.5242995182852094,
+      "accuracy_explicit": 0.5331843991436284,
+      "accuracy_non_explicit": 0.5203779786359901
+    },
+    "per_novel": {
+      "AHandfulOfDust": {
+        "n": 2307,
+        "accuracy": 0.48287819679237104,
+        "accuracy_explicit": 0.4626865671641791,
+        "accuracy_non_explicit": 0.48713910761154855
+      },
+      "APassageToIndia": {
+        "n": 2123,
+        "accuracy": 0.38954309938765896,
+        "accuracy_explicit": 0.30097087378640774,
+        "accuracy_non_explicit": 0.4046306504961411
+      },
+      "ARoomWithAView": {
+        "n": 1029,
+        "accuracy": 0.45675413022351796,
+        "accuracy_explicit": 0.42570281124497994,
+        "accuracy_non_explicit": 0.4672657252888318
+      },
+      "AlicesAdventuresInWonderland": {
+        "n": 697,
+        "accuracy": 0.6312769010043041,
+        "accuracy_explicit": 0.6151142355008787,
+        "accuracy_non_explicit": 0.703125
+      },
+      "AnneOfGreenGables": {
+        "n": 1181,
+        "accuracy": 0.7933954276037256,
+        "accuracy_explicit": 0.7728,
+        "accuracy_non_explicit": 0.818018018018018
+      },
+      "DaisyMiller": {
+        "n": 550,
+        "accuracy": 0.6290909090909091,
+        "accuracy_explicit": 0.5854700854700855,
+        "accuracy_non_explicit": 0.6613924050632911
+      },
+      "Emma": {
+        "n": 1593,
+        "accuracy": 0.5411173885750157,
+        "accuracy_explicit": 0.49104859335038364,
+        "accuracy_non_explicit": 0.5574043261231281
+      },
+      "HardTimes": {
+        "n": 1616,
+        "accuracy": 0.5111386138613861,
+        "accuracy_explicit": 0.4784366576819407,
+        "accuracy_non_explicit": 0.5389016018306636
+      },
+      "HowardsEnd": {
+        "n": 2157,
+        "accuracy": 0.5090403337969402,
+        "accuracy_explicit": 0.4251497005988024,
+        "accuracy_non_explicit": 0.5344619105199516
+      },
+      "MansfieldPark": {
+        "n": 1157,
+        "accuracy": 0.5151253241140882,
+        "accuracy_explicit": 0.5,
+        "accuracy_non_explicit": 0.522697795071336
+      },
+      "NightAndDay": {
+        "n": 2060,
+        "accuracy": 0.5839805825242719,
+        "accuracy_explicit": 0.5298196948682385,
+        "accuracy_non_explicit": 0.6133133881824981
+      },
+      "NorthangerAbbey": {
+        "n": 842,
+        "accuracy": 0.5344418052256532,
+        "accuracy_explicit": 0.5176470588235295,
+        "accuracy_non_explicit": 0.5386904761904762
+      },
+      "OliverTwist": {
+        "n": 2598,
+        "accuracy": 0.5727482678983834,
+        "accuracy_explicit": 0.6300813008130082,
+        "accuracy_non_explicit": 0.49732620320855614
+      },
+      "Persuasion": {
+        "n": 440,
+        "accuracy": 0.5795454545454546,
+        "accuracy_explicit": 0.4947916666666667,
+        "accuracy_non_explicit": 0.6437246963562753
+      },
+      "PrideAndPrejudice": {
+        "n": 1270,
+        "accuracy": 0.5968503937007874,
+        "accuracy_explicit": 0.48623853211009177,
+        "accuracy_non_explicit": 0.6352067868504772
+      },
+      "SenseAndSensibility": {
+        "n": 1076,
+        "accuracy": 0.5724907063197026,
+        "accuracy_explicit": 0.5384615384615384,
+        "accuracy_non_explicit": 0.5898876404494382
+      },
+      "TheAgeOfInnocence": {
+        "n": 1126,
+        "accuracy": 0.38809946714031973,
+        "accuracy_explicit": 0.3881856540084388,
+        "accuracy_non_explicit": 0.3880764904386952
+      },
+      "TheAwakening": {
+        "n": 584,
+        "accuracy": 0.6797945205479452,
+        "accuracy_explicit": 0.5925925925925926,
+        "accuracy_non_explicit": 0.7060133630289532
+      },
+      "TheGambler": {
+        "n": 767,
+        "accuracy": 0.28292046936114734,
+        "accuracy_explicit": 0.30337078651685395,
+        "accuracy_non_explicit": 0.2791728212703102
+      },
+      "TheInvisibleMan": {
+        "n": 750,
+        "accuracy": 0.5893333333333334,
+        "accuracy_explicit": 0.5891238670694864,
+        "accuracy_non_explicit": 0.5909090909090909
+      },
+      "TheManWhoWasThursday": {
+        "n": 766,
+        "accuracy": 0.5013054830287206,
+        "accuracy_explicit": 0.45473684210526316,
+        "accuracy_non_explicit": 0.5833333333333334
+      },
+      "TheMysteriousAffairAtStyles": {
+        "n": 1834,
+        "accuracy": 0.5158124318429662,
+        "accuracy_explicit": 0.6363636363636364,
+        "accuracy_non_explicit": 0.4984404242046163
+      },
+      "ThePictureOfDorianGray": {
+        "n": 820,
+        "accuracy": 0.5463414634146342,
+        "accuracy_explicit": 0.48823529411764705,
+        "accuracy_non_explicit": 0.5615384615384615
+      },
+      "TheSignOfTheFour": {
+        "n": 638,
+        "accuracy": 0.42946708463949845,
+        "accuracy_explicit": 0.43209876543209874,
+        "accuracy_non_explicit": 0.42908438061041293
+      },
+      "TheSportOfTheGods": {
+        "n": 624,
+        "accuracy": 0.5208333333333334,
+        "accuracy_explicit": 0.37373737373737376,
+        "accuracy_non_explicit": 0.5485714285714286
+      },
+      "TheSunAlsoRises": {
+        "n": 2599,
+        "accuracy": 0.4813389765294344,
+        "accuracy_explicit": 0.5117845117845118,
+        "accuracy_non_explicit": 0.4725548902195609
+      },
+      "WhereAngelsFearToTread": {
+        "n": 1000,
+        "accuracy": 0.462,
+        "accuracy_explicit": 0.4380952380952381,
+        "accuracy_non_explicit": 0.46835443037974683
+      },
+      "WinnieThePooh": {
+        "n": 879,
+        "accuracy": 0.5972696245733788,
+        "accuracy_explicit": 0.605080831408776,
+        "accuracy_non_explicit": 0.5925925925925926
+      }
+    }
+  },
+  "published": {
+    "non_explicit_minus_explicit": {
+      "n_novels": 22,
+      "mean_delta": 0.040200494766365155,
+      "ci": [
+        0.009012524659278444,
+        0.06918947846609975
+      ],
+      "p": 0.012939870601293988,
+      "novels_non_explicit_higher": 16,
+      "novels_explicit_higher": 6,
+      "n_boot": 100000
+    },
+    "novels": 22,
+    "quotes": 24758,
+    "macro": {
+      "accuracy": 0.5407258208397896,
+      "accuracy_explicit": 0.5178135810533363,
+      "accuracy_non_explicit": 0.5580140758197015
+    },
+    "micro": {
+      "accuracy": 0.5338880361903223,
+      "accuracy_explicit": 0.5398230088495575,
+      "accuracy_non_explicit": 0.5316497941929025
+    },
+    "per_novel": {
+      "AHandfulOfDust": {
+        "n": 2200,
+        "accuracy": 0.48318181818181816,
+        "accuracy_explicit": 0.4733893557422969,
+        "accuracy_non_explicit": 0.48507867607162236
+      },
+      "ARoomWithAView": {
+        "n": 985,
+        "accuracy": 0.46294416243654823,
+        "accuracy_explicit": 0.43209876543209874,
+        "accuracy_non_explicit": 0.47304582210242585
+      },
+      "AlicesAdventuresInWonderland": {
+        "n": 654,
+        "accuracy": 0.636085626911315,
+        "accuracy_explicit": 0.6231343283582089,
+        "accuracy_non_explicit": 0.6949152542372882
+      },
+      "AnneOfGreenGables": {
+        "n": 1128,
+        "accuracy": 0.8058510638297872,
+        "accuracy_explicit": 0.788235294117647,
+        "accuracy_non_explicit": 0.8270676691729323
+      },
+      "DaisyMiller": {
+        "n": 538,
+        "accuracy": 0.6301115241635687,
+        "accuracy_explicit": 0.591304347826087,
+        "accuracy_non_explicit": 0.6590909090909091
+      },
+      "Emma": {
+        "n": 1588,
+        "accuracy": 0.5409319899244333,
+        "accuracy_explicit": 0.4896907216494845,
+        "accuracy_non_explicit": 0.5575
+      },
+      "HowardsEnd": {
+        "n": 2083,
+        "accuracy": 0.5151224195871339,
+        "accuracy_explicit": 0.4425531914893617,
+        "accuracy_non_explicit": 0.5359801488833746
+      },
+      "NightAndDay": {
+        "n": 2007,
+        "accuracy": 0.5909317389138017,
+        "accuracy_explicit": 0.5399129172714079,
+        "accuracy_non_explicit": 0.6177811550151976
+      },
+      "NorthangerAbbey": {
+        "n": 822,
+        "accuracy": 0.5304136253041363,
+        "accuracy_explicit": 0.524390243902439,
+        "accuracy_non_explicit": 0.5319148936170213
+      },
+      "Persuasion": {
+        "n": 411,
+        "accuracy": 0.583941605839416,
+        "accuracy_explicit": 0.49714285714285716,
+        "accuracy_non_explicit": 0.6483050847457628
+      },
+      "PrideAndPrejudice": {
+        "n": 1237,
+        "accuracy": 0.6014551333872271,
+        "accuracy_explicit": 0.4967532467532468,
+        "accuracy_non_explicit": 0.6361679224973089
+      },
+      "SenseAndSensibility": {
+        "n": 1063,
+        "accuracy": 0.5738476011288806,
+        "accuracy_explicit": 0.5359116022099447,
+        "accuracy_non_explicit": 0.5934379457917262
+      },
+      "TheAgeOfInnocence": {
+        "n": 1074,
+        "accuracy": 0.3854748603351955,
+        "accuracy_explicit": 0.3925233644859813,
+        "accuracy_non_explicit": 0.38372093023255816
+      },
+      "TheAwakening": {
+        "n": 561,
+        "accuracy": 0.6916221033868093,
+        "accuracy_explicit": 0.6349206349206349,
+        "accuracy_non_explicit": 0.7080459770114943
+      },
+      "TheGambler": {
+        "n": 746,
+        "accuracy": 0.28150134048257375,
+        "accuracy_explicit": 0.325,
+        "accuracy_non_explicit": 0.27627627627627627
+      },
+      "TheInvisibleMan": {
+        "n": 686,
+        "accuracy": 0.6064139941690962,
+        "accuracy_explicit": 0.6272401433691757,
+        "accuracy_non_explicit": 0.5935960591133005
+      },
+      "TheManWhoWasThursday": {
+        "n": 724,
+        "accuracy": 0.4986187845303867,
+        "accuracy_explicit": 0.45374449339207046,
+        "accuracy_non_explicit": 0.5805243445692884
+      },
+      "TheMysteriousAffairAtStyles": {
+        "n": 1795,
+        "accuracy": 0.5136490250696378,
+        "accuracy_explicit": 0.6561085972850679,
+        "accuracy_non_explicit": 0.4936467598475222
+      },
+      "ThePictureOfDorianGray": {
+        "n": 757,
+        "accuracy": 0.5389696169088507,
+        "accuracy_explicit": 0.5032679738562091,
+        "accuracy_non_explicit": 0.5480132450331126
+      },
+      "TheSignOfTheFour": {
+        "n": 608,
+        "accuracy": 0.41776315789473684,
+        "accuracy_explicit": 0.4358974358974359,
+        "accuracy_non_explicit": 0.41509433962264153
+      },
+      "TheSportOfTheGods": {
+        "n": 584,
+        "accuracy": 0.5256849315068494,
+        "accuracy_explicit": 0.41379310344827586,
+        "accuracy_non_explicit": 0.545271629778672
+      },
+      "TheSunAlsoRises": {
+        "n": 2507,
+        "accuracy": 0.48145193458316715,
+        "accuracy_explicit": 0.5148861646234676,
+        "accuracy_non_explicit": 0.4718346253229974
+      }
+    }
+  }
+}
