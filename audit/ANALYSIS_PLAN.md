@@ -38,8 +38,67 @@ Precision and recall are weighted by stratum: each sampled row stands for
 design carry that design's weights (`bound_stratum_*`) and are used only for
 the bound; rows in both designs are labelled once.
 
-## Generation comparisons
+## Generation comparisons: the multiple-comparison family
 
-None of the generation gaps was named before its run. They are reported with
-raw and Holm-corrected intervals, Holm applied within each metric across every
-comparison computed on the four runs (`audit/generation/holm.json`).
+Fixed as of this commit and not changed after labels are read.
+
+**Unit.** Paired bootstrap over the 30 stories, 100,000 resamples, seed 0,
+percentile intervals; two-sided bootstrap p with the +1 correction
+(`dsg/eval/multiplicity.py`).
+
+**Family.** One family per metric. For each of the nine metrics in
+`dsg.generate.score.METRICS`, the family is every pair in
+`dsg.generate.score.COMPARISONS` whose two arms both appear in one of these four
+runs: `gen-qwen3b-s30-c20`, `gen-v3-hybrid`, `gen-v4-retrieval`,
+`gen-v5-selection`. That is 27 comparisons per metric, listed below. Any metric
+added in phase 1d, such as violations per subject mention, is its own family of
+the same 27 comparisons.
+
+**Arms excluded from conclusions still count.** The five comparisons involving
+run 1's tuned arm are in the family although that arm is excluded from every
+conclusion. Keeping them makes the correction more conservative; dropping them
+after seeing results would be a choice made with the data in view.
+
+**Runs not in the family.** The 7B prose and smoke runs
+(`gen-qwen7b-prose-*`) are not cited by any finding and are excluded, although
+some `COMPARISONS` pairs could be computed on them.
+
+**Detector versions.** In phase 1d each detector version (v1, v2) and the
+other-subject bound is a separate analysis over the same family. Holm is applied
+within each version and metric; versions are never pooled into one family.
+
+**Correction.** Holm step-down at α = 0.05 within the family. Each comparison is
+also reported with its interval at its Holm step level, α / (m − rank + 1).
+
+**Wording.** A gap that fails the correction is described as "not significant
+after correction", never as no difference.
+
+| # | run | comparison (a − b) | note |
+|---|---|---|---|
+| 1 | `gen-qwen3b-s30-c20` | `base:rolling-summary` − `base:none` | |
+| 2 | `gen-qwen3b-s30-c20` | `base:full-context` − `base:rolling-summary` | |
+| 3 | `gen-qwen3b-s30-c20` | `base:dsg-state` − `base:none` | |
+| 4 | `gen-qwen3b-s30-c20` | `base:dsg-state` − `base:rolling-summary` | |
+| 5 | `gen-qwen3b-s30-c20` | `base:dsg-state` − `base:full-context` | |
+| 6 | `gen-qwen3b-s30-c20` | `base:dsg-state` − `base:append-only-state` | |
+| 7 | `gen-qwen3b-s30-c20` | `tuned:dsg-state` − `base:dsg-state` | excluded arm |
+| 8 | `gen-qwen3b-s30-c20` | `tuned:full-context` − `base:full-context` | excluded arm |
+| 9 | `gen-qwen3b-s30-c20` | `tuned:dsg-state` − `tuned:full-context` | excluded arm |
+| 10 | `gen-qwen3b-s30-c20` | `tuned:dsg-repair` − `tuned:dsg-state` | excluded arm |
+| 11 | `gen-qwen3b-s30-c20` | `tuned:dsg-repair` − `base:full-context` | excluded arm |
+| 12 | `gen-v3-hybrid` | `base:dsg-state` − `base:none` | |
+| 13 | `gen-v3-hybrid` | `base:dsg-state` − `base:full-context` | |
+| 14 | `gen-v3-hybrid` | `base:dsg-hybrid` − `base:dsg-state` | |
+| 15 | `gen-v3-hybrid` | `base:dsg-hybrid` − `base:last-chapter` | |
+| 16 | `gen-v3-hybrid` | `base:dsg-hybrid` − `base:full-context` | |
+| 17 | `gen-v3-hybrid` | `base:dsg-hybrid` − `base:none` | |
+| 18 | `gen-v3-hybrid` | `base:dsg-hybrid-repair` − `base:dsg-hybrid` | |
+| 19 | `gen-v4-retrieval` | `base:beat-retrieval` − `base:none` | |
+| 20 | `gen-v4-retrieval` | `base:beat-hybrid` − `base:last-chapter` | |
+| 21 | `gen-v4-retrieval` | `base:beat-hybrid` − `base:full-context` | |
+| 22 | `gen-v4-retrieval` | `base:beat-hybrid` − `base:beat-retrieval` | |
+| 23 | `gen-v4-retrieval` | `base:beat-hybrid-repair` − `base:beat-hybrid` | |
+| 24 | `gen-v5-selection` | `base:last-chapter@bo4-graph` − `base:last-chapter` | |
+| 25 | `gen-v5-selection` | `base:last-chapter@bo4-random` − `base:last-chapter` | |
+| 26 | `gen-v5-selection` | `base:last-chapter@bo4-graph` − `base:last-chapter@bo4-random` | |
+| 27 | `gen-v5-selection` | `base:last-chapter@bo4-graph` − `base:full-context` | |
