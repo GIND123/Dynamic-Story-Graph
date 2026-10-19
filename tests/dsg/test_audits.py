@@ -74,7 +74,8 @@ def test_recording_state_leaves_the_log_unchanged_and_sees_the_old_value():
 def _event(i: int, rule: str, book: str, corpus: str = "pdnc", marker: str = "") -> dict:
     return {"rule": rule, "book": book, "corpus": corpus,
             "markers_in_evidence": marker, "markers_in_sentence": "",
-            "new_match": "exact", "old_match": "exact", "id": i}
+            "new_match": "exact", "old_match": "exact", "id": i,
+            "old_evidence": "x", "new_evidence": "y"}
 
 
 def test_sample_caps_provisional_takes_small_strata_whole_and_marks_doubles():
@@ -87,8 +88,24 @@ def test_sample_caps_provisional_takes_small_strata_whole_and_marks_doubles():
     )
     rows, design = ca.sample(events, seed=1)
     assert len(rows) == ca.N_ITEMS
-    assert design["provisional_share"] <= ca.MAX_PROVISIONAL_SHARE
+    assert design["sampled_by_rule"]["elaborate:provisional"] == ca.N_PROVISIONAL
     assert design["sampled_by_rule"]["revise:immutable"] == 12
-    assert any(r["markers_in_evidence"] for r in rows)
     assert sum(r["double_annotate"] == "yes" for r in rows) == ca.N_DOUBLE
     assert rows == ca.sample(events, seed=1)[0], "seeded"
+
+
+def _stratum(fact_key: str, text: str) -> str:
+    from dsg.evidence import sentences
+
+    fact = FACTS[fact_key]
+    m = da._subject_re(fact.subject).search(text)
+    sent = da._sentence_of(sentences(text), m.start())
+    return da.recall_stratum(fact, text, m.start(), m.end(), sent)
+
+
+def test_recall_strata_pick_out_likely_misses():
+    assert _stratum("miriam_eyes", "Miriam looked up, her brown eyes wide.") == "out_of_vocab_value"
+    assert _stratum("miriam_eyes", "Miriam had green and blue eyes.") == "suppressed_by_true_value"
+    assert _stratum("miriam_eyes", "Miriam closed her eyes.") == "attribute_cue"
+    assert _stratum("miriam_eyes", "Miriam went to the market.") == ""
+    assert _stratum("locket_silver", "The locket was copper.") == "out_of_vocab_value"

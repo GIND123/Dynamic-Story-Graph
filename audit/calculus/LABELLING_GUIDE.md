@@ -39,6 +39,13 @@ belief about a world that did not change.)
 | `EXTRACTION_ERROR` | One of the two facts isn't actually in the text: wrong person, wrong slot, invented, or not a fact (e.g. `location = wretched`). | |
 | `UNSURE` | You can't tell from the text shown. Add a note. | |
 
+**Label the clash the text shows, not what you guess the program did.** For
+many rows the program decided "no clash, just more detail" and quietly
+replaced the old value with the new one. If the two values can't both be true
+at once, that was a real clash. Label it `SUPERSEDE` or `REVISE` as the text
+warrants, never `ELABORATE` by default. Use `ELABORATE` only when the new value
+really is the old one stated more precisely.
+
 Judgements that come up often:
 - **Finding out is not the same as being wrong.** "She learned that her father
   had died" reports a *change* (SUPERSEDE). "She learned that he had never been

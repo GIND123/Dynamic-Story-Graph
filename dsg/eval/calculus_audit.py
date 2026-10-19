@@ -24,6 +24,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from dsg.data.registry import load as load_corpus
+from dsg.eval.provenance import record as provenance
 from dsg.evidence import NOT_FOUND, Located, locate
 from dsg.experiments.run_study import load_book_proposals
 from dsg.lexicon import revelation_markers
@@ -34,8 +35,9 @@ from dsg.store import CandidateAssertion, NarrativeState
 SEED = 20261018
 N_ITEMS = 250
 N_DOUBLE = 50
-MAX_PROVISIONAL_SHARE = 0.15
-MIN_PER_MARKER = 10
+# Low-confidence ELABORATE decides most classified clashes and rewrites the old
+# value in place, so it is the main rule under audit.
+N_PROVISIONAL = 90
 CONTEXT = 300
 
 RUNS = {
@@ -43,21 +45,6 @@ RUNS = {
     "litbank": "artifacts/hub/proposals/litbank-qwen7b-w1200",
 }
 
-# Provisional marker groups, to be settled by the dev labels in phase 4c, not
-# here. "never_true" markers say the old value was false all along;
-# "found_out" markers only say someone came to know something.
-NEVER_TRUE = frozenset({
-    r"\bin fact\b", r"\bin truth\b", r"\bturn(?:ed|s) out\b", r"\ball along\b",
-    r"\bhad (?:always|never) been\b", r"\bwas (?:never|not really)\b", r"\bmistaken\b",
-    r"\breally was\b", r"\bthe truth (?:was|is)\b", r"\bfalsely\b",
-    r"\bpretend(?:ed|ing)\b", r"\bdisguise[d]?\b", r"\bimpost(?:or|er)\b",
-    r"\bno longer believed\b",
-})
-FOUND_OUT = frozenset({
-    r"\brevealed?\b", r"\breveal(?:s|ing)\b", r"\bdiscover(?:ed|s)\b",
-    r"\blearn(?:ed|s|t) that\b", r"\bconfess(?:ed|es)\b", r"\badmitted\b",
-    r"\brealis(?:ed|es)\b", r"\brealiz(?:ed|es)\b", r"\bactually\b",
-})
 # Cues that a value changed in the story world. Recorded for analysis only.
 CHANGE_CUES = (r"\bdied\b", r"\bdead\b", r"\bmarr(?:ied|y|ies)\b", r"\bmoved?\b",
                r"\bbecame\b", r"\bnow\b", r"\bno longer\b", r"\bsince\b")
@@ -68,10 +55,6 @@ CLASSIFIED_RULES = (
     "revise:revelation-marker", "revise:reported-to-narrated", "revise:immutable",
     "supersede:mutable",
 )
-
-
-def marker_group(pattern: str) -> str:
-    return "never_true" if pattern in NEVER_TRUE else "found_out" if pattern in FOUND_OUT else ""
 
 
 def change_cues(text: str) -> list[str]:
@@ -211,7 +194,6 @@ def _with_text(e: dict, corpus: str, book_id: str, text: str) -> dict:
         "old_context": old_ctx, "new_context": new_ctx,
         "old_window": old_win, "new_window": new_win,
         "markers_in_evidence": ";".join(markers_ev),
-        "marker_groups_in_evidence": ";".join(sorted({marker_group(m) for m in markers_ev})),
         "markers_in_sentence": ";".join(markers_sent),
         "change_cues_in_evidence": ";".join(change_cues(e["new_evidence"])),
         "change_cues_in_sentence": ";".join(change_cues(new_sentence)),
@@ -225,7 +207,7 @@ SHEET_COLUMNS = (
     "old_object", "old_evidence", "old_match", "old_context",
     "new_object", "new_evidence", "new_match", "new_context",
     "label", "correct_value", "correct_value_text", "labeller", "notes",
-    "classified_op", "applied_op", "rule", "markers_in_evidence", "marker_groups_in_evidence",
+    "classified_op", "applied_op", "rule", "markers_in_evidence",
     "markers_in_sentence", "change_cues_in_evidence", "change_cues_in_sentence",
     "old_certainty", "new_certainty", "old_confidence", "old_commit",
     "old_window_index", "new_window_index", "old_start", "old_end", "new_start", "new_end",
@@ -235,15 +217,11 @@ SHEET_COLUMNS = (
 # Everything a labeller could be steered by: the calculus's own call and the
 # cues it keyed on.
 BLIND_DROP = {
-    "classified_op", "applied_op", "rule", "markers_in_evidence", "marker_groups_in_evidence",
+    "classified_op", "applied_op", "rule", "markers_in_evidence",
     "markers_in_sentence", "change_cues_in_evidence", "change_cues_in_sentence",
     "old_certainty", "new_certainty", "old_confidence", "old_commit",
     "sample_reason", "stratum", "stratum_population", "stratum_sampled",
 }
-
-
-def _has_marker(e: dict) -> bool:
-    return bool(e["markers_in_evidence"] or e["markers_in_sentence"])
 
 
 def _by_novel(pool: list[dict], n: int, rng: random.Random, reason: str) -> list[dict]:
@@ -275,7 +253,7 @@ def _by_novel(pool: list[dict], n: int, rng: random.Random, reason: str) -> list
 def sample(events: list[dict], seed: int = SEED) -> tuple[list[dict], dict]:
     """The labelling sample. Census strata are taken whole; the two large ones
     (``supersede:mutable`` and ``elaborate:provisional``) are sampled by novel,
-    with ``elaborate:provisional`` capped at MAX_PROVISIONAL_SHARE."""
+    with N_PROVISIONAL rows of ``elaborate:provisional``."""
     rng = random.Random(seed)
     for i, e in enumerate(events):
         e["_key"] = i
@@ -288,18 +266,13 @@ def sample(events: list[dict], seed: int = SEED) -> tuple[list[dict], dict]:
                                      "stratum_population": len(rows),
                                      "stratum_sampled": len(rows)}
 
-    # Every marker occurrence: none occurs often enough to reach MIN_PER_MARKER.
-    take([e for e in events if _has_marker(e)], "marker")
     # Small strata in full.
     for rule in ("revise:revelation-marker", "revise:reported-to-narrated",
                  "revise:immutable", "elaborate:refines", "elaborate:underspecified"):
         take([e for e in events if e["rule"] == rule], "census")
 
-    cap = int(N_ITEMS * MAX_PROVISIONAL_SHARE)
-    have_prov = sum(1 for e in chosen.values() if e["rule"] == "elaborate:provisional")
-    prov_pool = [e for e in events
-                 if e["rule"] == "elaborate:provisional" and e["_key"] not in chosen]
-    for e in _by_novel(prov_pool, max(0, cap - have_prov), rng, "provisional"):
+    prov_pool = [e for e in events if e["rule"] == "elaborate:provisional"]
+    for e in _by_novel(prov_pool, N_PROVISIONAL, rng, "provisional"):
         chosen[e["_key"]] = e
 
     sup_pool = [e for e in events
@@ -344,14 +317,37 @@ def sample(events: list[dict], seed: int = SEED) -> tuple[list[dict], dict]:
         "provisional_share": sum(r["rule"] == "elaborate:provisional" for r in rows) / len(rows),
         "double_annotate": sum(r["double_annotate"] == "yes" for r in rows),
         "double_by_rule": dict(Counter(r["rule"] for r in rows if r["double_annotate"] == "yes")),
-        "markers": {m: {"population": marker_population[m], "sampled": marker_rows[m],
-                        "provisional_group": marker_group(m)}
+        "markers": {m: {"population": marker_population[m], "sampled": marker_rows[m]}
                     for m in sorted(marker_population)},
+        "evidence_not_found": {
+            "population": _not_found(events), "sample": _not_found(rows),
+        },
         "new_match_in_sample": dict(Counter(r["new_match"] for r in rows)),
         "old_match_in_sample": dict(Counter(r["old_match"] for r in rows)),
         "books_in_sample": len({r["book"] for r in rows}),
     }
     return rows, design
+
+
+# Evidence strings that cannot be located because there is nothing to find:
+# empty, or the extractor wrote the certainty label into the evidence field.
+_NON_EVIDENCE = frozenset({"", "reported", "narrated", "inferred", "hypothetical"})
+
+
+def _not_found(rows: list[dict]) -> dict[str, float]:
+    n = len(rows)
+    out: dict[str, float] = {"rows": n}
+    for side in ("old", "new"):
+        nf = [r for r in rows if r[f"{side}_match"] == NOT_FOUND]
+        empty = sum(r[f"{side}_evidence"].strip().lower() in _NON_EVIDENCE for r in nf)
+        out[f"{side}_not_found"] = len(nf)
+        out[f"{side}_not_found_rate"] = len(nf) / n if n else 0.0
+        out[f"{side}_not_found_no_evidence"] = empty
+        out[f"{side}_not_found_real_evidence"] = len(nf) - empty
+    either = sum(1 for r in rows if NOT_FOUND in (r["old_match"], r["new_match"]))
+    out["either_not_found"] = either
+    out["either_not_found_rate"] = either / n if n else 0.0
+    return out
 
 
 def _write(path: Path, rows: list[dict], columns: tuple[str, ...]) -> None:
@@ -362,7 +358,7 @@ def _write(path: Path, rows: list[dict], columns: tuple[str, ...]) -> None:
             w.writerow({c: r.get(c, "") for c in columns})
 
 
-def export(out_dir: Path, seed: int = SEED) -> dict:
+def export(out_dir: Path, seed: int = SEED, argv: list[str] | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     events, census = [], {}
     for corpus, run_dir in RUNS.items():
@@ -378,7 +374,11 @@ def export(out_dir: Path, seed: int = SEED) -> dict:
     _write(out_dir / "sheet_blind.csv", rows, blind)
     _write(out_dir / "sheet_second_annotator.csv",
            [r for r in rows if r["double_annotate"] == "yes"], blind)
-    manifest = {"runs": RUNS, "policy": "dsg-full", "census": census, **design}
+    inputs = [f for d in RUNS.values() for f in sorted(Path(d).glob("*.jsonl"))]
+    manifest = {
+        "provenance": provenance("dsg.eval.calculus_audit", argv, {"sample": seed}, inputs),
+        "runs": RUNS, "policy": "dsg-full", "census": census, **design,
+    }
     (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return manifest
 
@@ -390,10 +390,10 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--out", default="audit/calculus")
     e.add_argument("--seed", type=int, default=SEED)
     args = p.parse_args(argv)
-    m = export(Path(args.out), args.seed)
+    m = export(Path(args.out), args.seed, argv)
     print(json.dumps({k: m[k] for k in (
         "population_by_rule", "sampled_by_rule", "sampled_by_corpus",
-        "provisional_share", "double_annotate", "new_match_in_sample")}, indent=2))
+        "provisional_share", "double_annotate", "evidence_not_found")}, indent=2))
     return 0
 
 

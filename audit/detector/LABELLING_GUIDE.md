@@ -40,6 +40,11 @@ Use the text alone, not what the story "should" say.
 - For trade: "Tobias, the apothecary", "Tobias worked as a blacksmith",
   "the apothecary Tobias".
 - For home: "born in Ravensmoor", "Rowena, who came from Thornbury".
+- Any value other than `true_value` counts, even one the planted list never
+  offered: "brown eyes" contradicts green eyes, "the copper locket"
+  contradicts a silver one, "Tobias the watchmaker" contradicts clockmaker
+  only if a watchmaker is clearly a different trade to you (otherwise
+  `unsure`, with a note).
 - Dialogue counts when the story presents it as true. A lie that the story
   later exposes still counts as `yes` for that passage. Say so in `notes`.
 
