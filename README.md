@@ -44,7 +44,7 @@ characters:
 | before only | 1,524 | 14.2% |
 
 > **A strict prefix-causal cut removes the decisive lexical cue for 29.3% of
-> explicit quotes — about 8.8% of the corpus.**
+> explicit quotes — 3,148 of 37,131 quotes, 8.5% of the corpus.**
 
 The benchmark is substantially easier than it looks because, for a large slice of
 it, the answer arrives after the question. This is a property of the corpus, not
@@ -225,8 +225,10 @@ What that leaves is the question worth asking, and it is empirical:
 
 > **What does enforcing consistency cost?**
 
-The answer is nothing, and it was not obvious in advance — the natural worry is
-that aggressive revision throws away correct facts.
+On these metrics the answer cannot be anything but nothing, so this is not yet
+evidence: identity and mention scoring never read fact assertions, so the 0.000 is guaranteed by construction, like I1. The real worry — that aggressive revision throws away
+correct facts — is untested. The first real test is scoring the calculus's
+chosen values against the labelled correct value (audit phase 4d).
 
 | rung (7B) | identity CoNLL F1 | mention linking | self-contradictory slots |
 |---|---|---|---|
@@ -237,8 +239,9 @@ that aggressive revision throws away correct facts.
 
 Bold entries have a 95% interval excluding zero. The revision rung moves the
 consistency metric by exactly the amount it is defined to move it and moves the
-accuracy metrics by *exactly zero* — identity and fact revision are disjoint, and
-the ladder shows it rather than assuming it.
+accuracy metrics by *exactly zero*, because identity and fact revision are
+disjoint by construction; the ladder confirms the construction, it does not
+test the cost.
 
 Two findings on that ladder are genuinely empirical:
 
@@ -286,7 +289,8 @@ language model appears in any metric.
 Serialised state is worse than no memory in its run before correction (+0.083,
 raw CI [+0.025, +0.142]) but is not significant after Holm correction across the
 27 violation-rate comparisons (adjusted p 0.090, Holm-level CI [−0.004,
-+0.171]). Beat-conditioned retrieval — the design the prior literature predicts
++0.171]). Run 1, an independent run, points the same way (+0.075, raw CI
+[+0.008, +0.142], adjusted p 0.365). Beat-conditioned retrieval — the design the prior literature predicts
 should win — is worse than no memory in its run and remains significant after
 correction (+0.083, raw CI [+0.037, +0.125]; adjusted p 0.004, Holm-level CI
 [+0.017, +0.146]). Intervals use 100,000 bootstrap resamples. Neither gap
@@ -365,12 +369,12 @@ Three update types that append-only pipelines conflate:
 | `REVISE` | the **reader** was wrong; it was never true | retracted, and so is anything derived from it |
 
 The `SUPERSEDE`/`REVISE` split is the operational form of the narratological
-distinction between an event in the story and a disclosure in the telling — a
-distinction static belief revision (AGM, TMS) does not make, because a knowledge
-base has no notion of the world legitimately moving on.
+distinction between an event in the story and a disclosure in the telling. For
+knowledge bases the same distinction is Katsuno & Mendelzon's (1991) update
+versus revision; DSG applies it to a reader.
 
-Assertions carry two independent clocks: discourse time (while the reader held
-the belief) and story time (while the fact held in the world). Seven structural
+Assertions carry two clocks: discourse time (while the reader held the belief)
+and story time (while the fact held in the world). Story time is represented but is currently set from reading position (`valid_from` = `d_open` = the window index, and `valid_to` is set on close the same way), so the two clocks do not yet differ; the difference between a plot event and a reveal is carried by the operation (`SUPERSEDE` vs `REVISE`), not by the clocks. Seven structural
 invariants are checked after every reading step, including prefix causality.
 Memory is bounded by cast size, not book length.
 
@@ -409,7 +413,7 @@ had to be structural rather than statistical.
 ## 6. Controls, and what they cost us
 
 Every headline in this repository is paired with the control that could have
-killed it. Three of them did:
+killed it. Five of them did:
 
 | control | what it killed |
 |---|---|
@@ -480,7 +484,7 @@ follow the evidence.
 
 ```bash
 python -m dsg doctor                      # environment check
-python -m pytest tests/ -q                # 231 passed, 20 skipped
+python -m pytest tests/ -q                # 289 passed, 20 skipped, 52 expected failures
 python -m dsg.eval.causal_audit --report tag-position   # §1
 python -m dsg report                      # regenerates every table from results.json
 ```
@@ -542,7 +546,8 @@ These are reported as limits of the study, not as pending work.
 2. **Citation verification** for the 2026 preprints the positioning rests on.
 
 **What a continuation would need.** Mention-level identity gold (BookCoref) to
-replace the alias-set proxy; validation of the `SUPERSEDE`/`REVISE` decision
+replace the alias-set proxy — BookCoref's gold set already covers *Pride and
+Prejudice*, one of the PDNC novels; validation of the `SUPERSEDE`/`REVISE` decision
 against a few hundred hand-annotated conflict pairs; a second model family to
 show the negatives are not Qwen-specific; human validation that a flagged canon
 violation reads as a continuity error. The corpus-level results in §1 require no

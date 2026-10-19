@@ -104,7 +104,7 @@ does the speaker's name occur within ±250 characters of the quote?
 | before only | 1,524 | 14.2% |
 
 **So a strict prefix-causal cut removes the decisive lexical cue for 29.3% of
-explicit quotes (~8.8% of the whole corpus).** The constraint is real and its
+explicit quotes (3,148 of 37,131 quotes, 8.5% of the whole corpus).** The constraint is real and its
 cost is now quantified rather than assumed. This is itself a publishable
 measurement — it says how much of PDNC's attribution signal is *post-hoc*.
 

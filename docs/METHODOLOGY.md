@@ -22,7 +22,8 @@ positive claim narrow enough to be true.
 **Claim.** Given a fixed stream of extracted assertions, an append-only store
 turns **0.107–0.423** of its own single-valued slots self-contradictory — at
 1.5B, 3B and 7B extractors, over 28 novels — and equipping the store with an
-explicit update calculus removes that at **no measurable cost in accuracy**.
+explicit update calculus removes that. Its cost in accuracy is **untested**:
+identity and mention scoring never read fact assertions, so the 0.000 is guaranteed by construction, like I1; correct-value scoring in audit phase 4d is the first real test.
 
 **What is measured, and what is not.** The append-only rate is the empirical
 quantity. The calculus's own **0.000** is a *conformance check*: invariant I1 is
@@ -87,7 +88,8 @@ apparent 7× win, purely by degenerating into pastiche of its training corpus.
 
 ## 4. C3 — State conditioning did not help generation in this setup (negative; draft)
 
-Four designs, three runs, 12,600 chapters, 30 stories, paired within story.
+Five designs, four runs, 30 stories, paired within story (counts in
+`docs/GENERATION_FINDINGS.md`).
 
 > **Draft wording, pending the canon-detector audit (phase 1d).** Scope: Qwen2.5-3B writer, state
 > supplied as a digest or retrieved slice, about 10K words, deterministic test on
@@ -99,10 +101,10 @@ Four designs, three runs, 12,600 chapters, 30 stories, paired within story.
 | --- | --- | --- | --- |
 | none | 0.487 | 112 | floor |
 | previous chapter | 0.312 | 1,017 | strong, cheap |
-| full transcript | 0.254 | 5,362 | best, 5× the context |
-| serialised state digest | 0.588 | 357 | **worse than nothing** |
-| digest + previous chapter | 0.379 | 1,194 | loses to previous alone |
-| beat-conditioned retrieval | 0.571 | 212 | **worse than nothing** |
+| full transcript | 0.254 | 5,362 | memory baseline, 5× the context; unstable across runs (`GENERATION_FINDINGS.md` §3) |
+| serialised state digest | 0.588 | 357 | worse before correction; not significant after correction |
+| digest + previous chapter | 0.379 | 1,194 | worse before correction; not significant after correction (vs previous alone) |
+| beat-conditioned retrieval | 0.571 | 212 | **worse than no memory**, significant after correction |
 | retrieval + previous chapter | 0.317 | 1,098 | ties previous alone |
 | + graph guard | 0.317 | 1,095 | no effect (ns) |
 
@@ -110,8 +112,9 @@ Serialised state is worse than no memory before correction (+0.083, raw CI
 [+0.025, +0.142]) and is not significant after Holm correction (adjusted p
 0.090). Beat-conditioned retrieval — the design the prior literature predicts
 should win — is also worse than no memory (+0.083, raw CI [+0.037, +0.125];
-Holm-adjusted p 0.004) and
-indistinguishable from the serialisation it was meant to fix. Retrieval plus
+Holm-adjusted p 0.004). Its rate (0.571) is close to the digest's (0.588), but
+that is a cross-run observation, not evidence: the retrieval run has no digest
+arm. Retrieval plus
 recent text ties recent text alone (+0.004, ns). The guard never moves a number.
 
 **This is not an extraction ceiling.** The state held **0.492** of the planted

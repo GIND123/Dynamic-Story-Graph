@@ -18,7 +18,7 @@ The closest conceptual antecedent, and the one the paper must engage first.
 
 | Work | Establishes | Leaves open |
 | --- | --- | --- |
-| **Chen (2026), *Distinguishing Revision and Delayed Elaboration in Incremental Narrative Interpretation*, CMN'26, arXiv:2608.21364** **[verified]** | The revision / delayed-elaboration distinction; the separation of *committed* from *underspecified* content, which DSG implements as deferred commitment; and that representing early structure as underspecified converts non-monotone rollbacks into monotone refinement. | Explicitly conceptual: one worked seven-panel manga example, **no implementation, no corpus, no metrics**. Its own future work asks for (a) algorithmic criteria for classifying updates, (b) corpus-scale measurement of revision vs elaboration frequency, (c) a hybrid neural-propose / symbolic-commit architecture, (d) process metrics such as rollback frequency and proportion of monotone refinements. **To our knowledge, DSG is the first to supply all four.** |
+| **Chen (2026), *Distinguishing Revision and Delayed Elaboration in Incremental Narrative Interpretation*, CMN'26, arXiv:2608.21364** **[verified]** | The revision / delayed-elaboration distinction; the separation of *committed* from *underspecified* content, which DSG implements as deferred commitment; and that representing early structure as underspecified converts non-monotone rollbacks into monotone refinement. | Explicitly conceptual: one worked seven-panel manga example, **no implementation, no corpus, no metrics**. Four of the five directions in its future work ask for (a) algorithmic criteria for classifying updates, (b) corpus-scale measurement of revision vs elaboration frequency, (c) a hybrid neural-propose / symbolic-commit architecture, (d) process metrics such as rollback frequency and proportion of monotone refinements. (the fifth is schema refinement and relation normalisation). **To our knowledge, DSG is the first to supply those four.** |
 | Kamp (1981); Kamp & Reyle (1993) — Discourse Representation Theory | Meaning as incremental context update; the DRS as a state that grows with discourse. | No account of *retraction* when later discourse corrects earlier commitment. |
 | Asher & Lascarides (2003) — SDRT | Rhetorical structure constrains how new content attaches to the existing representation. | Attachment, not revision; no reader-model correction. |
 | Copestake et al. (2005) — Minimal Recursion Semantics; underspecified DRT | Underspecification as a principled representational strategy: hold structure open, add constraints monotonically. | Sentence/discourse scope, not book scale; not evaluated as a *state* over a long text. |
@@ -35,7 +35,7 @@ inspectable decision — then measure how often each fires on real novels.
 | Alchourrón, Gärdenfors & Makinson (1985) — AGM | Rationality postulates for revising a belief set under contradiction; expansion / revision / contraction. | AGM has no notion of the *world changing*. Every conflict is an error to be repaired. |
 | **Katsuno & Mendelzon (1991), *On the difference between updating a knowledge base and revising it*, KR'91, pp. 387–394** **[verified via secondary sources]** | *Update* (the world changed) versus *revision* (new information about a world that did not change), with separate postulates; the AGM postulates describe revision only. | Propositional knowledge bases; no reader, no discourse time, no way to tell the two apart from text. |
 | Doyle (1979) — Truth Maintenance Systems; de Kleer (1986) — ATMS | Dependency-directed backtracking: retracting a belief retracts what was derived from it. | Same gap; also no time-indexing of belief. |
-| Doutre et al. (2024), *What killed the cat? Towards a logical formalization of curiosity (and suspense, and surprise) in narratives*, arXiv:2410.08597 | Narrative tension formalised over **non-monotonic** reasoning — the reader's inferences are defeasible by later text. | Logical framework; not built, not measured on corpora. |
+| Dupin de Saint-Cyr, Bosser, Callac & Maisel (2024), *What killed the cat? Towards a logical formalization of curiosity (and suspense, and surprise) in narratives*, TIME 2024, arXiv:2410.08597 | Narrative tension formalised over **non-monotonic** reasoning — the reader's inferences are defeasible by later text. | Logical framework; not built, not measured on corpora. |
 
 **What DSG takes from this line, and what it adds.** A narrative conflict can
 mean the world moved on (`SUPERSEDE` — the earlier belief was true *of its
@@ -58,9 +58,9 @@ measured against human labels (`audit/calculus/`). *(Draft, pending audit phases
 | Graesser, Singer & Trabasso (1994) — constructionist inference | Readers build explanatory structure online, not retrospectively. |
 
 This literature is the warrant for the whole design: the object a reader
-maintains is time-indexed, incremental, and revisable. `dsg/schemas.py` keeps
+maintains is time-indexed, incremental, and revisable. `dsg/schemas.py` represents
 two clocks (discourse time and story time) for exactly the reason the
-event-indexing model separates presentation from situation.
+event-indexing model separates presentation from situation. Story time is represented but is currently set from reading position (`valid_from` = `d_open` = the window index, and `valid_to` is set on close the same way), so the two clocks do not yet differ; the difference between a plot event and a reveal is carried by the operation (`SUPERSEDE` vs `REVISE`), not by the clocks.
 
 ## 4. Coreference at document and book scale
 
@@ -70,12 +70,12 @@ and a reviewer will look first.**
 | Work | Establishes |
 | --- | --- |
 | Bamman, Popat & Shen (2019) — LitBank entities; Bamman, Lewke & Mansoor (2020) — LitBank coreference **[verified via MEIC-DT]** | Gold entity and coreference annotation over 100 literary excerpts (~2,100 words, ~291 mentions each). |
-| **Martinelli, Bonomo, Huguet Cabot & Navigli (2025), *BookCoref: Coreference Resolution at Book Scale*, ACL, arXiv:2507.12075** **[verified]** | Gold-annotated coreference over whole books (30K–67K tokens); manually annotated test set, automatically generated train set. |
+| **Martinelli, Bonomo, Huguet Cabot & Navigli (2025), *BookCoref: Coreference Resolution at Book Scale*, ACL, arXiv:2507.12075** **[verified]** | Book-scale character coreference: a manually annotated test set of 3 books (Animal Farm 36.5K, Siddhartha 47.8K, Pride and Prejudice 146.5K tokens; mean 76K) and an automatically annotated silver set of 50 books (mean about 217K tokens). |
 | Xia et al. (2020); Toshniwal et al. (2020) — incremental coreference **[verified via MEIC-DT]** | Fixed-size cache + linear classifier; LRU eviction. The originating incremental-clustering line. |
 | Guo et al. (2023) — dual cache **[verified via MEIC-DT]** | LRU+LFU dual-cache eviction for long documents. |
 | Martinelli et al. (2024) — Maverick **[verified via MEIC-DT]** | Lightweight Transformer over all mentions of historical clusters; SOTA on long text. |
 | **Luo et al. (2025), *MEIC-DT*, arXiv:2512.24711** **[verified]** | Memory-efficient incremental clustering under an explicit memory budget; **81.27 CoNLL Avg-F1 on LitBank**. |
-| Le Bourgeois et al. (2025), *The Elephant in the Coreference Room*, arXiv:2510.15594 | Full-length French fiction coreference; long annotated documents remain scarce. |
+| Bourgois & Poibeau (2025), *The Elephant in the Coreference Room*, arXiv:2510.15594 | Gold mention-level character coreference over three full French novels (over 285K tokens); long annotated documents remain scarce. |
 
 **The honest statement DSG must make.** Supervised incremental coreference is a
 mature line reaching ~81 CoNLL F1 on LitBank. DSG's identity plane is *not* a
@@ -100,7 +100,7 @@ commitment decision. Worth one paragraph, because the words collide.
 | Henaff et al. (2017) — Recurrent Entity Networks | Latent per-entity memory slots updated as text streams. | Latent and uninspectable; no revision semantics; short texts. |
 | Dalvi et al. (2018) — ProPara; Tandon et al. (2018) | Explicit state change over procedural text, with annotation. | Process descriptions, not narrative; no reader/world distinction. |
 | Ghosh et al. (2023), *PASTA*, arXiv:2208.00329 | Participant states in narratives, often inferred rather than stated. | Short narratives; no persistent store. |
-| *Entity tracking emerges in sub-billion parameter LMs*, arXiv:2608.18083 | Small LMs do track entities in naturalistic narrative. | Short texts; state stays inside the model, so it cannot be audited or corrected. |
+| Drożdż & Heilbron (2026), *Entity tracking emerges in sub-billion parameter LMs*, arXiv:2608.18083 **[verified]** | Small LMs do track entities in naturalistic narrative. | Short texts; state stays inside the model, so it cannot be audited or corrected. |
 | Chain and Causal Attention, arXiv:2410.05565; Structured-Sparse Attention, arXiv:2605.22476 | Architectural limits and remedies for entity tracking in transformers. | In-weights tracking; no external, revisable state. |
 
 **DSG's move.** Put the state *outside* the model, where it can be inspected,
@@ -112,13 +112,16 @@ model, is what keeps it consistent.
 | Work | Establishes |
 | --- | --- |
 | **Vishnubhotla, Hammond & Hirst (2022), *The Project Dialogism Novel Corpus*, LREC** **[verified — used as our primary corpus]** | 22 novels in the LREC 2022 release, extended to 28 in June 2023, with gold character alias sets, quotation spans, speakers, addressees, and annotated referring expressions with character offsets. |
-| Bamman, Underwood & Smith (2014); Bamman, O'Connor & Smith (2013) | Latent character-type models over literary text. |
+| Bamman, Underwood & Smith (2014); Bamman, O'Connor & Smith (2013) | Latent character-type models, over literary characters (2014) and film characters (2013). |
 | Elson, Dames & McKeown (2010) | Social networks extracted from dialogue in novels. |
 | BookNLP | Pipeline tooling for literary NLP: entities, quotation attribution, events. |
 
-PDNC is what makes DSG's evaluation possible at all: it is the only corpus that
-supplies full novel text, gold alias sets, *and* offset-anchored referring
-expressions, which is what a prefix-causal probe requires.
+PDNC is what makes DSG's evaluation possible at all: for 28 novels it supplies
+full novel text, gold alias sets, *and* offset-anchored referring expressions,
+which is what a prefix-causal probe requires. It is not the only full-novel gold:
+BookCoref's 3-book gold set (which includes *Pride and Prejudice*, also in PDNC)
+and Bourgois & Poibeau's three French novels provide full-novel, mention-level
+coreference.
 
 ## 7. Narrative memory for LLMs
 
@@ -132,7 +135,7 @@ with something else.
 | Rasmussen et al. (2025) — Graphiti/Zep | Bi-temporal knowledge graph agent memory: when a fact was true, when it was ingested. | Generic entity-relation facts; append-dominant; no reader-model correction. |
 | Edge et al. (2024) — GraphRAG; Guo et al. (2024) — LightRAG; Gutiérrez et al. (2024) — HippoRAG | Graph-structured retrieval over source-derived entity graphs. | Retrieval indices, not maintained world state. |
 | Packer et al. (2023) — MemGPT; Chhikara et al. (2025) — Mem0 | Long-term agent memory with consolidation. | Conversational facts; no narrative time. |
-| EvoWiki, arXiv:2608.23265 | Incremental state overwriting with traceable QA as knowledge evolves. | Meetings, not narrative; overwriting rather than a typed revision calculus. |
+| EvoWiki, arXiv:2608.23265 **[verified]** | Incremental state updates for cross-meeting QA: a replaced state is kept, labelled Overturned, with its provenance — closer to `SUPERSEDE` than to plain overwriting. | Meetings, not narrative; one replacement operation, with no distinction between a changed world and a corrected belief. |
 | Hindsight is 20/20, arXiv:2512.12818 | Agent memory that retains, recalls, reflects. | Agent episodes, not reading. |
 
 **The distinction to draw sharply.** Every system above is evaluated by *what a
@@ -151,7 +154,7 @@ different evidence standard.
 | World-State Transformations for Neuro-symbolic Interactive Storytelling, arXiv:2605.24719 | Typed world-state operations for interactive fiction. | Authored worlds, not extracted from existing novels. |
 | Long Story Generation via Knowledge Graph and Literary Theory, arXiv:2508.03137; StoryWriter, arXiv:2506.16445 | KG- and multi-agent-scaffolded long story generation. | Generation quality, not state correctness. |
 | **Lost in Stories: Consistency Bugs in Long Story Generation, arXiv:2603.05890** | Taxonomises consistency failures in long generated narratives. | Diagnoses the symptom in *generated* text; DSG measures the mechanism in *read* text. |
-| **Wan & Chen (2026), *Scaling Long-Form Story Generation via Narrative State Tracking* (NSTAgent), arXiv:2609.35759** **[verified]** | An explicit, writer-maintained narrative state beats a rolling summary on consistency from 20K to 100K words on two frontier backbones, and at 10K words on DeepSeek-V4-Flash; parity at 10K only on GPT-5.6 Luna. Scored by an LLM judge (the ConStory-Bench checker). | Contrary evidence to our generation negative, from stronger models with an active state and an LLM judge. Its Case 3 shows the state locking in a wrongly extracted name and conditioning every later chapter on it. |
+| **Wan & Chen (2026), *Scaling Long-Form Story Generation via Narrative State Tracking* (NSTAgent), arXiv:2609.35759** **[verified]** | An explicit, writer-maintained narrative state beats a rolling summary on consistency from 20K to 100K words on two frontier backbones, and at 10K words on DeepSeek-V4-Flash; parity at 10K only on GPT-5.6 Luna. Scored by an LLM judge (DeepSeek-V4-Pro on an extended ConStory-Bench). | Contrary evidence to our generation negative, from stronger models with an active state and an LLM judge. Its Case 3 shows the state locking in a wrongly extracted name and conditioning every later chapter on it. |
 | **Tian et al. (2026), *Shared Worlds, Private Minds* (NarraWorld), arXiv:2609.32401** **[verified]** | Structured storyworld memory beats Graphiti, Mem0 and other memory systems on ConStory-Bench and roughly ties full context. | The human tie with full context (consistency error density 0.095 vs 0.096) rests on 12 stories per arm with one confirmed error each. |
 
 Shadow-Loom is the paper to position against most carefully, because a reviewer
@@ -162,7 +165,7 @@ does not do: **prefix-causality** and **measurement**.
 
 | Work | Used for |
 | --- | --- |
-| Shklovsky (1917/1965); Tomashevsky (1965); Genette (1980); Bal (2009) | *Fabula* vs *syuzhet* — story order vs telling order. This is the theoretical basis for DSG's two clocks, and for the `SUPERSEDE`/`REVISE` split: a change in fabula versus a disclosure in syuzhet. |
+| Shklovsky (1917/1965); Tomashevsky (1965); Genette (1980); Bal (2009) | *Fabula* vs *syuzhet* — story order vs telling order. This is the theoretical basis for DSG's two clocks (story time is represented but currently set from reading position), and for the `SUPERSEDE`/`REVISE` split: a change in fabula versus a disclosure in syuzhet. |
 | Sternberg (1992) | Curiosity / suspense / surprise as functions of what the reader knows when. |
 | Propp (1968); Greimas (1983) | Structural function inventories; background for typed narrative roles. |
 | Ryan (1991); Doležel (1998); Pavel (1986) | Possible-worlds narratology — relevant if DSG's provisional nodes are framed modally. |
@@ -187,7 +190,7 @@ than feeding a growing prefix into the model.
 | LitVISTA, arXiv:2601.06445; NarraBench, arXiv:2510.09869 | Recent narrative benchmark frameworks; useful for placing DSG's metric suite. |
 | *The Challenge and Reward of Fair Play in Narrative*, arXiv:2507.13841 | Surprise and sense-making measured jointly; a natural companion to the revision-trace instrument. |
 | Vilain et al. (1995) MUC; Bagga & Baldwin (1998) B³; Luo (2005) CEAF | The coreference metrics DSG reuses for its identity plane. |
-| Bamman et al. (2024), *On classification with large language models in cultural analytics* | The methodological argument for not trusting an LLM as a measurement instrument — the reason no primary DSG metric uses an LLM judge. |
+| Bamman et al. (2024), *On classification with large language models in cultural analytics* | Prompted LLMs are competitive with supervised models on established tasks and weaker on *de novo* ones, where supervision matters. DSG's constructs (canon violations, update types) are de novo, which is one reason no primary DSG metric uses an LLM judge. |
 
 ---
 
@@ -209,5 +212,7 @@ than feeding a growing prefix into the model.
    choice as an implemented, lexicon-arbitrated decision for a prefix-causal
    reader, with its accuracy measured against human labels *(Draft, pending audit phases 4c/4d: in the replay audit `REVISE` decides 78 of 2,263 classified clashes and low-confidence `ELABORATE` 1,324, so the classifier's value is not yet established.)*; the prefix-causal evaluation protocol with
    position-indexed probes; the finding that persistent state is self-poisoning
-   and that revision is the antidote at zero accuracy cost; and the negative
+   and that revision is the antidote (its accuracy cost is untested: the 0.000 on
+   identity and mention metrics is guaranteed because they never read fact
+   assertions); and the negative
    result that the calculus does *not* improve accuracy.

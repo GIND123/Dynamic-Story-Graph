@@ -46,7 +46,10 @@ Case 3).
 An append-only store cannot say "this was true then", "this was never true", or
 "these two people are one", so every such contradiction it creates is
 permanent. Giving it those operations removes the contradiction entirely — on
-every one of 28 books — **at no measurable cost in accuracy**. What revision
+every one of 28 books. Whether that costs accuracy is untested: our identity and
+mention metrics never read fact assertions, so they cannot move, and scoring the
+chosen values against labelled correct values (audit phase 4d) is the first real
+test. What revision
 buys is not a better answer; it is a state that still means something after
 500,000 characters.
 
@@ -94,13 +97,13 @@ underspecified content (the separation our deferred commitment implements), and
 argues that representing early structure as underspecified converts rollbacks
 into monotone refinement.
 That paper is explicitly conceptual: one worked seven-panel example, no
-implementation, no corpus, no metrics. Its stated future work asks for exactly
-four things — algorithmic criteria for classifying updates, corpus-scale
+implementation, no corpus, no metrics. Four of the five directions in its future-work
+section ask for — algorithmic criteria for classifying updates, corpus-scale
 measurement of revision versus elaboration frequency, a hybrid architecture in
 which a neural component proposes and a symbolic layer manages commitment, and
 process-oriented metrics such as rollback frequency and the proportion of
-monotone refinements. To our knowledge, this paper is the first to supply all
-four.
+monotone refinements. (the fifth is schema refinement and relation normalisation). To our knowledge,
+this paper is the first to supply those four.
 
 **Belief update versus revision.** Katsuno & Mendelzon (1991) separate updating a
 knowledge base, when the world changes, from revising it, when new information
@@ -114,13 +117,13 @@ chooses between the two from text, not the distinction. *(Draft, pending audit p
 **Narrative memory for generation.** Narrative World Model (Saifullah et al.,
 2026) pairs a narratology-typed temporal graph with query-conditioned retrieval
 and beats generic temporal-KG agent memory (Graphiti/Zep) on multi-hop writer
-QA. Its evidence is downstream: a frontier model reads each system's evidence
-and is scored by another frontier model, on a partly proprietary corpus; its State
+QA. Its evidence is downstream: a frontier model (Opus 4.8) reads each system's
+evidence, and its answers are scored by a deterministic token-coverage rule, on a partly proprietary corpus; its State
 Memory condition, which serialises the whole store, scores 0.358 against 0.898
 for query-conditioned retrieval, a gap the authors trace mainly to their evidence
 budget truncating the dump. Our object of study is different — the *correctness of the
 state itself*, measured against human annotation — and our constraint is
-different: a 1.5B–14B open-weight model, no API anywhere in the pipeline.
+different: a 1.5B–7B open-weight model, no API anywhere in the pipeline.
 
 **A versioned narrative world graph already exists.** Shadow-Loom (Wilmot,
 2026) builds the closest architectural cousin: a typed, *versioned* world graph
@@ -134,9 +137,10 @@ purpose: counterfactual forks ("what if Macbeth refuses?"), not correction of a
 reader's belief as the reader acquires it. What is left open is precisely what
 we do: build under a prefix-causal constraint, and measure.
 
-**Coreference at book scale.** LitBank (Bamman et al., 2019) and BookCoref
-(Martinelli et al., 2025) established gold coreference over literary text, the
-latter at full-book length. Both are evaluated non-causally: a system may see
+**Coreference at book scale.** LitBank (Bamman, Lewke & Mansoor, 2020)
+established gold coreference over 2,000-token literary excerpts; BookCoref
+(Martinelli et al., 2025) extends coreference to full books, though only its
+3-book test set is gold (its 50-book training set is annotated automatically). Both are evaluated non-causally: a system may see
 the whole document. We reuse this style of annotation under a prefix-causal
 protocol, which changes the task rather than the data.
 
@@ -154,14 +158,14 @@ constrained* — the system must not know what it has not read — and the
 operative decision is commitment.
 
 **Entity state tracking.** Small language models track entities in short
-naturalistic narratives well (2026). Our question begins where that one ends:
+naturalistic narratives well (Drożdż & Heilbron, 2026). Our question begins where that one ends:
 what happens across 500,000 characters, when tracking must persist in an
 external store that later text can contradict.
 
 **Belief revision.** AGM revision and truth-maintenance systems formalise
-non-monotone update under contradiction. Narrative adds a distinction those
-frameworks do not make, because it does not arise in a static knowledge base:
-a conflict may mean the world moved rather than that a belief was wrong.
+non-monotone update under contradiction; `REVISE` borrows their retraction of
+dependents. The distinction between a world that moved and a belief that was
+wrong is Katsuno & Mendelzon's update versus revision, discussed above.
 
 ## 3. The revision calculus
 
@@ -233,6 +237,9 @@ Foundations:
 - Alchourrón, Gärdenfors & Makinson (1985). On the Logic of Theory Change. JSL.
 - Doyle (1979). A Truth Maintenance System. Artificial Intelligence.
 - Kamp (1981); Kamp & Reyle (1993). Discourse Representation Theory.
+- Drożdż & Heilbron (2026). Entity Tracking Emerges in Sub-Billion Parameter
+  Language Models and Exceeds Human Performance in Naturalistic Narratives.
+  arXiv:2608.18083.
 - Zwaan & Radvansky (1998). Situation Models in Language Comprehension and
   Memory. Psychological Bulletin.
 - Genette (1980). Narrative Discourse: An Essay in Method.

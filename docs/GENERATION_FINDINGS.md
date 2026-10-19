@@ -22,9 +22,9 @@ parity at 10K only on GPT-5.6 Luna.
 
 | use of the graph | design | outcome |
 |---|---|---|
-| carried as context | serialised state digest in the prompt | worse than no memory |
-| carried plus recent text | digest and the previous chapter | loses to the previous chapter alone |
-| queried by the next beat | retrieve only what the beat implicates | worse than no memory |
+| carried as context | serialised state digest in the prompt | worse before correction; not significant after correction |
+| carried plus recent text | digest and the previous chapter | worse before correction; not significant after correction (vs the previous chapter alone, +0.071) |
+| queried by the next beat | retrieve only what the beat implicates | worse than no memory, significant after correction |
 | queried plus recent text | retrieval and the previous chapter | ties the previous chapter alone |
 | used to rank candidates | draw four, pick the most consistent | indistinguishable from picking blind |
 
@@ -74,9 +74,12 @@ chapter is therefore **not established**, and the honest statement is that both
 beat no memory while their ranking against each other is unresolved at this
 sample size.
 
-What survives the variance is the part that is large and repeated: no memory is
-clearly worst, and every graph conditioning design lands at or below the memory
-baselines rather than above them.
+What survives the variance is the part that is large and repeated: in each run
+in the table above, no memory is worse than both memory baselines, and every
+graph conditioning design lands at or below the memory baselines rather than
+above them. No memory is not the worst condition overall: the digest and beat
+retrieval score above it (worse), and in run 1 the rolling summary ties it
+(−0.008).
 
 **Implication for the benchmark.** Conditions whose prompt grows without bound
 are unstable across seeds. Effects below roughly 0.15 on such conditions need
@@ -136,9 +139,12 @@ family is fixed in `audit/ANALYSIS_PLAN.md`).
 | gap (within run) | Δ | raw 95% CI | Holm-adjusted p | Holm-level CI | significant after correction |
 |---|---|---|---|---|---|
 | digest − no memory (hybrid run) | +0.083 | [+0.025, +0.142] | 0.090 | [−0.004, +0.171] | no |
+| digest − no memory (run 1) | +0.075 | [+0.008, +0.142] | 0.365 | [−0.021, +0.175] | no |
 | beat retrieval − no memory (retrieval run) | +0.083 | [+0.037, +0.125] | 0.004 | [+0.017, +0.146] | yes |
 
 A gap that is not significant after correction is not evidence of no difference.
+The digest gap points the same way in two independent runs (hybrid run and run
+1), and neither is significant after correction.
 
 Both gaps also rest on a detector under audit. With the flags whose matched
 word is another planted subject's true value removed, neither interval excludes
