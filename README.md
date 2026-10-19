@@ -71,68 +71,70 @@ Effective N after dropping quotes whose gold speaker has no resolvable alias:
 
 ## 2. A prefix-causal number on PDNC
 
-Qwen2.5-7B-Instruct, 1,200-character window, greedy decoding, gold candidate
-lists (matching the literature's protocol). Paired bootstrap over 28 novels,
-10,000 resamples.
+Two runs, both Qwen2.5-7B-Instruct, 1,200-character window, greedy decoding, gold
+candidate lists, all 28 novels and 35,083 quotes. They differ in one prompt line
+("The next line of dialogue is:" became "The line of dialogue that comes next:")
+and in which arms they carry. **v3 is the primary run because it is the only one
+with the full ladder and the corrected oracle**; the earlier run is kept for
+comparison. Paired bootstrap over novels, 100,000 resamples, Holm across the
+eight E1 comparisons ([`audit/e1/v3_comparisons.json`](audit/e1/v3_comparisons.json)).
 
-| condition | evidence available | overall | explicit | non-explicit |
-|---|---|---|---|---|
-| `prior` | candidate list only | 0.139 | 0.144 | 0.138 |
-| `recency` | last attributed speaker before `s` | 0.165 | 0.165 | 0.171 |
-| **`text-causal`** | `text[s−W:s]` | **0.523** | **0.497** | **0.537** |
-| `state-causal`† | `text[s−W:s]` + serialised state at `s` | 0.450 | 0.424 | 0.464 |
-| `oracle-noncausal`‡ | `text[s−W:s+W]`, target marked | 0.696 | 0.850 | 0.644 |
-
-| comparison | Δ | 95% CI | excludes 0 |
+| condition | evidence available | v3 | earlier run |
 |---|---|---|---|
-| `text-causal` − `recency` | +0.3579 | [+0.3253, +0.3887] | yes |
-| `recency` − `prior` | +0.0257 | [+0.0098, +0.0419] | yes |
+| `prior` | candidate list only | 0.155 | 0.139 |
+| `recency` | last attributed speaker before `s` | 0.168 | 0.165 |
+| **`text-causal`** | `text[s−W:s]` | **0.532** | 0.523 |
+| `state-causal` | + serialised state at `s` | 0.453 | 0.450 |
+| `state-retrieval` | + state lines for characters named in the window | 0.482 | — |
+| `oracle-noncausal` | `text[s−W:s+W]`, target marked | 0.697 | superseded† |
 
-**`text-causal` = 0.523 is the headline: to our knowledge the first
-prefix-causal attribution number on PDNC**, on 35,083 quotes with leakage
-enforced per item. It covers all 28 novels and every annotated speaker, so it is
-not on the published protocol's item set.
+**`text-causal` is, to our knowledge, the first prefix-causal attribution number
+on PDNC**, with leakage enforced per item. It covers all 28 novels and every
+annotated speaker, so it is not on the published protocol's item set (see below).
 
-† **`state-causal` supports no claim in this repository.** It scores −0.073
-below `text-causal` (CI [−0.0919, −0.0555]), but adding the state block also
-adds ~1,400 characters between the recent text and the question, so the
-contrast confounds content with prompt length. The `state-shuffled` placebo that
-would separate them is specified in
-[`docs/METHODOLOGY_V2.md`](docs/METHODOLOGY_V2.md) §2.4 and **was not run — the
-compute budget for this project is exhausted.** The number is published here for
-completeness and is excluded from every conclusion.
+**The price of causality is +0.165** [+0.142, +0.187] (corrected oracle −
+`text-causal`, v3, 27–1 novels). This comparison was added to the family after
+the arms were seen.
 
-‡ **`oracle-noncausal` is superseded.** This run's oracle was asked about "the
-next line" while its context bracketed the quote. The fix is implemented; the
-rerun will not happen for the same reason. **No "cost of causality" figure is
-claimed from this row.**
+**Adding state lowers accuracy, and querying it lowers it less.** The serialised
+state costs −0.078 [−0.099, −0.060] against `text-causal` (0–28 novels); the
+retrieved state costs −0.050 [−0.067, −0.034] (3–25); retrieval beats the full
+dump by +0.029 [+0.020, +0.037] (25–3). Neither result separates the state's
+content from prompt length. **v3's `state-shuffled` arm ran without its
+placebo**: the remote client did not pass the placebo snapshot, so every
+`state-shuffled` prompt equalled the `text-causal` prompt (99.1% identical
+replies). The wiring is now fixed and tested, but the arm has not been rerun, so
+**no content-versus-length claim is made.**
 
-### The evidence that the causal cut is what bites
+† The earlier run's oracle was asked about "the next line" while its context
+bracketed the quote; v3 marks the target inline.
 
-Without a valid internal oracle, the cross-paper gap (0.523 against a published
-0.906) confounds model with setting and cannot be read as a causality price. One
-piece of evidence survives that confound, because it compares **orderings within
-a condition** rather than numbers across papers.
+### The explicit advantage of published non-causal systems disappears under a causal cut
 
-§1 predicts an asymmetry: a causal cut destroys the decisive cue for 29.3% of
-*explicit* quotes, while anaphoric and implicit quotes never had a nearby name
-cue to lose. So the explicit slice — the easy one in every published setting —
-should become the hard one under a causal constraint.
+§1 predicts this: a causal cut destroys the decisive cue for 29.3% of *explicit*
+quotes, while anaphoric and implicit quotes never had a nearby name cue to lose.
+Published non-causal systems are much better on explicit quotes (+5.6 for
+Llama-3 8B, +29.7 for BookNLP+; Michel et al. 2024, Table 1, per-novel
+averages). Under a causal cut, per novel, the gap reverses: non-explicit −
+explicit = **+0.045 [+0.017, +0.072]** (21–7 novels), and **+0.040 [+0.009,
++0.069]** on the published item set (22-novel release, speakers with at least
+ten quotes; 16–6). Pooled over quotes instead, explicit stays slightly ahead.¹
 
-| setting | overall | non-explicit | which slice is easier |
+| setting | overall | explicit | non-explicit |
 |---|---|---|---|
-| BookNLP+, non-causal `[published]` | 78.5 | 68.9 | explicit (overall > non-explicit) |
-| Llama-3 8B zero-shot, non-causal `[published]` | 90.6 | 89.1 | explicit (overall > non-explicit) |
-| **`text-causal`, this work** | **52.3** | **53.7** | **non-explicit — the ordering inverts** |
+| BookNLP+, non-causal `[published]` | 78.5 | 98.6 | 68.9 |
+| Llama-3 8B zero-shot, non-causal `[published]` | 90.6 | 94.7 | 89.1 |
+| **`text-causal`, v3, all items** | **53.2** | **50.2** | **54.8** |
+| **`text-causal`, v3, published item set** | **54.1** | **51.8** | **55.8** |
 
-Published rows use the 22-novel release and characters with at least ten quotes;
-ours uses all 28 novels and every annotated speaker.
+Rows are per-novel averages, the published convention
+([`audit/e1/published_itemset_v3.json`](audit/e1/published_itemset_v3.json)).
+Each row compares slices within one system and one prompt, so the reversal is
+robust to the model differences that make the absolute numbers incomparable.
 
-Both published systems score *below* their overall accuracy on non-explicit
-quotes; ours scores *above* it. Each row is an internal comparison within one
-system and one prompt, so the inversion is robust to the model differences that
-make the absolute numbers incomparable. **The slice the corpus audit says should
-break is the slice that breaks.**
+¹ Pooled over quotes, explicit − non-explicit is 53.3 − 52.0 on all items and
+54.0 − 53.2 on the published item set. The reversal holds per novel, not per
+quote.
 
 ### Leakage is enforced, not asserted
 
@@ -456,14 +458,13 @@ follow the evidence.
   tested. That was a pre-registered falsifier and it fired.
 - **The 0.000 consistency figure is conformance, not evidence** (§3).
 - **The contradiction rate does not measure textual consistency** (AUC 0.394).
-- **No cost-of-causality figure is claimed *for attribution*.** The E1 oracle
-  that would price it is superseded and will not be rerun (§2); the cross-paper
-  gap confounds model with setting, so only the explicit/non-explicit *ordering
-  inversion* is claimed there. This does not affect §3, where the `retrospective`
-  oracle replays the identical cached proposal stream with full lookahead and the
-  causality cost is measured internally.
-- **`state-causal` − `text-causal` = −0.073 supports nothing** — the length
-  placebo was not run and cannot be (§2).
+- **The attribution cost of causality comes from one run.** It is the v3
+  corrected oracle against `text-causal` (+0.165, §2), a comparison added after
+  the arms were seen; the cross-paper gap confounds model with setting and is not
+  read as a causality price.
+- **The state penalty at attribution time is not attributed to content** —
+  v3's length placebo ran without its placebo block (§2), so state's content and
+  prompt length remain confounded.
 - **Every "first" claim is to our knowledge.**
   [`paper/RELATED_WORK.md`](paper/RELATED_WORK.md) tracks which related-work
   entries were read directly.
@@ -533,8 +534,9 @@ stories (§4.2); the shuffled-order control (§4.3).
 
 **Permanently unresolved, and excluded from all claims.** The utility of a
 serialised state at attribution time — `state-causal` cannot be separated from
-its length confound without the `state-shuffled` placebo, and no internal cost of
-causality can be quantified without a corrected oracle. Neither run will happen.
+its length confound, because v3's `state-shuffled` arm ran without its placebo
+block (§2). The corrected oracle did run (v3), so the attribution cost of
+causality is reported, from that one run.
 These are reported as limits of the study, not as pending work.
 
 **Fixable without compute, and still open.**
