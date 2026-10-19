@@ -61,7 +61,9 @@ We make three contributions.
 
 1. **A revision calculus for narrative state** (§3) that separates three update
    types append-only pipelines conflate: monotone `ELABORATE` of deliberately
-   underspecified structure, history-preserving `SUPERSEDE` of a changed world,
+   underspecified structure *(draft, pending audit phase 4c: 1,263 of the 1,276
+   assertion-level `ELABORATE`s at 7B are low-confidence overwrites, not
+   refinements; `audit/calculus/elaborate_census.json`)*, history-preserving `SUPERSEDE` of a changed world,
    and non-monotone `REVISE` of a mistaken reader belief. The
    `SUPERSEDE`/`REVISE` split is Katsuno & Mendelzon's (1991) distinction between
    updating a knowledge base and revising it, made operational for a reader: an
@@ -102,8 +104,8 @@ section ask for — algorithmic criteria for classifying updates, corpus-scale
 measurement of revision versus elaboration frequency, a hybrid architecture in
 which a neural component proposes and a symbolic layer manages commitment, and
 process-oriented metrics such as rollback frequency and the proportion of
-monotone refinements. (the fifth is schema refinement and relation normalisation). To our knowledge,
-this paper is the first to supply those four.
+monotone refinements; the fifth is schema refinement and relation
+normalisation. To our knowledge, this paper is the first to supply those four.
 
 **Belief update versus revision.** Katsuno & Mendelzon (1991) separate updating a
 knowledge base, when the world changes, from revising it, when new information

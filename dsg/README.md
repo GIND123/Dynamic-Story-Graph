@@ -266,7 +266,7 @@ refined against where it is corrected.
 
 Reported with a shuffled window control, because state growth alone manufactures
 such trends. Under shuffling the elaboration trend disappears, so it is a
-property of narrative order, while most of the revision trend survives, so it is
+property of narrative order *(Draft, pending audit phase 4c: at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites, which replace a value rather than refine it; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the trend is refinement depends on the 4c labels.)*, while most of the revision trend survives, so it is
 largely an artefact of the state getting larger.
 
 ## 7. Architecture
