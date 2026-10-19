@@ -251,6 +251,63 @@ def get_backend(kind: str, model: str):
     raise ValueError(f"unknown backend: {kind}")
 
 
+STATE_CONDITIONS = ("state-causal", "state-shuffled", "state-retrieval")
+
+
+def _snapshots_from_cache(novel: NovelData) -> list[Snapshot]:
+    path = DEFAULT_PROPOSALS / f"{novel.name}.jsonl"
+    if not path.exists():
+        raise SystemExit(
+            f"a state condition was requested but there are no cached proposals for "
+            f"{novel.name} at {path}. Fetch them first:\n"
+            "  huggingface-cli download GOVINDFROM/dsg-artifacts "
+            "--include 'proposals/pdnc-qwen7b-w3200/*' --local-dir artifacts"
+        )
+    return build_snapshots(path)
+
+
+def build_payloads(
+    novel_data: list[NovelData],
+    conds: tuple[str, ...],
+    *,
+    window: int,
+    limit: int = 0,
+    snapshots=_snapshots_from_cache,
+) -> tuple[list[dict], dict]:
+    """Every prompt for a remote run, built and verified on the client.
+
+    Each state condition gets the block it is defined by: ``state-causal`` and
+    ``state-retrieval`` the snapshot the quote is entitled to, ``state-shuffled``
+    the placebo snapshot. Passing both on every call is what keeps the placebo
+    from silently degenerating into ``text-causal`` (the defect in run
+    ``e1-qwen7b-v3``). ``snapshots`` maps a novel to its snapshots; tests inject it.
+    """
+    rng = random.Random(0)
+    payloads, meta = [], {}
+    for nd in novel_data:
+        quotes = list(nd.quotes)
+        if limit and len(quotes) > limit:
+            quotes = sorted(rng.sample(quotes, limit), key=lambda q: q.start)
+        prev, last = {}, None
+        for q in sorted(nd.quotes, key=lambda q: q.start):
+            prev[q.start] = last
+            last = q.speaker
+        snaps = snapshots(nd) if set(STATE_CONDITIONS) & set(conds) else []
+        prompts, keys = [], []
+        for cond in conds:
+            for q in quotes:
+                prompts.append(build_prompt(
+                    nd, q, cond, window=window, recent=prev.get(q.start),
+                    snapshot=snapshot_for(snaps, q.start) if snaps else EMPTY,
+                    placebo=placebo_for(snaps, q.start) if snaps else EMPTY,
+                ))
+                keys.append([cond, q.quote_id, q.speaker, q.quote_type])
+        payloads.append({"novel": nd.name, "prompts": prompts, "keys": keys})
+        meta[nd.name] = {"candidates": nd.candidates,
+                         "aliases": {k: sorted(v) for k, v in nd.aliases.items()}}
+    return payloads, meta
+
+
 def run(
     novels: list[NovelData],
     conditions: tuple[str, ...],

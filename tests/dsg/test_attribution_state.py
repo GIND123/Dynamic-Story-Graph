@@ -238,3 +238,50 @@ class TestPlacebo:
 
         correct = snapshot_for(self.SNAPS, 25_000)
         assert placebo_for(self.SNAPS, 25_000).facts != correct.facts
+
+
+class TestRemotePayloads:
+    """The payload builder the remote run uses must give each state arm its block.
+
+    Run e1-qwen7b-v3 built its prompts without the placebo, so every
+    state-shuffled prompt equalled the text-causal one and the control measured
+    nothing. These pin the wiring, not just the snapshot selection.
+    """
+
+    @staticmethod
+    def _novel():
+        from dsg.eval.attribution_run import NovelData, Quote
+
+        line = '"I shall go to the harbour," said Ada.'
+        filler = "The rain kept on over the roofs of the town. " * 400
+        text = filler + line + " " + filler
+        start = len(filler)
+        quote = Quote(novel="N", quote_id="Q1", start=start, end=start + len(line),
+                      text=line, speaker="Ada", quote_type="Explicit",
+                      spans=((start, start + len(line)),))
+        return NovelData(name="N", text=text, quotes=[quote], aliases={"Ada": {"Ada"}},
+                         candidates=["Ada", "Bram"])
+
+    @staticmethod
+    def _snapshots(novel):
+        return [snap(i, 1000 * (i + 1), entities=f"moment-{i}",
+                     recent_speakers=(f"speaker-{i}",)) for i in range(16)]
+
+    def _prompts(self, conds):
+        from dsg.eval.attribution_run import build_payloads
+
+        payloads, _ = build_payloads([self._novel()], conds, window=600,
+                                     snapshots=self._snapshots)
+        return dict(zip((k[0] for k in payloads[0]["keys"]), payloads[0]["prompts"],
+                        strict=True))
+
+    def test_state_shuffled_prompt_differs_from_text_causal(self) -> None:
+        prompts = self._prompts(("text-causal", "state-shuffled"))
+        assert prompts["state-shuffled"] != prompts["text-causal"]
+        assert "reader's notes" in prompts["state-shuffled"]
+
+    def test_placebo_carries_an_earlier_moment_than_the_real_state(self) -> None:
+        prompts = self._prompts(("state-causal", "state-shuffled"))
+        assert "moment-15" in prompts["state-causal"]
+        assert "moment-15" not in prompts["state-shuffled"]
+        assert "moment-3" in prompts["state-shuffled"]

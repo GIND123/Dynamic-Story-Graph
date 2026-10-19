@@ -135,17 +135,7 @@ def main(
     out: str = "artifacts/e1",
 ) -> None:
     """Build and verify prompts locally, then fan out over novels on the GPU."""
-    from dsg.eval.attribution_run import (
-        ALL_CONDITIONS,
-        build_prompt,
-        load_novels,
-    )
-    from dsg.eval.attribution_state import (
-        DEFAULT_PROPOSALS,
-        EMPTY,
-        build_snapshots,
-        snapshot_for,
-    )
+    from dsg.eval.attribution_run import ALL_CONDITIONS, build_payloads, load_novels
 
     model_id = MODELS.get(model, model)
     conds = tuple(c.strip() for c in conditions.split(",") if c.strip()) or ALL_CONDITIONS
@@ -156,51 +146,7 @@ def main(
         raise SystemExit("no PDNC novels found under data/pdnc/data")
 
     # --- local prompt construction; every causal prompt passes the whitelist ---
-    import random
-
-    rng = random.Random(0)
-    payloads, meta = [], {}
-    for nd in novel_data:
-        quotes = list(nd.quotes)
-        if limit and len(quotes) > limit:
-            quotes = sorted(rng.sample(quotes, limit), key=lambda q: q.start)
-        ordered = sorted(nd.quotes, key=lambda q: q.start)
-        prev, last = {}, None
-        for q in ordered:
-            prev[q.start] = last
-            last = q.speaker
-
-        # state-causal replays the cached proposal stream to rebuild what the
-        # reader knew. Without this the condition degenerates to an empty block
-        # and the experiment silently measures nothing.
-        snaps = []
-        if "state-causal" in conds:
-            path = DEFAULT_PROPOSALS / f"{nd.name}.jsonl"
-            if path.exists():
-                snaps = build_snapshots(path)
-            else:
-                raise SystemExit(
-                    f"state-causal requested but no cached proposals for {nd.name} "
-                    f"at {path}. Fetch them first:\n"
-                    "  huggingface-cli download GOVINDFROM/dsg-artifacts "
-                    "--include 'proposals/pdnc-qwen7b-w3200/*' --local-dir artifacts"
-                )
-
-        prompts, keys = [], []
-        for cond in conds:
-            for q in quotes:
-                prompts.append(
-                    build_prompt(
-                        nd, q, cond,
-                        window=window,
-                        recent=prev.get(q.start),
-                        snapshot=snapshot_for(snaps, q.start) if snaps else EMPTY,
-                    )
-                )
-                keys.append([cond, q.quote_id, q.speaker, q.quote_type])
-        payloads.append({"novel": nd.name, "prompts": prompts, "keys": keys})
-        meta[nd.name] = {"candidates": nd.candidates,
-                         "aliases": {k: sorted(v) for k, v in nd.aliases.items()}}
+    payloads, meta = build_payloads(novel_data, conds, window=window, limit=limit)
 
     total = sum(len(p["prompts"]) for p in payloads)
     print(
