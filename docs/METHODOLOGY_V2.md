@@ -65,13 +65,16 @@ which includes the following text where the attribution cue usually lives.
 |---|---|---|---|
 | BookNLP+ | 78.5 | 68.9 | non-causal `[published]` |
 | Llama-3 8B zero-shot | **90.6** | **89.1** | non-causal `[published]` |
-| Joint scoring, ModernBERT-large | **94.5** | **92.4** | non-causal `[published]` |
+| Joint scoring, ModernBERT-large (fine-tuned) | **94.5** | **92.4** | non-causal `[published]` |
 
 Sources: Michel, Epure, Hennequin & Cerisara (2024), *Evaluating LLMs for
 Quotation Attribution in Literary Texts*, arXiv:2406.11380, Table 1; Michel,
 Attali & Epure (2026), *Fast and Accurate Quotation Attribution in Literary
-Texts*, arXiv:2608.02359, Table 1. All rows are on PDNC's 22-novel first release,
-characters with at least ten quotes, gold alias lists.
+Texts*, arXiv:2608.02359, Table 1. All rows are on PDNC's 22-novel first release with gold
+alias lists. BookNLP+ (supervised) and Llama-3 (zero-shot) are scored on
+characters with at least ten quotes; the joint-scoring encoder is fine-tuned
+under PDNC's 5-fold cross-validation and scored on characters mentioned at least
+ten times.
 
 **We found no published number for the prefix-causal setting.** To our
 knowledge E1 produces the first one, on an established benchmark, against a

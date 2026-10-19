@@ -26,8 +26,10 @@ Quote attribution on the Project Dialogism Novel Corpus is a solved-looking task
 Llama-3 8B zero-shot reaches **90.6** overall and **89.1** on non-explicit quotes
 (Michel, Epure, Hennequin & Cerisara 2024, arXiv:2406.11380, Table 1), and an
 encoder with joint scoring now reaches **94.5** (Michel, Attali & Epure 2026,
-arXiv:2608.02359). Both are on PDNC's 22-novel first release, scored on characters
-with at least ten quotes, with gold alias lists. Every published number we found
+arXiv:2608.02359). Both are on PDNC's 22-novel first release with gold alias lists. Llama-3 is
+zero-shot and scored on characters with at least ten quotes; the encoder is
+fine-tuned under PDNC's 5-fold cross-validation and scored on characters
+mentioned at least ten times. Every published number we found
 is obtained non-causally — the system reads context on both sides of the quote.
 
 We asked where the evidence actually sits. For the 10,743 explicit quotes whose
@@ -282,11 +284,12 @@ language model appears in any metric.
 > from different runs; compare only within a run.
 
 Serialised state is worse than no memory in its run before correction (+0.083,
-raw CI [+0.025, +0.142]) but not after Holm correction across the 27
-violation-rate comparisons (adjusted p 0.076, Holm-level CI [−0.004, +0.163]).
-Beat-conditioned retrieval — the design the prior literature predicts should win
-— is worse than no memory in its run and survives correction (+0.083, raw CI
-[+0.038, +0.125]; adjusted p 0.005, Holm-level CI [+0.017, +0.146]). Neither gap
+raw CI [+0.025, +0.142]) but is not significant after Holm correction across the
+27 violation-rate comparisons (adjusted p 0.090, Holm-level CI [−0.004,
++0.171]). Beat-conditioned retrieval — the design the prior literature predicts
+should win — is worse than no memory in its run and remains significant after
+correction (+0.083, raw CI [+0.037, +0.125]; adjusted p 0.004, Holm-level CI
+[+0.017, +0.146]). Intervals use 100,000 bootstrap resamples. Neither gap
 was named before its run, and both rest on a detector under audit
 (`audit/detector/bound.json`). Stronger models judged by an LLM disagree:
 NSTAgent (Wan & Chen, 2026) finds an explicit narrative state beats a rolling
@@ -461,7 +464,7 @@ follow the evidence.
   [`paper/RELATED_WORK.md`](paper/RELATED_WORK.md) tracks which related-work
   entries were read directly.
 - **The `SUPERSEDE`/`REVISE` distinction is not ours.** It is Katsuno &
-  Mendelzon's (1991) update versus revision; ours is the classifier.
+  Mendelzon's (1991) update versus revision; ours is the classifier. *(Draft, pending audit phases 4c/4d: in the replay audit `REVISE` decides 78 of 2,263 classified clashes and low-confidence `ELABORATE` 1,324, so the classifier's value is not yet established.)*
 - **One model family, one language.** 28 English novels plus 100 LitBank
   excerpts, Qwen2.5 throughout.
 - **`SUPERSEDE` vs `REVISE` is decided by a lexicon** whose accuracy has not

@@ -47,7 +47,7 @@ the update side, closing the old fact's validity interval on a contradiction,
 but treat every contradiction as a change in the world. What DSG adds is the
 decision itself for a prefix-causal reader: a deterministic, lexicon-arbitrated
 classifier that chooses between the two from text, whose accuracy is being
-measured against human labels (`audit/calculus/`).
+measured against human labels (`audit/calculus/`). *(Draft, pending audit phases 4c/4d: in the replay audit `REVISE` decides 78 of 2,263 classified clashes and low-confidence `ELABORATE` 1,324, so the classifier's value is not yet established.)*
 
 ## 3. Situation models: why prefix-causal state is the right object
 
@@ -207,7 +207,7 @@ than feeding a growing prefix into the model.
 4. **The update/revision distinction is not ours either** — Katsuno &
    Mendelzon (1991) state it. **What is ours, to our knowledge**: making that
    choice as an implemented, lexicon-arbitrated decision for a prefix-causal
-   reader, with its accuracy measured against human labels; the prefix-causal evaluation protocol with
+   reader, with its accuracy measured against human labels *(Draft, pending audit phases 4c/4d: in the replay audit `REVISE` decides 78 of 2,263 classified clashes and low-confidence `ELABORATE` 1,324, so the classifier's value is not yet established.)*; the prefix-causal evaluation protocol with
    position-indexed probes; the finding that persistent state is self-poisoning
    and that revision is the antidote at zero accuracy cost; and the negative
    result that the calculus does *not* improve accuracy.

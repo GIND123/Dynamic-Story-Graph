@@ -91,7 +91,8 @@ Four designs, three runs, 12,600 chapters, 30 stories, paired within story.
 
 > **Draft wording, pending the canon-detector audit (phase 1d).** Scope: Qwen2.5-3B writer, state
 > supplied as a digest or retrieved slice, about 10K words, deterministic test on
-> planted canon. The digest − no memory gap does not survive Holm correction; see
+> planted canon. The digest − no memory gap is not significant after Holm
+> correction; see
 > `docs/GENERATION_FINDINGS.md` §6.
 
 | memory | violations ↓ | tokens | verdict |
@@ -106,9 +107,10 @@ Four designs, three runs, 12,600 chapters, 30 stories, paired within story.
 | + graph guard | 0.317 | 1,095 | no effect (ns) |
 
 Serialised state is worse than no memory before correction (+0.083, raw CI
-[+0.025, +0.142]; Holm-adjusted p 0.076). Beat-conditioned retrieval — the
-design the prior literature predicts should win — is also worse than no memory
-(+0.083, raw CI [+0.038, +0.125]; Holm-adjusted p 0.005) and
+[+0.025, +0.142]) and is not significant after Holm correction (adjusted p
+0.090). Beat-conditioned retrieval — the design the prior literature predicts
+should win — is also worse than no memory (+0.083, raw CI [+0.037, +0.125];
+Holm-adjusted p 0.004) and
 indistinguishable from the serialisation it was meant to fix. Retrieval plus
 recent text ties recent text alone (+0.004, ns). The guard never moves a number.
 

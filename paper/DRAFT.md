@@ -109,7 +109,7 @@ Makinson, 1985) describe only the second. `SUPERSEDE` and `REVISE` are that pair
 Graphiti/Zep (Rasmussen et al., 2025) records when a fact held and when it was
 learned, and on a contradiction closes the old fact's interval, treating every
 conflict as a change in the world. Our contribution here is the classifier that
-chooses between the two from text, not the distinction.
+chooses between the two from text, not the distinction. *(Draft, pending audit phases 4c/4d: in the replay audit `REVISE` decides 78 of 2,263 classified clashes and low-confidence `ELABORATE` 1,324, so the classifier's value is not yet established.)*
 
 **Narrative memory for generation.** Narrative World Model (Saifullah et al.,
 2026) pairs a narratology-typed temporal graph with query-conditioned retrieval

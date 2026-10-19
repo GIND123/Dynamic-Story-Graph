@@ -129,13 +129,16 @@ No generation comparison was named before its run: the only generation
 falsifiers (commit `a34e751`, 4 September 2026, 23:46 UTC) were committed after
 runs 1 and 2 and name neither gap below. Every interval in this document is
 therefore re-read with Holm correction within each metric, over the 27
-violation-rate comparisons computed across the four runs
-(`python -m dsg.eval.multiplicity`, `audit/generation/holm.json`).
+violation-rate comparisons computed across the four runs, 100,000 bootstrap
+resamples (`python -m dsg.eval.multiplicity`, `audit/generation/holm.json`; the
+family is fixed in `audit/ANALYSIS_PLAN.md`).
 
-| gap (within run) | Δ | raw 95% CI | Holm-adjusted p | Holm-level CI | survives |
+| gap (within run) | Δ | raw 95% CI | Holm-adjusted p | Holm-level CI | significant after correction |
 |---|---|---|---|---|---|
-| digest − no memory (hybrid run) | +0.083 | [+0.025, +0.142] | 0.076 | [−0.004, +0.163] | no |
-| beat retrieval − no memory (retrieval run) | +0.083 | [+0.038, +0.125] | 0.005 | [+0.017, +0.146] | yes |
+| digest − no memory (hybrid run) | +0.083 | [+0.025, +0.142] | 0.090 | [−0.004, +0.171] | no |
+| beat retrieval − no memory (retrieval run) | +0.083 | [+0.037, +0.125] | 0.004 | [+0.017, +0.146] | yes |
+
+A gap that is not significant after correction is not evidence of no difference.
 
 Both gaps also rest on a detector under audit. With the flags whose matched
 word is another planted subject's true value removed, neither interval excludes
