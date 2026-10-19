@@ -36,7 +36,6 @@ import dsg.matching
 import dsg.policies.runner
 import dsg.proposals
 import dsg.store
-
 from dsg.data.registry import load as load_corpus
 from dsg.eval.instrument import position_trend
 from dsg.eval.provenance import record as provenance
