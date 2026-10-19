@@ -5,10 +5,18 @@ facts about the story, such as "Harriet is at Highbury". Each row is a moment
 when a new fact clashed with one it already held on the same slot (same person,
 same kind of fact). You decide what that clash really was.
 
-**Use `sheet_blind.csv`.** It hides what the program decided and why. If a row
-says `double_annotate = yes`, a second person labels it independently from
-`sheet_second_annotator.csv`. Don't discuss those rows until both of you are
-done. We report agreement (Cohen's kappa) on them.
+**Label only your own file**, `annotators/annotator_NN.csv`. It has no run,
+condition or other hidden columns, so you can't tell which system wrote the
+text. Some rows are in both annotators' files; we use them to report agreement
+(Cohen's kappa). So label every row on your own, and don't compare answers until
+both files are finished. Don't open `sheet.csv`, `sheet_blind.csv` or
+`annotators/assignment.json`. Don't edit any column except the label columns:
+the check script will reject a file whose row text has changed.
+
+When you're done, run `python -m dsg.eval.labels check --sheet audit/calculus`
+(add `--partial` to check a file before it's complete) and fix anything it lists.
+
+Your file also hides what the program decided and why.
 
 ## What each row shows
 

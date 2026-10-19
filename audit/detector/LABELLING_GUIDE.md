@@ -6,10 +6,18 @@ eyes" or "The locket is silver". The detector flags a chapter when a different
 value seems to be given to the same subject. Your labels tell us how often it is
 right.
 
-**Use `sheet_blind.csv`.** It has no run, condition or automatic-overlap
-columns, so you cannot tell which system wrote the text. Do not open `sheet.csv`
-until you have finished. Fill in only the empty label cells. Leave cells that say
-`n/a` alone.
+**Label only your own file**, `annotators/annotator_NN.csv`. It has no run,
+condition or other hidden columns, so you can't tell which system wrote the
+text. Some rows are in both annotators' files; we use them to report agreement
+(Cohen's kappa). So label every row on your own, and don't compare answers until
+both files are finished. Don't open `sheet.csv`, `sheet_blind.csv` or
+`annotators/assignment.json`. Don't edit any column except the label columns:
+the check script will reject a file whose row text has changed.
+
+When you're done, run `python -m dsg.eval.labels check --sheet audit/detector`
+(add `--partial` to check a file before it's complete) and fix anything it lists.
+
+Fill in only the empty label cells. Leave cells that say `n/a` alone.
 
 ## What each row shows
 

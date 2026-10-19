@@ -2,10 +2,12 @@
   "provenance": {
     "command": "python -m dsg.eval.detector_audit export --generation artifacts/hub/generation --out audit/detector --seed 20261018",
     "seeds": {
-      "sample": 20261018
+      "sample": 20261018,
+      "bound_target": 20261019,
+      "double": 20261020
     },
     "git": {
-      "commit": "5ffd3099cbbaf385ecc82a01185935500efe11e6",
+      "commit": "c774587e75d5c3232addeabf4a861279ff7475fc",
       "dsg_tree_dirty": false
     },
     "python": "3.13.9",
@@ -41,9 +43,55 @@
     "unflagged_mention": 440688
   },
   "sampled": {
-    "flagged_violation": 300,
-    "flagged_restatement": 100,
-    "unflagged_mention": 150
+    "unflagged_mention": 150,
+    "flagged_violation": 399,
+    "flagged_restatement": 100
+  },
+  "rows": 649,
+  "bound_target_design": [
+    {
+      "stratum": [
+        "gen-v3-hybrid",
+        "base:dsg-state"
+      ],
+      "population": 532,
+      "sampled": 40,
+      "already_in_main_sample": 0
+    },
+    {
+      "stratum": [
+        "gen-v3-hybrid",
+        "base:none"
+      ],
+      "population": 74,
+      "sampled": 10,
+      "already_in_main_sample": 0
+    },
+    {
+      "stratum": [
+        "gen-v4-retrieval",
+        "base:beat-retrieval"
+      ],
+      "population": 243,
+      "sampled": 40,
+      "already_in_main_sample": 1
+    },
+    {
+      "stratum": [
+        "gen-v4-retrieval",
+        "base:none"
+      ],
+      "population": 75,
+      "sampled": 10,
+      "already_in_main_sample": 0
+    }
+  ],
+  "bound_target_added_rows": 99,
+  "double_annotate": 50,
+  "double_by_type": {
+    "flagged_violation": 30,
+    "flagged_restatement": 8,
+    "unflagged_mention": 12
   },
   "recall_population": {
     "attribute_cue": 47372,
@@ -74,6 +122,44 @@
     "trade|suppressed_by_true_value": 54
   },
   "design": {
+    "bound_target": [
+      {
+        "stratum": [
+          "gen-v3-hybrid",
+          "base:dsg-state"
+        ],
+        "population": 532,
+        "sampled": 40,
+        "already_in_main_sample": 0
+      },
+      {
+        "stratum": [
+          "gen-v3-hybrid",
+          "base:none"
+        ],
+        "population": 74,
+        "sampled": 10,
+        "already_in_main_sample": 0
+      },
+      {
+        "stratum": [
+          "gen-v4-retrieval",
+          "base:beat-retrieval"
+        ],
+        "population": 243,
+        "sampled": 40,
+        "already_in_main_sample": 1
+      },
+      {
+        "stratum": [
+          "gen-v4-retrieval",
+          "base:none"
+        ],
+        "population": 75,
+        "sampled": 10,
+        "already_in_main_sample": 0
+      }
+    ],
     "flagged_violation": [
       {
         "stratum": [
