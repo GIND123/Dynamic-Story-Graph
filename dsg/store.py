@@ -143,8 +143,11 @@ class NarrativeState:
         self._counter += 1
         return f"{prefix}{self._counter:05d}"
 
-    def _record(self, op: Op, target: str, detail: str = "", payload: str | None = None) -> Op:
-        self.log.append(UpdateRecord(self.index, op, target, detail, payload))
+    def _record(
+        self, op: Op, target: str, detail: str = "", payload: str | None = None,
+        rule: str = "",
+    ) -> Op:
+        self.log.append(UpdateRecord(self.index, op, target, detail, payload, rule))
         return op
 
     # -------------------------------------------------------------- entities
@@ -384,7 +387,7 @@ class NarrativeState:
                 a.confidence = min(1.0, a.confidence + 0.15)
                 if a.commit is CommitLevel.PROVISIONAL and a.confidence >= 0.8:
                     a.commit = CommitLevel.COMMITTED
-                return self._record(Op.NOOP, a.id, "reinforced")
+                return self._record(Op.NOOP, a.id, "reinforced", rule="noop:reinforced")
 
         conflicts = [
             a for a in existing
@@ -394,10 +397,10 @@ class NarrativeState:
         conflicts = [a for a in conflicts if not (a.object == obj and a.polarity == cand.polarity)]
 
         if not conflicts:
-            self._assert_new(subject, predicate, str(obj), cand)
+            self._assert_new(subject, predicate, str(obj), cand, rule="assert:open-slot")
             return Op.ASSERT
 
-        op = self._classify(conflicts[0], str(obj), cand, predicate)
+        op, rule = self._classify_with_rule(conflicts[0], str(obj), cand, predicate)
 
         if op is Op.ELABORATE and self.policy.allow_elaborate:
             target = conflicts[0]
@@ -408,16 +411,18 @@ class NarrativeState:
                 target.provenance = cand.span
             return self._record(
                 Op.ELABORATE, target.id,
-                f"{subject}.{predicate} specified to '{obj}'",
+                f"{subject}.{predicate} specified to '{obj}'", rule=rule,
             )
 
         if op is Op.SUPERSEDE and self.policy.allow_supersede:
             return self._close_and_link(
-                conflicts, str(obj), cand, subject, predicate, revise=False
+                conflicts, str(obj), cand, subject, predicate, revise=False, rule=rule
             )
 
         if op is Op.REVISE and self.policy.allow_revise:
-            return self._close_and_link(conflicts, str(obj), cand, subject, predicate, revise=True)
+            return self._close_and_link(
+                conflicts, str(obj), cand, subject, predicate, revise=True, rule=rule
+            )
 
         # The policy cannot express the required operation. Assert anyway and
         # let the contradiction stand -- this is the measured failure mode.
@@ -425,7 +430,7 @@ class NarrativeState:
         return self._record(
             Op.ASSERT, f"{subject}.{predicate}",
             f"unrevised conflict: '{conflicts[0].object}' vs '{obj}' "
-            f"(needed {op.value}, policy {self.policy.name})",
+            f"(needed {op.value}, policy {self.policy.name})", rule=rule,
         )
 
     def classify_only(self, cand: CandidateAssertion) -> tuple[Op, Assertion | None]:
@@ -465,17 +470,25 @@ class NarrativeState:
         self, existing: Assertion, obj: str, cand: CandidateAssertion, predicate: str
     ) -> Op:
         """The core judgement: elaboration, world change, or reader correction."""
-        if is_underspecified(existing.object) or refines(existing.object, obj):
-            return Op.ELABORATE
+        return self._classify_with_rule(existing, obj, cand, predicate)[0]
+
+    def _classify_with_rule(
+        self, existing: Assertion, obj: str, cand: CandidateAssertion, predicate: str
+    ) -> tuple[Op, str]:
+        """``_classify`` plus the name of the rule that decided, for the log."""
+        if is_underspecified(existing.object):
+            return Op.ELABORATE, "elaborate:underspecified"
+        if refines(existing.object, obj):
+            return Op.ELABORATE, "elaborate:refines"
         if existing.commit is CommitLevel.PROVISIONAL and existing.confidence < 0.5:
-            return Op.ELABORATE
+            return Op.ELABORATE, "elaborate:provisional"
         if has_revelation_marker(cand.evidence):
-            return Op.REVISE
+            return Op.REVISE, "revise:revelation-marker"
         if existing.certainty is Certainty.REPORTED and cand.certainty is Certainty.NARRATED:
-            return Op.REVISE
+            return Op.REVISE, "revise:reported-to-narrated"
         if not is_mutable(predicate):
-            return Op.REVISE
-        return Op.SUPERSEDE
+            return Op.REVISE, "revise:immutable"
+        return Op.SUPERSEDE, "supersede:mutable"
 
     def _assert_new(
         self,
@@ -484,6 +497,7 @@ class NarrativeState:
         obj: str,
         cand: CandidateAssertion,
         record: bool = True,
+        rule: str = "",
     ) -> Assertion:
         a = Assertion(
             id=self._next_id("a"),
@@ -500,7 +514,7 @@ class NarrativeState:
         )
         self.assertions[a.id] = a
         if record:
-            self._record(Op.ASSERT, a.id, f"{subject}.{predicate} = '{obj}'")
+            self._record(Op.ASSERT, a.id, f"{subject}.{predicate} = '{obj}'", rule=rule)
         return a
 
     def _close_and_link(
@@ -511,6 +525,7 @@ class NarrativeState:
         subject: str,
         predicate: str,
         revise: bool,
+        rule: str = "",
     ) -> Op:
         self._assert_new(subject, predicate, obj, cand, record=False)
         new_id = f"a{self._counter:05d}"
@@ -530,7 +545,7 @@ class NarrativeState:
         return self._record(
             op, new.id,
             f"{subject}.{predicate}: '{conflicts[0].object}' -> '{obj}'",
-            payload=conflicts[0].id,
+            payload=conflicts[0].id, rule=rule,
         )
 
     def _cascade_retract(self, root: str) -> None:
@@ -542,7 +557,7 @@ class NarrativeState:
                 if a.live and set(a.derived_from) & frontier:
                     a.status = Status.RETRACTED
                     a.d_close = self.index
-                    self._record(Op.REVISE, a.id, "cascade retract")
+                    self._record(Op.REVISE, a.id, "cascade retract", rule="revise:cascade")
                     nxt.add(a.id)
             frontier = nxt
 
@@ -568,7 +583,10 @@ class NarrativeState:
                 old.valid_to = self.index
                 old.superseded_by = keeper.id
                 keeper.supersedes = old.id
-                self._record(Op.SUPERSEDE, keeper.id, "post-merge slot reconciliation")
+                self._record(
+                    Op.SUPERSEDE, keeper.id, "post-merge slot reconciliation",
+                    rule="supersede:post-merge",
+                )
 
     # ------------------------------------------------------------- bookkeeping
     def step(self, index: int, prefix_end: int) -> None:

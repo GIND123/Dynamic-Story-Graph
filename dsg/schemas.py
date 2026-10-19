@@ -171,6 +171,9 @@ class UpdateRecord:
     target: str
     detail: str = ""
     payload: str | None = None
+    # Which classifier rule decided the operation, e.g. "revise:immutable".
+    # Empty for operations the revision calculus does not classify.
+    rule: str = ""
 
     @property
     def monotone(self) -> bool:
