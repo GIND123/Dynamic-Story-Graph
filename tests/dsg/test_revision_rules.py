@@ -187,3 +187,12 @@ def test_a_policy_that_cannot_revise_still_logs_the_rule_it_needed():
     assert op is Op.ASSERT
     assert s.log[-1].rule == "revise:immutable"
     assert "needed revise" in s.log[-1].detail
+
+
+def test_an_elaboration_logs_the_value_it_overwrote():
+    op, s = _two_step(
+        "Pip", "location", ("a house", "in a house"), ("Satis House", "at Satis House")
+    )
+    assert op is Op.ELABORATE
+    assert s.log[-1].payload == "a house"
+    assert next(a for a in s.assertions.values() if a.live).object == "Satis House"

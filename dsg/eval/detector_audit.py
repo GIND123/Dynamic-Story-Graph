@@ -48,11 +48,24 @@ N_UNFLAGGED_CUED = 100      # unflagged mentions in a sentence with an attribute
 BOOTSTRAP_SEED = 0          # dsg.eval.bootstrap's default, as every reported interval
 CONTEXT = 300           # characters shown either side of the judged span
 
+N_DOUBLE = 50               # rows labelled by two people, for agreement
+
 LABEL_COLUMNS = ("real_violation", "real_restatement", "labeller", "notes")
-# Columns that reveal the arm or the automatic overlap call; dropped from the
-# blind sheet so a labeller cannot be steered by them.
-UNBLINDED_COLUMNS = ("run", "condition", "other_subject_same_value",
-                     "other_subject_nearby", "hyphen_compound")
+# The blind sheet is an allow-list: anything that reveals the arm, the
+# automatic overlap call or why a row was sampled stays out of it.
+BLIND_COLUMNS = (
+    "item_id", "double_annotate", "item_type", "story", "chapter", "fact_id", "subject",
+    "kind", "true_value", "matched_word", "matched_value", "context", *LABEL_COLUMNS,
+)
+
+# Targeted stratum that settles the overlap bound: other-subject-value flags in
+# the arms of the two headline within-run gaps. (run, condition, rows).
+BOUND_TARGETS = (
+    ("gen-v3-hybrid", "base:dsg-state", 40),
+    ("gen-v3-hybrid", "base:none", 10),
+    ("gen-v4-retrieval", "base:beat-retrieval", 40),
+    ("gen-v4-retrieval", "base:none", 10),
+)
 
 
 def _words(*alts: str) -> re.Pattern[str]:
@@ -385,7 +398,51 @@ SHEET_COLUMNS = (
     "other_subject_same_value", "other_subject_nearby", "hyphen_compound",
     "v1_other_candidate_hits", "v1_restated_in_chapter", "v1_flagged_in_chapter",
     "recall_stratum", "stratum", "stratum_population", "stratum_sampled",
+    "bound_stratum", "bound_stratum_population", "bound_stratum_sampled", "double_annotate",
 )
+
+
+def _flag_key(r: dict) -> tuple:
+    return (r["item_type"], r["run"], r["condition"], r["story"], r["chapter"], r["fact_id"])
+
+
+def _bound_sample(flags: list[dict], rows: list[dict], rng: random.Random) -> tuple[list, list]:
+    """Draw BOUND_TARGETS; a flag already in the main sample is labelled once
+    and carries both designs' weights."""
+    by_key = {_flag_key(r): r for r in rows}
+    added, design = [], []
+    for run, condition, n in BOUND_TARGETS:
+        pool = [f for f in flags if f["run"] == run and f["condition"] == condition
+                and f["other_subject_same_value"]]
+        k = min(n, len(pool))
+        overlap = 0
+        for f in rng.sample(pool, k):
+            row = by_key.get(_flag_key(f))
+            overlap += row is not None
+            if row is None:
+                row = {**f, "real_violation": "", "real_restatement": "n/a"}
+                added.append(row)
+                by_key[_flag_key(f)] = row
+            row.update(bound_stratum=f"{run}|{condition}", bound_stratum_population=len(pool),
+                       bound_stratum_sampled=k)
+        design.append({"stratum": [run, condition], "population": len(pool), "sampled": k,
+                       "already_in_main_sample": overlap})
+    return added, design
+
+
+def _doubles(rows: list[dict], rng: random.Random, n: int = N_DOUBLE) -> None:
+    """Mark ``n`` rows for a second annotator, proportional to item type."""
+    by_type: dict[str, list[int]] = defaultdict(list)
+    for i, r in enumerate(rows):
+        by_type[r["item_type"]].append(i)
+    alloc = {t: round(n * len(ix) / len(rows)) for t, ix in sorted(by_type.items())}
+    while sum(alloc.values()) > n:
+        alloc[max(alloc, key=lambda t: (alloc[t], t))] -= 1
+    while sum(alloc.values()) < n:
+        alloc[min(alloc, key=lambda t: (alloc[t] / len(by_type[t]), t))] += 1
+    chosen = {i for t in sorted(by_type) for i in rng.sample(by_type[t], alloc[t])}
+    for i, r in enumerate(rows):
+        r["double_annotate"] = "yes" if i in chosen else "no"
 
 
 def export(generation_dir: Path, out_dir: Path, seed: int = SEED,
@@ -417,19 +474,22 @@ def export(generation_dir: Path, out_dir: Path, seed: int = SEED,
     for r in rows:
         r.setdefault("real_violation", "n/a")
         r.setdefault("real_restatement", "n/a")
+    # Separate streams, so adding a design never moves the main sample.
+    bound_rows, b_design = _bound_sample(flags, rows, random.Random(seed + 1))
+    rows += bound_rows
     rng.shuffle(rows)
     for i, r in enumerate(rows, 1):
         r["item_id"] = f"D{i:04d}"
+    _doubles(rows, random.Random(seed + 2))
 
     out_dir.mkdir(parents=True, exist_ok=True)
     _write(out_dir / "sheet.csv", rows, SHEET_COLUMNS)
-    _write(out_dir / "sheet_blind.csv", rows,
-           tuple(c for c in SHEET_COLUMNS
-                 if c not in UNBLINDED_COLUMNS and not c.startswith(("v1_", "stratum"))))
+    _write(out_dir / "sheet_blind.csv", rows, BLIND_COLUMNS)
 
     manifest = {
         "provenance": provenance(
-            "dsg.eval.detector_audit", argv, {"sample": seed},
+            "dsg.eval.detector_audit", argv,
+            {"sample": seed, "bound_target": seed + 1, "double": seed + 2},
             sorted(generation_dir.glob("*.json")),
         ),
         "seed": seed,
@@ -438,13 +498,19 @@ def export(generation_dir: Path, out_dir: Path, seed: int = SEED,
                        "flagged_restatement": len(restates),
                        "unflagged_mention": len(unflagged)},
         "sampled": dict(Counter(r["item_type"] for r in rows)),
+        "rows": len(rows),
+        "bound_target_design": b_design,
+        "bound_target_added_rows": len(bound_rows),
+        "double_annotate": sum(r["double_annotate"] == "yes" for r in rows),
+        "double_by_type": dict(Counter(
+            r["item_type"] for r in rows if r["double_annotate"] == "yes")),
         "recall_population": dict(Counter(r["recall_stratum"] for r in unflagged)),
         "recall_population_by_kind": {
             f"{k}|{s}": n for (k, s), n in sorted(
                 Counter((r["kind"], r["recall_stratum"]) for r in unflagged).items())
         },
-        "design": {"flagged_violation": v_design, "flagged_restatement": r_design,
-                   "unflagged_mention": u_design},
+        "design": {"bound_target": b_design, "flagged_violation": v_design,
+                   "flagged_restatement": r_design, "unflagged_mention": u_design},
         "overlap_by_condition": overlap_by_condition(flags),
         "overlap_by_kind": overlap_by_kind(flags),
         "overlap_in_sample": overlap_by_condition(v_sample),

@@ -372,8 +372,6 @@ def export(out_dir: Path, seed: int = SEED, argv: list[str] | None = None) -> di
     blind = tuple(c for c in SHEET_COLUMNS if c not in BLIND_DROP)
     _write(out_dir / "sheet.csv", rows, SHEET_COLUMNS)
     _write(out_dir / "sheet_blind.csv", rows, blind)
-    _write(out_dir / "sheet_second_annotator.csv",
-           [r for r in rows if r["double_annotate"] == "yes"], blind)
     inputs = [f for d in RUNS.values() for f in sorted(Path(d).glob("*.jsonl"))]
     manifest = {
         "provenance": provenance("dsg.eval.calculus_audit", argv, {"sample": seed}, inputs),

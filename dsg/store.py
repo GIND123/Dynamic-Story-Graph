@@ -407,6 +407,9 @@ class NarrativeState:
 
         if op is Op.ELABORATE and self.policy.allow_elaborate:
             target = conflicts[0]
+            # The overwrite keeps no history in the state, so the log keeps the
+            # value it replaced (for ELABORATE the payload is a value, not an id).
+            replaced = target.object
             target.object = str(obj)
             target.confidence = max(target.confidence, cand.confidence)
             target.certainty = cand.certainty
@@ -414,7 +417,7 @@ class NarrativeState:
                 target.provenance = cand.span
             return self._record(
                 Op.ELABORATE, target.id,
-                f"{subject}.{predicate} specified to '{obj}'", rule=rule,
+                f"{subject}.{predicate} specified to '{obj}'", payload=replaced, rule=rule,
             )
 
         if op is Op.SUPERSEDE and self.policy.allow_supersede:
