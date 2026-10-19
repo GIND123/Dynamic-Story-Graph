@@ -57,20 +57,26 @@ speaker, conditioned **only** on `text[0:s]` and on state built causally from
 
 ### 2.2 Why this is novel
 
-Every published PDNC number is **non-causal**: the system reads a window
-*centred* on the quote, which includes the following text where the attribution
-cue usually lives.
+Every published PDNC number we found is **non-causal**: the system reads
+context on both sides of the quote (a centred window, or a whole chapter chunk),
+which includes the following text where the attribution cue usually lives.
 
 | System | PDNC overall | non-explicit | Setting |
 |---|---|---|---|
 | BookNLP+ | 78.5 | 68.9 | non-causal `[published]` |
 | Llama-3 8B zero-shot | **90.6** | **89.1** | non-causal `[published]` |
+| Joint scoring, ModernBERT-large | **94.5** | **92.4** | non-causal `[published]` |
 
-Source: Michel, Epure, Hennequin & Cerisara (2024), *Evaluating LLMs for
-Quotation Attribution in Literary Texts*, arXiv:2406.11380, Table 1.
+Sources: Michel, Epure, Hennequin & Cerisara (2024), *Evaluating LLMs for
+Quotation Attribution in Literary Texts*, arXiv:2406.11380, Table 1; Michel,
+Attali & Epure (2026), *Fast and Accurate Quotation Attribution in Literary
+Texts*, arXiv:2608.02359, Table 1. All rows are on PDNC's 22-novel first release,
+characters with at least ten quotes, gold alias lists.
 
-**No published number exists for the prefix-causal setting.** E1 produces the
-first one, on an established benchmark, against a known non-causal ceiling.
+**We found no published number for the prefix-causal setting.** To our
+knowledge E1 produces the first one, on an established benchmark, against a
+known non-causal ceiling. The item sets differ: E1 scores all 28 novels and
+every annotated speaker.
 
 ### 2.3 What causality actually removes `[measured]`
 
@@ -140,10 +146,11 @@ The experiment is designed to be informative under every result:
   beyond generation, which is a stronger and more surprising negative than v1's.
 - **3 ≈ 5** → causality is nearly free on this task once state is present. Strong
   result.
-- **3 ≪ 5** → we have priced causality on a benchmark with known SOTA. Still first.
+- **3 ≪ 5** → we have priced causality on a benchmark with known SOTA. Still, to our
+  knowledge, the first.
 
 No outcome is unpublishable, and none requires a win. **We do not promise to
-beat 90.6 and must not imply we will.**
+beat 94.5 and must not imply we will.**
 
 ### 2.6 Leakage controls — enforced in code, not by convention
 
@@ -161,12 +168,14 @@ Mandatory guards:
   assembled prompt shares any 40-character substring with `text[s:]`. This runs
   on every quote, not a sample, and fails the run rather than warning.
 - **G2 — no gold at inference.** Report two candidate regimes: *gold candidates*
-  (matches the literature protocol, comparable to 90.6) and *system candidates*
+  (matches the literature's candidate protocol, though not its item set) and *system candidates*
   (derived from causal state, harder, honest). Never mix them in one table.
 - **G3 — memorization covariate.** Qwen and Llama have read these public-domain
   novels. Per novel, run name cloze *with our own model over PDNC* and correlate
   it with attribution accuracy (Spearman, permutation test). Michel et al. ran
-  this exact check and found memorization did not explain their gain; if our
+  name cloze, found it near zero for Llama-3 8B even on canonical novels, judged
+  it unreliable for that model class, and used a corrupted-speaker test instead,
+  which also found memorization did not explain their gain; if our
   correlation is significant and positive, the result is contaminated and must be
   reported as such. **Not** taken from `gpt4_books`: those numbers are ChatGPT's,
   and the corpora only align for 16 of 28 novels with at least one wrong match
@@ -224,10 +233,11 @@ context brackets the quote. Fixed to mark the target inline; rerun pending.
 2. *The state hurts, −0.073, interval excluding zero.* **Not yet interpretable**
    without `state-shuffled`: adding state also adds 1,400 characters, so this
    may price the block rather than its contents.
-3. *G3 is flagged.* ρ = +0.411, permutation p = 0.030. But mean cloze is 0.054 —
-   the model can barely recall these books — and `text-causal` correlates
-   equally (ρ = 0.403). Equal correlation with and without state points at
-   **book tractability**, not memorization: famous, small-cast novels are easier
+3. *G3 is flagged.* ρ = +0.411, permutation p = 0.030. Mean cloze is 0.054, which
+   Michel et al. (2024) would read as a failure of the measure rather than as
+   absence of recall, and `text-causal` correlates equally (ρ = 0.403). Equal
+   correlation with and without state points away from the state and plausibly
+   at **book tractability**, without ruling memorization out: famous, small-cast novels are easier
    to cloze *and* easier to attribute. Reported as a complication, not
    explained away, and it wants a difficulty control.
 
@@ -238,7 +248,9 @@ baseline it was competing against.
 
 `manuscript-memory-engine/FAILURE_PROFILE_REPORT.md` Part 2 `[measured, prior]`:
 advertised context windows are 3–18× larger than usable ones — Qwen2.5-7B holds
-to only ~7,292 tokens of its advertised 131,072.
+to only ~7,292 tokens of its advertised 131,072. That window assumes YaRN rope
+scaling; Qwen2.5-7B's native window is 32,768 tokens, and the failure point is a
+ladder rung on a quantized Ollama build, not a precise measurement.
 
 v1's `full-context` condition peaked at **5,308–5,398 prompt tokens** at 20
 chapters — *below* that breaking point. So every graph condition was competing
@@ -350,8 +362,11 @@ Carried forward from v1 and still binding:
   MEIC-DT `[published, verified]`). Our identity plane is an unsupervised
   alias-string partition, a different item set.
 - The contradiction rate does not measure textual consistency (AUC 0.394).
-- No "first" claim until every related-work entry is checked against its
-  published version.
+- No "first" claim without "to our knowledge".
+- The `SUPERSEDE`/`REVISE` distinction is not ours: it is Katsuno & Mendelzon's
+  (1991) update versus revision.
+- The generation gaps were not pre-specified; report them with Holm-corrected
+  intervals (`audit/generation/holm.json`).
 - The 0.492 canon-capture figure does **not** rule out an extraction ceiling. It
   shows half the canon was present and unused. Say that instead.
 - The `manuscript-memory-engine` "Graph 0.816 vs Long-Context 0.653" comparison

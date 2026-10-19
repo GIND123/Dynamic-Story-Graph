@@ -85,9 +85,14 @@ apparent 7× win, purely by degenerating into pastiche of its training corpus.
 **Why this is the durable contribution.** It is gold by construction, so unlike
 §5 it does not depend on extraction quality at all.
 
-## 4. C3 — State conditioning does not help generation (negative, well powered)
+## 4. C3 — State conditioning did not help generation in this setup (negative; draft)
 
 Four designs, three runs, 12,600 chapters, 30 stories, paired within story.
+
+> **Draft wording, pending the canon-detector audit (phase 1d).** Scope: Qwen2.5-3B writer, state
+> supplied as a digest or retrieved slice, about 10K words, deterministic test on
+> planted canon. The digest − no memory gap does not survive Holm correction; see
+> `docs/GENERATION_FINDINGS.md` §6.
 
 | memory | violations ↓ | tokens | verdict |
 | --- | --- | --- | --- |
@@ -100,20 +105,21 @@ Four designs, three runs, 12,600 chapters, 30 stories, paired within story.
 | retrieval + previous chapter | 0.317 | 1,098 | ties previous alone |
 | + graph guard | 0.317 | 1,095 | no effect (ns) |
 
-Serialised state is worse than no memory (+0.083, CI [+0.025, +0.142]).
-Beat-conditioned retrieval — the design the prior literature predicts should
-win — is also worse than no memory (+0.083, CI [+0.038, +0.125]) and
+Serialised state is worse than no memory before correction (+0.083, raw CI
+[+0.025, +0.142]; Holm-adjusted p 0.076). Beat-conditioned retrieval — the
+design the prior literature predicts should win — is also worse than no memory
+(+0.083, raw CI [+0.038, +0.125]; Holm-adjusted p 0.005) and
 indistinguishable from the serialisation it was meant to fix. Retrieval plus
 recent text ties recent text alone (+0.004, ns). The guard never moves a number.
 
 **This is not an extraction ceiling.** The state held **0.492** of the planted
 canon at the moment of writing and conditioning on it still added nothing.
 
-**It replicates a published negative.** The Narrative World Model paper's own
-ablation reports serialised current state at 0.358 against query-conditioned
-retrieval at 0.898. Our `state-digest` is structurally their `State Memory`. We
-reproduce their failure with a 3B open model — and, unlike them, find that
-their success condition does not transfer.
+**It does not replicate a published negative.** The Narrative World Model's State
+Memory condition (0.358 against 0.898 for query-conditioned retrieval) is a
+question-answering condition, not generation; it still beats RAG and GraphRAG,
+and the authors trace most of its misses to their evidence budget truncating the
+serialised store. It is a related design, not a replication.
 
 ## 5. C4 — The contradiction count does not measure a text (negative, and it
 constrains C1)
@@ -157,8 +163,10 @@ how consistent a text is. We do not.
    `on_premise` for violation rate; the human-vs-machine test for the
    contradiction rate. One caught a 7× false positive; the other invalidated a
    claim we wanted to make.
-4. **Pre-register the falsifiers.** Four were stated before the generation runs;
-   three fired, and are reported as such.
+4. **Pre-register the falsifiers.** Four reading-study falsifiers were committed
+   before any result; three fired, and are reported as such. The generation
+   falsifiers came after the first two generation runs, so generation gaps are
+   reported with Holm correction (draft).
 5. **Price causality.** A non-causal oracle given the same extraction bounds
    what reading forward costs, separately from what the method buys.
 

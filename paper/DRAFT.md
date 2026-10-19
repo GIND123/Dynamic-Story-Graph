@@ -38,7 +38,10 @@ system that remembers earlier windows answers 31 points more mention-linking
 questions correctly than one that reads each window in isolation — and at the
 same time turns a third of its own state self-contradictory (+0.32 in the share
 of single-valued slots holding rival live values). Memory buys accuracy and
-manufactures contradiction in the same motion.
+manufactures contradiction in the same motion. A related failure appears in
+generation: in NSTAgent's own case study an explicit state records a wrongly
+extracted name and every later chapter is written against it (Wan & Chen, 2026,
+Case 3).
 
 An append-only store cannot say "this was true then", "this was never true", or
 "these two people are one", so every such contradiction it creates is
@@ -57,8 +60,9 @@ We make three contributions.
    types append-only pipelines conflate: monotone `ELABORATE` of deliberately
    underspecified structure, history-preserving `SUPERSEDE` of a changed world,
    and non-monotone `REVISE` of a mistaken reader belief. The
-   `SUPERSEDE`/`REVISE` split is the operational form of the narratological
-   distinction between an event in the story and a disclosure in the telling.
+   `SUPERSEDE`/`REVISE` split is Katsuno & Mendelzon's (1991) distinction between
+   updating a knowledge base and revising it, made operational for a reader: an
+   event in the story versus a disclosure in the telling.
    The mechanisms are separable and we price each one: identity merging
    *without* fact revision makes the state strictly worse, so the two are
    complementary rather than additive.
@@ -85,23 +89,36 @@ overturned our first reading of the revision profile (§7).
 Architecture and claim-to-evidence map: [`ARCHITECTURE.md`](ARCHITECTURE.md).*
 
 **Incremental interpretation.** Chen (2026) draws the distinction between
-revision-driven update and delayed elaboration, and argues that representing
-early structure as underspecified converts rollbacks into monotone refinement.
+revision-driven update and delayed elaboration, separates committed from
+underspecified content (the separation our deferred commitment implements), and
+argues that representing early structure as underspecified converts rollbacks
+into monotone refinement.
 That paper is explicitly conceptual: one worked seven-panel example, no
 implementation, no corpus, no metrics. Its stated future work asks for exactly
 four things — algorithmic criteria for classifying updates, corpus-scale
 measurement of revision versus elaboration frequency, a hybrid architecture in
 which a neural component proposes and a symbolic layer manages commitment, and
 process-oriented metrics such as rollback frequency and the proportion of
-monotone refinements. This paper supplies all four.
+monotone refinements. To our knowledge, this paper is the first to supply all
+four.
+
+**Belief update versus revision.** Katsuno & Mendelzon (1991) separate updating a
+knowledge base, when the world changes, from revising it, when new information
+arrives about a world that did not; the AGM postulates (Alchourrón, Gärdenfors &
+Makinson, 1985) describe only the second. `SUPERSEDE` and `REVISE` are that pair.
+Graphiti/Zep (Rasmussen et al., 2025) records when a fact held and when it was
+learned, and on a contradiction closes the old fact's interval, treating every
+conflict as a change in the world. Our contribution here is the classifier that
+chooses between the two from text, not the distinction.
 
 **Narrative memory for generation.** Narrative World Model (Saifullah et al.,
 2026) pairs a narratology-typed temporal graph with query-conditioned retrieval
 and beats generic temporal-KG agent memory (Graphiti/Zep) on multi-hop writer
 QA. Its evidence is downstream: a frontier model reads each system's evidence
-and is scored by another frontier model, on a partly proprietary corpus; its own
-ablation finds the gain comes from retrieval conditioning rather than from the
-typed representation. Our object of study is different — the *correctness of the
+and is scored by another frontier model, on a partly proprietary corpus; its State
+Memory condition, which serialises the whole store, scores 0.358 against 0.898
+for query-conditioned retrieval, a gap the authors trace mainly to their evidence
+budget truncating the dump. Our object of study is different — the *correctness of the
 state itself*, measured against human annotation — and our constraint is
 different: a 1.5B–14B open-weight model, no API anywhere in the pipeline.
 
@@ -184,6 +201,12 @@ Core positioning:
   Narratives. arXiv:2605.02475.
 - Saifullah et al. (2026). Narrative World Model: Narratology-Grounded Writer
   Memory for Long-Form Fiction. arXiv:2607.05577.
+- Katsuno & Mendelzon (1991). On the Difference between Updating a Knowledge Base
+  and Revising It. KR'91, 387–394.
+- Rasmussen et al. (2025). Zep: A Temporal Knowledge Graph Architecture for Agent
+  Memory. arXiv:2501.13956.
+- Wan & Chen (2026). Scaling Long-Form Story Generation via Narrative State
+  Tracking. arXiv:2609.35759.
 
 Data and annotation:
 
