@@ -3,6 +3,15 @@
 Fixed before any label is read. Code: `dsg/eval/agreement.py`,
 `dsg/eval/labels.py`, `dsg/eval/multiplicity.py`.
 
+## Scope of the calculus labels
+
+The calculus sheet is drawn from the **7B runs only**
+(`pdnc-qwen7b-w3200`, `litbank-qwen7b-w1200`; `dsg/eval/calculus_audit.py`
+`RUNS`). Every estimate made from those labels — rule precision, the v1/v2
+comparison in 4c, the correct-value scoring and the overwrite-only comparison
+in 4d — is a 7B estimate and is reported as one. It is not carried over to the
+1.5B or 3B runs, whose rule mix differs (`audit/calculus/elaborate_census.json`).
+
 ## Splits
 
 Dev and test are split by group, never by row, so nothing a rule could
