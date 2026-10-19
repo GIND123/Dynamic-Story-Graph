@@ -24,9 +24,13 @@ committed artifact by the command printed beside it.
 
 Quote attribution on the Project Dialogism Novel Corpus is a solved-looking task:
 Llama-3 8B zero-shot reaches **90.6** overall and **89.1** on non-explicit quotes
-(Michel, Epure, Hennequin & Cerisara 2024, arXiv:2406.11380, Table 1). Every
-published number is obtained non-causally — the system reads a window *centred*
-on the quote.
+(Michel, Epure, Hennequin & Cerisara 2024, arXiv:2406.11380, Table 1), and an
+encoder with joint scoring now reaches **94.5** (Michel, Attali & Epure 2026,
+arXiv:2608.02359). Both are on PDNC's 22-novel first release with gold alias lists. Llama-3 is
+zero-shot and scored on characters with at least ten quotes; the encoder is
+fine-tuned under PDNC's 5-fold cross-validation and scored on characters
+mentioned at least ten times. Every published number we found
+is obtained non-causally — the system reads context on both sides of the quote.
 
 We asked where the evidence actually sits. For the 10,743 explicit quotes whose
 gold speaker has resolvable aliases, we located the speaker's name within ±250
@@ -40,7 +44,7 @@ characters:
 | before only | 1,524 | 14.2% |
 
 > **A strict prefix-causal cut removes the decisive lexical cue for 29.3% of
-> explicit quotes — about 8.8% of the corpus.**
+> explicit quotes — 3,148 of 37,131 quotes, 8.5% of the corpus.**
 
 The benchmark is substantially easier than it looks because, for a large slice of
 it, the answer arrives after the question. This is a property of the corpus, not
@@ -65,7 +69,7 @@ Effective N after dropping quotes whose gold speaker has no resolvable alias:
 
 ---
 
-## 2. The first prefix-causal number on PDNC
+## 2. A prefix-causal number on PDNC
 
 Qwen2.5-7B-Instruct, 1,200-character window, greedy decoding, gold candidate
 lists (matching the literature's protocol). Paired bootstrap over 28 novels,
@@ -84,8 +88,10 @@ lists (matching the literature's protocol). Paired bootstrap over 28 novels,
 | `text-causal` − `recency` | +0.3579 | [+0.3253, +0.3887] | yes |
 | `recency` − `prior` | +0.0257 | [+0.0098, +0.0419] | yes |
 
-**`text-causal` = 0.523 is the headline: the first prefix-causal attribution
-number on PDNC**, on 35,083 quotes with leakage enforced per item.
+**`text-causal` = 0.523 is the headline: to our knowledge the first
+prefix-causal attribution number on PDNC**, on 35,083 quotes with leakage
+enforced per item. It covers all 28 novels and every annotated speaker, so it is
+not on the published protocol's item set.
 
 † **`state-causal` supports no claim in this repository.** It scores −0.073
 below `text-causal` (CI [−0.0919, −0.0555]), but adding the state block also
@@ -119,6 +125,9 @@ should become the hard one under a causal constraint.
 | Llama-3 8B zero-shot, non-causal `[published]` | 90.6 | 89.1 | explicit (overall > non-explicit) |
 | **`text-causal`, this work** | **52.3** | **53.7** | **non-explicit — the ordering inverts** |
 
+Published rows use the 22-novel release and characters with at least ten quotes;
+ours uses all 28 novels and every annotated speaker.
+
 Both published systems score *below* their overall accuracy on non-explicit
 quotes; ours scores *above* it. Each row is an internal comparison within one
 system and one prompt, so the inversion is robust to the model differences that
@@ -149,11 +158,13 @@ The causal claim lives or dies here, so the guards are code:
 
 Qwen has read these public-domain novels. Per novel, ρ = **+0.411** between name
 cloze and attribution accuracy (permutation p = 0.030) — which looks like
-contamination. But mean cloze is **0.054** (the model can barely recall these
-books), and `text-causal` correlates *equally* (ρ = 0.403). Equal correlation
-with and without state points at **book tractability** — famous, small-cast
-novels are both easier to cloze and easier to attribute — rather than at
-memorization. Reported as a complication that wants a difficulty control, not
+contamination. Mean cloze is **0.054**, but that does not show the model cannot
+recall these books: Michel et al. (2024) found name cloze near zero for Llama-3
+8B even on canonical novels and judged the measure unreliable for that model
+class. `text-causal` correlates *equally* (ρ = 0.403), so whatever drives the
+correlation is not the state — plausibly **book tractability**, since famous,
+small-cast novels are both easier to cloze and easier to attribute. G3 cannot
+rule memorization in or out. Reported as a complication that wants a difficulty control, not
 explained away.
 
 ---
@@ -214,8 +225,10 @@ What that leaves is the question worth asking, and it is empirical:
 
 > **What does enforcing consistency cost?**
 
-The answer is nothing, and it was not obvious in advance — the natural worry is
-that aggressive revision throws away correct facts.
+On these metrics the answer cannot be anything but nothing, so this is not yet
+evidence: identity and mention scoring never read fact assertions, so the 0.000 is guaranteed by construction, like I1. The real worry — that aggressive revision throws away
+correct facts — is untested. The first real test is scoring the calculus's
+chosen values against the labelled correct value (audit phase 4d).
 
 | rung (7B) | identity CoNLL F1 | mention linking | self-contradictory slots |
 |---|---|---|---|
@@ -226,8 +239,9 @@ that aggressive revision throws away correct facts.
 
 Bold entries have a 95% interval excluding zero. The revision rung moves the
 consistency metric by exactly the amount it is defined to move it and moves the
-accuracy metrics by *exactly zero* — identity and fact revision are disjoint, and
-the ladder shows it rather than assuming it.
+accuracy metrics by *exactly zero*, because identity and fact revision are
+disjoint by construction; the ladder confirms the construction, it does not
+test the cost.
 
 Two findings on that ladder are genuinely empirical:
 
@@ -249,7 +263,7 @@ Two findings on that ladder are genuinely empirical:
 These are reported at the same volume as the positive result, because they are
 what make the positive claim narrow enough to be true.
 
-### 4.1 State conditioning does not help generation
+### 4.1 State conditioning did not help generation in this setup (draft)
 
 Five designs, four runs, **18,600 generated chapters**, 30 stories, conditions
 paired within story. Canon is planted in chapter 1 and withheld afterwards;
@@ -267,18 +281,33 @@ language model appears in any metric.
 | retrieval + previous chapter | 0.317 | 1,098 |
 | + graph guard | 0.317 | 1,095 |
 
-Serialised state is worse than no memory (+0.083, CI [+0.025, +0.142]).
-Beat-conditioned retrieval — the design the prior literature predicts should win
-— is also worse than no memory (+0.083, CI [+0.038, +0.125]).
+> **Draft wording, pending the canon-detector audit (phase 1d).** Scope: Qwen2.5-3B
+> writer, state supplied as a digest or retrieved slice, about 10K words (20
+> chapters of 500), deterministic test on planted canon. Rows in the table come
+> from different runs; compare only within a run.
+
+Serialised state is worse than no memory in its run before correction (+0.083,
+raw CI [+0.025, +0.142]) but is not significant after Holm correction across the
+27 violation-rate comparisons (adjusted p 0.090, Holm-level CI [−0.004,
++0.171]). Run 1, an independent run, points the same way (+0.075, raw CI
+[+0.008, +0.142], adjusted p 0.365). Beat-conditioned retrieval — the design the prior literature predicts
+should win — is worse than no memory in its run and remains significant after
+correction (+0.083, raw CI [+0.037, +0.125]; adjusted p 0.004, Holm-level CI
+[+0.017, +0.146]). Intervals use 100,000 bootstrap resamples. Neither gap
+was named before its run, and both rest on a detector under audit
+(`audit/detector/bound.json`). Stronger models judged by an LLM disagree:
+NSTAgent (Wan & Chen, 2026) finds an explicit narrative state beats a rolling
+summary at 10K words on DeepSeek-V4-Flash and from 20K to 100K words on both its
+backbones.
 
 **This is not an extraction ceiling.** The state held **0.492** of the planted
 canon at the moment of writing, and conditioning on it still added nothing.
 
-**It replicates a published negative.** The Narrative World Model paper's own
-ablation reports serialised current state at 0.358 against query-conditioned
-retrieval at 0.898. Our `state-digest` is structurally their `State Memory`. We
-reproduce their failure with a 3B open model and, unlike them, find their success
-condition does not transfer.
+**It does not replicate a published negative.** The Narrative World Model's State
+Memory condition (0.358 against 0.898 for query-conditioned retrieval) is a
+question-answering condition, not generation; it still beats RAG and GraphRAG,
+and the authors trace most of its misses to their evidence budget truncating the
+serialised store. It is a related design, not a replication.
 
 ### 4.2 The contradiction count does not measure a text
 
@@ -314,7 +343,7 @@ reading order destroys narrative order while preserving state growth exactly:
 | shuffled | +0.08 (p = 0.75) | **+0.69** (p = 8×10⁻⁴) |
 
 The revision trend largely survives shuffling, so most of it is state growth. The
-elaboration trend disappears, so that one is real. **The control reversed our
+elaboration trend disappears, so that one is real. *(Draft, pending audit phase 4c: at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites, which replace a value rather than refine it; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the trend is refinement depends on the 4c labels.)* **The control reversed our
 first reading of this result**, and the surviving signal is in the opposite
 operation from the one we expected to carry it.
 
@@ -340,12 +369,12 @@ Three update types that append-only pipelines conflate:
 | `REVISE` | the **reader** was wrong; it was never true | retracted, and so is anything derived from it |
 
 The `SUPERSEDE`/`REVISE` split is the operational form of the narratological
-distinction between an event in the story and a disclosure in the telling — a
-distinction static belief revision (AGM, TMS) does not make, because a knowledge
-base has no notion of the world legitimately moving on.
+distinction between an event in the story and a disclosure in the telling. For
+knowledge bases the same distinction is Katsuno & Mendelzon's (1991) update
+versus revision; DSG applies it to a reader.
 
-Assertions carry two independent clocks: discourse time (while the reader held
-the belief) and story time (while the fact held in the world). Seven structural
+Assertions carry two clocks: discourse time (while the reader held the belief)
+and story time (while the fact held in the world). Story time is represented but is currently set from reading position (`valid_from` = `d_open` = the window index, and `valid_to` is set on close the same way), so the two clocks do not yet differ; the difference between a plot event and a reveal is carried by the operation (`SUPERSEDE` vs `REVISE`), not by the clocks. Seven structural
 invariants are checked after every reading step, including prefix causality.
 Memory is bounded by cast size, not book length.
 
@@ -384,7 +413,7 @@ had to be structural rather than statistical.
 ## 6. Controls, and what they cost us
 
 Every headline in this repository is paired with the control that could have
-killed it. Three of them did:
+killed it. Five of them did:
 
 | control | what it killed |
 |---|---|
@@ -406,7 +435,10 @@ Falsifiers were committed at **2026-09-03 17:19** (`2934dce`,
 [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md) §5). The earliest result
 artifact reached the Hub at **2026-09-04 04:18:59**; the generation runs ran
 2026-09-04 20:29 → 2026-09-06 04:15. Two independent timestamped systems, plan
-before results in both.
+before results in both. These four falsifiers concern the reading study. The
+generation falsifiers (commit `a34e751`, 4 September, 23:46 UTC) came after the
+first two generation runs had been uploaded, and name neither headline
+generation gap.
 
 Of the four pre-registered falsifiers, **three fired.** The project's original
 framing — "premature commitment, not incrementality" — predicted an
@@ -432,9 +464,11 @@ follow the evidence.
   causality cost is measured internally.
 - **`state-causal` − `text-causal` = −0.073 supports nothing** — the length
   placebo was not run and cannot be (§2).
-- **No "first" claim** stands until every related-work entry is checked against
-  its published version; [`paper/RELATED_WORK.md`](paper/RELATED_WORK.md) tracks
-  which were read directly.
+- **Every "first" claim is to our knowledge.**
+  [`paper/RELATED_WORK.md`](paper/RELATED_WORK.md) tracks which related-work
+  entries were read directly.
+- **The `SUPERSEDE`/`REVISE` distinction is not ours.** It is Katsuno &
+  Mendelzon's (1991) update versus revision; ours is the classifier. *(Draft, pending audit phases 4c/4d: in the replay audit `REVISE` decides 78 of 2,263 classified clashes and low-confidence `ELABORATE` 1,324, so the classifier's value is not yet established.)*
 - **One model family, one language.** 28 English novels plus 100 LitBank
   excerpts, Qwen2.5 throughout.
 - **`SUPERSEDE` vs `REVISE` is decided by a lexicon** whose accuracy has not
@@ -450,7 +484,7 @@ follow the evidence.
 
 ```bash
 python -m dsg doctor                      # environment check
-python -m pytest tests/ -q                # 231 passed, 20 skipped
+python -m pytest tests/ -q                # 289 passed, 20 skipped, 52 expected failures
 python -m dsg.eval.causal_audit --report tag-position   # §1
 python -m dsg report                      # regenerates every table from results.json
 ```
@@ -491,8 +525,8 @@ a closed experimental record: no further runs are planned or possible, and the
 scope is bounded accordingly rather than deferred to future work.
 
 **Complete and standing.** The causal audit of PDNC and its three annotation
-defects (§1, pure corpus analysis, no model); the first prefix-causal attribution
-number on 35,083 quotes with per-item leakage enforcement (§2); the reading study
+defects (§1, pure corpus analysis, no model); to our knowledge the first prefix-causal
+attribution number, on 35,083 quotes with per-item leakage enforcement (§2); the reading study
 at 1.5B/3B/7B on PDNC and 7B on LitBank, 184 book-runs (§3); four generation
 runs, 18,600 chapters (§4.1); the external-validity test on 215 novels vs 30
 stories (§4.2); the shuffled-order control (§4.3).
@@ -512,7 +546,8 @@ These are reported as limits of the study, not as pending work.
 2. **Citation verification** for the 2026 preprints the positioning rests on.
 
 **What a continuation would need.** Mention-level identity gold (BookCoref) to
-replace the alias-set proxy; validation of the `SUPERSEDE`/`REVISE` decision
+replace the alias-set proxy — BookCoref's gold set already covers *Pride and
+Prejudice*, one of the PDNC novels; validation of the `SUPERSEDE`/`REVISE` decision
 against a few hundred hand-annotated conflict pairs; a second model family to
 show the negatives are not Qwen-specific; human validation that a flagged canon
 violation reads as a continuity error. The corpus-level results in §1 require no
@@ -524,6 +559,12 @@ GPU and are the cheapest of these to extend.
 
 Michel, Epure, Hennequin & Cerisara (2024). *Evaluating LLMs for Quotation
 Attribution in Literary Texts.* arXiv:2406.11380 ·
+Michel, Attali & Epure (2026). *Fast and Accurate Quotation Attribution in
+Literary Texts.* arXiv:2608.02359 ·
+Katsuno & Mendelzon (1991). *On the Difference between Updating a Knowledge Base
+and Revising It.* KR ·
+Wan & Chen (2026). *Scaling Long-Form Story Generation via Narrative State
+Tracking.* arXiv:2609.35759 ·
 Vishnubhotla, Hammond & Hirst (2022). *The Project Dialogism Novel Corpus.* LREC ·
 Bamman, Popat & Shen (2019). *An Annotated Dataset of Literary Entities.* NAACL ·
 Bamman, Lewke & Mansoor (2020). *An Annotated Dataset of Coreference in English

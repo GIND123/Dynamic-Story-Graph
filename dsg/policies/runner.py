@@ -79,9 +79,11 @@ def run_policy(
     causal: bool = True,
     text_length: int | None = None,
     probes: list[Probe] | None = None,
+    state_cls: type[NarrativeState] = NarrativeState,
 ) -> RunResult:
+    """``state_cls`` lets an audit observe the calculus without changing it."""
     config = POLICIES[policy] if isinstance(policy, str) else policy
-    state = NarrativeState(config)
+    state = state_cls(config)
     result = RunResult(policy=config.name, state=state, windows=len(proposals))
 
     if not causal:

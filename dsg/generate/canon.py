@@ -48,6 +48,18 @@ def _forms(value: str) -> tuple[str, ...]:
     return (value,) + _ALIASES.get(value, ())
 
 
+# Detector versions. v1 is the proximity test every published number used; it is
+# kept unchanged so those numbers stay reproducible.
+DETECTOR_VERSIONS: tuple[str, ...] = ("v1", "v2")
+
+
+def _require_version(version: str) -> None:
+    if version not in DETECTOR_VERSIONS:
+        raise ValueError(f"unknown detector version {version!r}")
+    if version == "v2":
+        raise NotImplementedError("detector v2 is built in audit phase 1c")
+
+
 @dataclass(frozen=True, slots=True)
 class CanonFact:
     """One planted, checkable fact."""
@@ -71,13 +83,14 @@ class CanonFact:
         alt = "|".join(re.escape(w) for w in words)
         return re.compile(rf"(?<!\w)({alt})(?!\w)", re.IGNORECASE)
 
-    def check(self, text: str) -> tuple[bool, str]:
+    def check(self, text: str, version: str = "v1") -> tuple[bool, str]:
         """Return (violated, evidence).
 
         A violation requires a contradicting value *near a mention of the
         subject*: proximity is what makes the test about this character rather
         than about the chapter's vocabulary at large.
         """
+        _require_version(version)
         subject_re = re.compile(rf"(?<!\w){re.escape(self.subject)}(?!\w)", re.IGNORECASE)
         bad = self._pattern(self.contradictions())
         good = self._pattern(_forms(self.value))
@@ -95,8 +108,34 @@ class CanonFact:
             return True, " ".join(span[max(0, hit.start() - 90) : hit.end() + 90].split())
         return False, ""
 
-    def mentioned(self, text: str) -> bool:
+    def locate(self, text: str) -> tuple[int, int, int, int] | None:
+        """Where the violation ``check`` reports sits: (subject start, subject
+        end, flagged-word start, flagged-word end), or None.
+
+        Mirrors ``check`` step for step -- same subject mentions, same window,
+        same first contradicting hit, same nearby-correction escape -- so a
+        flagged span can be shown to a person. ``check`` itself is left exactly
+        as published; a test holds the two in agreement.
+        """
+        subject_re = re.compile(rf"(?<!\w){re.escape(self.subject)}(?!\w)", re.IGNORECASE)
+        bad = self._pattern(self.contradictions())
+        good = self._pattern(_forms(self.value))
+        for m in subject_re.finditer(text):
+            lo = max(0, m.start() - self.window)
+            hi = min(len(text), m.end() + self.window)
+            span = text[lo:hi]
+            hit = bad.search(span)
+            if hit is None:
+                continue
+            near = span[max(0, hit.start() - 40) : hit.end() + 40]
+            if good.search(near):
+                continue
+            return m.start(), m.end(), lo + hit.start(), lo + hit.end()
+        return None
+
+    def mentioned(self, text: str, version: str = "v1") -> bool:
         """Whether the story restates the fact correctly at all."""
+        _require_version(version)
         subject_re = re.compile(rf"(?<!\w){re.escape(self.subject)}(?!\w)", re.IGNORECASE)
         good = self._pattern(_forms(self.value))
         for m in subject_re.finditer(text):
@@ -183,6 +222,35 @@ _BEATS = (
     "The town settles into what it will now be.",
 )
 
+# How much room each beat deserves, for the prose template only. A beat is one
+# event; giving a quiet aftermath the same 500 words as a public accusation is
+# what turns small events into padding. Keyed by text, so a beat outside this
+# list (or a rotated order) still resolves, to medium.
+BEAT_SIZE: dict[str, str] = {
+    _BEATS[0]: "large",    # introduce the household and the trouble
+    _BEATS[3]: "large",    # a journey
+    _BEATS[8]: "large",    # a hidden arrangement exposed
+    _BEATS[11]: "large",   # a choice that cannot be taken back
+    _BEATS[15]: "large",   # the account settled
+    _BEATS[18]: "large",   # the last reckoning
+    _BEATS[12]: "small",   # the cost becomes plain
+    _BEATS[13]: "small",   # an alliance shifts
+    _BEATS[16]: "small",   # a quiet aftermath
+    _BEATS[19]: "small",   # the town settles
+}
+# Scales the run's --words. Over the twenty beats the mean is 0.93, so total
+# length stays close to the classic arm's: violations scale with text length.
+SIZE_FACTOR = {"small": 0.6, "medium": 0.9, "large": 1.2}
+
+
+def beat_size(beat: str) -> str:
+    return BEAT_SIZE.get(beat.strip(), "medium")
+
+
+def beat_budget(beat: str, words: int) -> int:
+    return round(words * SIZE_FACTOR[beat_size(beat)])
+
+
 
 def build_premises(n: int = 30, n_canon: int = 8, seed: int = 0) -> list[Premise]:
     """Deterministic premises with a fixed number of checkable planted facts."""
@@ -229,6 +297,21 @@ def build_premises(n: int = 30, n_canon: int = 8, seed: int = 0) -> list[Premise
     return premises
 
 
+def rotate_beats(premises: list[Premise], step: int) -> list[Premise]:
+    """Start story ``i`` at beat ``i * step`` of the outline, in place.
+
+    A short run on the stock order only ever sees the opening beats, none of
+    them small, so a per-beat budget could not be tested. Rotating spreads the
+    stories over the whole arc. Every condition shares the premise, so every
+    arm still sees identical beats; ``step`` 0 leaves the outline untouched.
+    """
+    if step:
+        for i, premise in enumerate(premises):
+            k = (i * step) % len(premise.beats)
+            premise.beats = premise.beats[k:] + premise.beats[:k]
+    return premises
+
+
 @dataclass(slots=True)
 class CanonReport:
     chapter: int
@@ -241,14 +324,16 @@ class CanonReport:
         return len(self.violations)
 
 
-def check_chapter(premise: Premise, text: str, chapter: int) -> CanonReport:
+def check_chapter(
+    premise: Premise, text: str, chapter: int, version: str = "v1"
+) -> CanonReport:
     violations, restated, evidence = [], [], {}
     for fact in premise.canon:
-        bad, why = fact.check(text)
+        bad, why = fact.check(text, version)
         if bad:
             violations.append(fact.fact_id)
             evidence[fact.fact_id] = why
-        if fact.mentioned(text):
+        if fact.mentioned(text, version):
             restated.append(fact.fact_id)
     return CanonReport(chapter=chapter, violations=violations,
                        restated=restated, evidence=evidence)

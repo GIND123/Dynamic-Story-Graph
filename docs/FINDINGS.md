@@ -7,8 +7,9 @@ any metric; identity is scored against PDNC's human alias annotation and
 LitBank's gold coreference, and mention linking against PDNC's annotated
 referring expressions.
 
-**Status.** PDNC at 3B and 1.5B and LitBank at 7B are complete. The PDNC 7B run
-is still extracting; this document is updated when it lands.
+**Status.** PDNC at 1.5B, 3B and 7B and LitBank at 7B are complete. This
+document reports the 3B and 1.5B runs; the 7B run is in
+`artifacts/report/pdnc-qwen7b/`.
 
 Every trend against discourse position is reported with a shuffled-window
 control, because state growth alone produces such trends (§2, F4).
@@ -20,7 +21,7 @@ control, because state growth alone produces such trends (§2, F4).
 Carrying narrative state forward is **necessary and self-poisoning**. It buys a
 large amount of accuracy and, at the same time, fills the state with
 contradictions that a stateless reader cannot have. Fact-level revision is the
-antidote, and it costs nothing in accuracy.
+antidote; whether it costs accuracy is untested (see below).
 
 On 28 PDNC novels with a 3B extractor, moving one rung at a time:
 
@@ -34,8 +35,9 @@ On 28 PDNC novels with a 3B extractor, moving one rung at a time:
 
 Bold entries have a 95% interval excluding zero. Read down the fourth column:
 persistent state introduces contradiction into a third of the state's slots, and
-fact revision removes it — **on every one of the 28 books** (0–28 win split),
-with no measurable cost to either accuracy metric.
+fact revision removes it — **on every one of the 28 books** (0–28 win split).
+Both accuracy metrics read 0.000 on that rung, but identity and mention scoring never read fact assertions, so the 0.000 is guaranteed by construction, like I1. The first
+real test of the cost is correct-value scoring in audit phase 4d.
 
 In absolute terms, the share of single-valued slots holding two or more live
 conflicting values:
@@ -96,7 +98,7 @@ growth rather than a property of the text; the honest residual is the gap
 between ρ = 0.82 and ρ = 0.69, which this design cannot cleanly separate. The
 elaboration trend **disappears** under shuffling. That one is real: refinement
 of underspecified structure is genuinely front-loaded in narrative order, and
-not explained by how much state has accumulated.
+not explained by how much state has accumulated. *(Draft, pending audit phase 4c: at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites, which replace a value rather than refine it; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the trend is refinement depends on the 4c labels.)*
 
 So the instrument has signal, but less than the uncontrolled numbers suggest,
 and in the opposite operation from the one we expected to carry it.
@@ -112,7 +114,8 @@ and in the opposite operation from the one we expected to carry it.
   slot simply holds both rival values. The two mechanisms are complementary:
   merging is only safe once the state can revise.
 - **Fact revision** is the load-bearing contribution: −0.433 self-contradictory
-  slots, 0–28, at no accuracy cost.
+  slots, 0–28; its accuracy cost is untested (the 0.000 on the accuracy metrics
+  is guaranteed by construction).
 - **Deferred commitment** converts rollbacks into monotone updates. The size of
   the effect varies with how fast nodes become committed: −5.50 rollbacks per
   book at 1.5B (0–28, a 99% reduction), −0.60 on LitBank (92%), but only −2.57

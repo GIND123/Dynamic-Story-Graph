@@ -1,0 +1,90 @@
+{
+  "provenance": {
+    "command": "python -m dsg.eval.detector_audit bound --generation artifacts/hub/generation --out audit/detector",
+    "seeds": {
+      "bootstrap": 0
+    },
+    "git": {
+      "commit": "c774587e75d5c3232addeabf4a861279ff7475fc",
+      "dsg_tree_dirty": false
+    },
+    "python": "3.13.9",
+    "inputs": {
+      "artifacts/hub/generation/gen-v3-hybrid.json": "aa3edae56001f255208f63241662052d1c45a5d5d6a9825a579f3432b1322e9d",
+      "artifacts/hub/generation/gen-v4-retrieval.json": "08909964e5dfb1e35708555d071b61cabe90d4dad2cbb3c0a35537b636391779"
+    }
+  },
+  "kind": "bound",
+  "note": "An upper bound on how far other-subject-value coincidences can move each gap. Not a result: those rows are unlabelled, and some may be real violations.",
+  "metric": "violation_rate",
+  "comparisons": {
+    "gen-v3-hybrid:base:dsg-state_minus_base:none": {
+      "v1": {
+        "n": 30.0,
+        "mean_a": 0.5875,
+        "mean_b": 0.5041666666666667,
+        "mean_delta": 0.08333333333333333,
+        "ci_low": 0.025,
+        "ci_high": 0.14166666666666666,
+        "excludes_zero": 1.0,
+        "wins_a": 16.0,
+        "wins_b": 6.0,
+        "ties": 8.0,
+        "p_sign": 0.052478790283203125,
+        "p_sign_floor": 4.76837158203125e-07
+      },
+      "v1_minus_other_subject": {
+        "n": 30.0,
+        "mean_a": 0.35833333333333334,
+        "mean_b": 0.36666666666666664,
+        "mean_delta": -0.008333333333333333,
+        "ci_low": -0.0875,
+        "ci_high": 0.07083333333333333,
+        "excludes_zero": 0.0,
+        "wins_a": 11.0,
+        "wins_b": 13.0,
+        "ties": 6.0,
+        "p_sign": 0.8388197422027588,
+        "p_sign_floor": 1.1920928955078125e-07
+      },
+      "chapter_flags_removed": {
+        "base:dsg-state": 512,
+        "base:none": 74
+      }
+    },
+    "gen-v4-retrieval:base:beat-retrieval_minus_base:none": {
+      "v1": {
+        "n": 30.0,
+        "mean_a": 0.5708333333333333,
+        "mean_b": 0.4875,
+        "mean_delta": 0.08333333333333333,
+        "ci_low": 0.0375,
+        "ci_high": 0.125,
+        "excludes_zero": 1.0,
+        "wins_a": 17.0,
+        "wins_b": 4.0,
+        "ties": 9.0,
+        "p_sign": 0.007197380065917969,
+        "p_sign_floor": 9.5367431640625e-07
+      },
+      "v1_minus_other_subject": {
+        "n": 30.0,
+        "mean_a": 0.42083333333333334,
+        "mean_b": 0.37083333333333335,
+        "mean_delta": 0.05,
+        "ci_low": -0.004166666666666667,
+        "ci_high": 0.10416666666666667,
+        "excludes_zero": 0.0,
+        "wins_a": 14.0,
+        "wins_b": 6.0,
+        "ties": 10.0,
+        "p_sign": 0.11531829833984375,
+        "p_sign_floor": 1.9073486328125e-06
+      },
+      "chapter_flags_removed": {
+        "base:beat-retrieval": 231,
+        "base:none": 73
+      }
+    }
+  }
+}

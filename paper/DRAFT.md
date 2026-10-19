@@ -38,12 +38,18 @@ system that remembers earlier windows answers 31 points more mention-linking
 questions correctly than one that reads each window in isolation — and at the
 same time turns a third of its own state self-contradictory (+0.32 in the share
 of single-valued slots holding rival live values). Memory buys accuracy and
-manufactures contradiction in the same motion.
+manufactures contradiction in the same motion. A related failure appears in
+generation: in NSTAgent's own case study an explicit state records a wrongly
+extracted name and every later chapter is written against it (Wan & Chen, 2026,
+Case 3).
 
 An append-only store cannot say "this was true then", "this was never true", or
 "these two people are one", so every such contradiction it creates is
 permanent. Giving it those operations removes the contradiction entirely — on
-every one of 28 books — **at no measurable cost in accuracy**. What revision
+every one of 28 books. Whether that costs accuracy is untested: our identity and
+mention metrics never read fact assertions, so they cannot move, and scoring the
+chosen values against labelled correct values (audit phase 4d) is the first real
+test. What revision
 buys is not a better answer; it is a state that still means something after
 500,000 characters.
 
@@ -55,10 +61,13 @@ We make three contributions.
 
 1. **A revision calculus for narrative state** (§3) that separates three update
    types append-only pipelines conflate: monotone `ELABORATE` of deliberately
-   underspecified structure, history-preserving `SUPERSEDE` of a changed world,
+   underspecified structure *(draft, pending audit phase 4c: 1,263 of the 1,276
+   assertion-level `ELABORATE`s at 7B are low-confidence overwrites, not
+   refinements; `audit/calculus/elaborate_census.json`)*, history-preserving `SUPERSEDE` of a changed world,
    and non-monotone `REVISE` of a mistaken reader belief. The
-   `SUPERSEDE`/`REVISE` split is the operational form of the narratological
-   distinction between an event in the story and a disclosure in the telling.
+   `SUPERSEDE`/`REVISE` split is Katsuno & Mendelzon's (1991) distinction between
+   updating a knowledge base and revising it, made operational for a reader: an
+   event in the story versus a disclosure in the telling.
    The mechanisms are separable and we price each one: identity merging
    *without* fact revision makes the state strictly worse, so the two are
    complementary rather than additive.
@@ -85,25 +94,38 @@ overturned our first reading of the revision profile (§7).
 Architecture and claim-to-evidence map: [`ARCHITECTURE.md`](ARCHITECTURE.md).*
 
 **Incremental interpretation.** Chen (2026) draws the distinction between
-revision-driven update and delayed elaboration, and argues that representing
-early structure as underspecified converts rollbacks into monotone refinement.
+revision-driven update and delayed elaboration, separates committed from
+underspecified content (the separation our deferred commitment implements), and
+argues that representing early structure as underspecified converts rollbacks
+into monotone refinement.
 That paper is explicitly conceptual: one worked seven-panel example, no
-implementation, no corpus, no metrics. Its stated future work asks for exactly
-four things — algorithmic criteria for classifying updates, corpus-scale
+implementation, no corpus, no metrics. Four of the five directions in its future-work
+section ask for — algorithmic criteria for classifying updates, corpus-scale
 measurement of revision versus elaboration frequency, a hybrid architecture in
 which a neural component proposes and a symbolic layer manages commitment, and
 process-oriented metrics such as rollback frequency and the proportion of
-monotone refinements. This paper supplies all four.
+monotone refinements; the fifth is schema refinement and relation
+normalisation. To our knowledge, this paper is the first to supply those four.
+
+**Belief update versus revision.** Katsuno & Mendelzon (1991) separate updating a
+knowledge base, when the world changes, from revising it, when new information
+arrives about a world that did not; the AGM postulates (Alchourrón, Gärdenfors &
+Makinson, 1985) describe only the second. `SUPERSEDE` and `REVISE` are that pair.
+Graphiti/Zep (Rasmussen et al., 2025) records when a fact held and when it was
+learned, and on a contradiction closes the old fact's interval, treating every
+conflict as a change in the world. Our contribution here is the classifier that
+chooses between the two from text, not the distinction. *(Draft, pending audit phases 4c/4d: in the replay audit `REVISE` decides 78 of 2,263 classified clashes and low-confidence `ELABORATE` 1,324, so the classifier's value is not yet established.)*
 
 **Narrative memory for generation.** Narrative World Model (Saifullah et al.,
 2026) pairs a narratology-typed temporal graph with query-conditioned retrieval
 and beats generic temporal-KG agent memory (Graphiti/Zep) on multi-hop writer
-QA. Its evidence is downstream: a frontier model reads each system's evidence
-and is scored by another frontier model, on a partly proprietary corpus; its own
-ablation finds the gain comes from retrieval conditioning rather than from the
-typed representation. Our object of study is different — the *correctness of the
+QA. Its evidence is downstream: a frontier model (Opus 4.8) reads each system's
+evidence, and its answers are scored by a deterministic token-coverage rule, on a partly proprietary corpus; its State
+Memory condition, which serialises the whole store, scores 0.358 against 0.898
+for query-conditioned retrieval, a gap the authors trace mainly to their evidence
+budget truncating the dump. Our object of study is different — the *correctness of the
 state itself*, measured against human annotation — and our constraint is
-different: a 1.5B–14B open-weight model, no API anywhere in the pipeline.
+different: a 1.5B–7B open-weight model, no API anywhere in the pipeline.
 
 **A versioned narrative world graph already exists.** Shadow-Loom (Wilmot,
 2026) builds the closest architectural cousin: a typed, *versioned* world graph
@@ -117,9 +139,10 @@ purpose: counterfactual forks ("what if Macbeth refuses?"), not correction of a
 reader's belief as the reader acquires it. What is left open is precisely what
 we do: build under a prefix-causal constraint, and measure.
 
-**Coreference at book scale.** LitBank (Bamman et al., 2019) and BookCoref
-(Martinelli et al., 2025) established gold coreference over literary text, the
-latter at full-book length. Both are evaluated non-causally: a system may see
+**Coreference at book scale.** LitBank (Bamman, Lewke & Mansoor, 2020)
+established gold coreference over 2,000-token literary excerpts; BookCoref
+(Martinelli et al., 2025) extends coreference to full books, though only its
+3-book test set is gold (its 50-book training set is annotated automatically). Both are evaluated non-causally: a system may see
 the whole document. We reuse this style of annotation under a prefix-causal
 protocol, which changes the task rather than the data.
 
@@ -137,14 +160,14 @@ constrained* — the system must not know what it has not read — and the
 operative decision is commitment.
 
 **Entity state tracking.** Small language models track entities in short
-naturalistic narratives well (2026). Our question begins where that one ends:
+naturalistic narratives well (Drożdż & Heilbron, 2026). Our question begins where that one ends:
 what happens across 500,000 characters, when tracking must persist in an
 external store that later text can contradict.
 
 **Belief revision.** AGM revision and truth-maintenance systems formalise
-non-monotone update under contradiction. Narrative adds a distinction those
-frameworks do not make, because it does not arise in a static knowledge base:
-a conflict may mean the world moved rather than that a belief was wrong.
+non-monotone update under contradiction; `REVISE` borrows their retraction of
+dependents. The distinction between a world that moved and a belief that was
+wrong is Katsuno & Mendelzon's update versus revision, discussed above.
 
 ## 3. The revision calculus
 
@@ -184,6 +207,12 @@ Core positioning:
   Narratives. arXiv:2605.02475.
 - Saifullah et al. (2026). Narrative World Model: Narratology-Grounded Writer
   Memory for Long-Form Fiction. arXiv:2607.05577.
+- Katsuno & Mendelzon (1991). On the Difference between Updating a Knowledge Base
+  and Revising It. KR'91, 387–394.
+- Rasmussen et al. (2025). Zep: A Temporal Knowledge Graph Architecture for Agent
+  Memory. arXiv:2501.13956.
+- Wan & Chen (2026). Scaling Long-Form Story Generation via Narrative State
+  Tracking. arXiv:2609.35759.
 
 Data and annotation:
 
@@ -210,6 +239,9 @@ Foundations:
 - Alchourrón, Gärdenfors & Makinson (1985). On the Logic of Theory Change. JSL.
 - Doyle (1979). A Truth Maintenance System. Artificial Intelligence.
 - Kamp (1981); Kamp & Reyle (1993). Discourse Representation Theory.
+- Drożdż & Heilbron (2026). Entity Tracking Emerges in Sub-Billion Parameter
+  Language Models and Exceeds Human Performance in Naturalistic Narratives.
+  arXiv:2608.18083.
 - Zwaan & Radvansky (1998). Situation Models in Language Comprehension and
   Memory. Psychological Bulletin.
 - Genette (1980). Narrative Discourse: An Essay in Method.

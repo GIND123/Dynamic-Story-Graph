@@ -5,17 +5,26 @@ story. Canon is planted in chapter 1 and withheld afterwards; violations are
 deterministic string tests near a mention of the subject. No language model
 appears in any metric.
 
-**Summary. Five ways of using a narrative graph at generation time were tested.
-None of them helps. The fifth, ranking candidates, is the one the project's own
-negative results predicted should work, and it does not either.**
+> **Draft wording, pending the canon-detector audit (phase 1d).**
+
+**Summary. Five ways of using a narrative graph at generation time were tested,
+with Qwen2.5-3B as the writer, the graph supplied as a digest or a retrieved
+slice, a target of about 10K words, and a deterministic test against planted
+canon. None of them helped in that setup. The fifth, ranking candidates, is the
+one the project's own negative results predicted should work, and it does not
+either.** Stronger models judged by an LLM disagree: NSTAgent (Wan & Chen, 2026)
+finds an explicit narrative state beats a rolling summary at 10K words on
+DeepSeek-V4-Flash (instance CED −2.78, 95% CI [−3.65, −1.95], Holm p < 0.001,
+their Table 15) and from 20K to 100K words on both its backbones; it finds
+parity at 10K only on GPT-5.6 Luna.
 
 ## 1. What was tried
 
 | use of the graph | design | outcome |
 |---|---|---|
-| carried as context | serialised state digest in the prompt | worse than no memory |
-| carried plus recent text | digest and the previous chapter | loses to the previous chapter alone |
-| queried by the next beat | retrieve only what the beat implicates | worse than no memory |
+| carried as context | serialised state digest in the prompt | worse before correction; not significant after correction |
+| carried plus recent text | digest and the previous chapter | worse before correction; not significant after correction (vs the previous chapter alone, +0.071) |
+| queried by the next beat | retrieve only what the beat implicates | worse than no memory, significant after correction |
 | queried plus recent text | retrieval and the previous chapter | ties the previous chapter alone |
 | used to rank candidates | draw four, pick the most consistent | indistinguishable from picking blind |
 
@@ -65,9 +74,12 @@ chapter is therefore **not established**, and the honest statement is that both
 beat no memory while their ranking against each other is unresolved at this
 sample size.
 
-What survives the variance is the part that is large and repeated: no memory is
-clearly worst, and every graph conditioning design lands at or below the memory
-baselines rather than above them.
+What survives the variance is the part that is large and repeated: in each run
+in the table above, no memory is worse than both memory baselines, and every
+graph conditioning design lands at or below the memory baselines rather than
+above them. No memory is not the worst condition overall: the digest and beat
+retrieval score above it (worse), and in run 1 the rolling summary ties it
+(−0.008).
 
 **Implication for the benchmark.** Conditions whose prompt grows without bound
 are unstable across seeds. Effects below roughly 0.15 on such conditions need
@@ -93,16 +105,50 @@ conclusion.
 
 ## 5. Why the conditioning line is closed
 
-Five designs, four runs, 18,600 chapters, each falsifier stated in advance.
+> **Draft wording, pending the canon-detector audit (phase 1d).**
+
+Five designs, four runs, 18,600 chapters. Four falsifiers were stated before the
+retrieval and selection runs, but after the first two runs (§6).
 Three separate controls each removed an apparent effect: `on_premise` removed a
 sevenfold win, the blind selection arm removed a 0.054 gain, and the cross run
 spread removed a baseline ordering.
 
 The state held 0.492 of the planted canon at the moment of writing and
 conditioning on it still added nothing, so this is not an extraction ceiling.
-The serialised digest result also replicates a published negative, the Narrative
-World Model paper's State Memory condition, with a 3B open model.
+The digest result resembles, but does not replicate, the Narrative World Model's
+State Memory condition: that is a question-answering condition, it beats RAG and
+GraphRAG, and its authors trace most of its misses to their evidence budget
+truncating the serialised store.
 
 The reading result in `METHODOLOGY.md` section 2 is unaffected. It compares
 policies on identical input, where a shared noise floor cancels, and it holds at
 three extractor sizes.
+
+## 6. Multiple comparisons (draft)
+
+> **Draft wording, pending the canon-detector audit (phase 1d).**
+
+No generation comparison was named before its run: the only generation
+falsifiers (commit `a34e751`, 4 September 2026, 23:46 UTC) were committed after
+runs 1 and 2 and name neither gap below. Every interval in this document is
+therefore re-read with Holm correction within each metric, over the 27
+violation-rate comparisons computed across the four runs, 100,000 bootstrap
+resamples (`python -m dsg.eval.multiplicity`, `audit/generation/holm.json`; the
+family is fixed in `audit/ANALYSIS_PLAN.md`).
+
+| gap (within run) | Δ | raw 95% CI | Holm-adjusted p | Holm-level CI | significant after correction |
+|---|---|---|---|---|---|
+| digest − no memory (hybrid run) | +0.083 | [+0.025, +0.142] | 0.090 | [−0.004, +0.171] | no |
+| digest − no memory (run 1) | +0.075 | [+0.008, +0.142] | 0.365 | [−0.021, +0.175] | no |
+| beat retrieval − no memory (retrieval run) | +0.083 | [+0.037, +0.125] | 0.004 | [+0.017, +0.146] | yes |
+
+A gap that is not significant after correction is not evidence of no difference.
+The digest gap points the same way in two independent runs (hybrid run and run
+1), and neither is significant after correction.
+
+Both gaps also rest on a detector under audit. With the flags whose matched
+word is another planted subject's true value removed, neither interval excludes
+zero: the digest gap becomes −0.008 [−0.087, +0.071] and the retrieval gap
++0.050 [−0.004, +0.104] (`audit/detector/bound.json`). That is a bound on how
+far those coincidences can move the gaps, not a result; the labels will settle
+it.

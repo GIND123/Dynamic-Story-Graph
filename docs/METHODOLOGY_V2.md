@@ -57,20 +57,29 @@ speaker, conditioned **only** on `text[0:s]` and on state built causally from
 
 ### 2.2 Why this is novel
 
-Every published PDNC number is **non-causal**: the system reads a window
-*centred* on the quote, which includes the following text where the attribution
-cue usually lives.
+Every published PDNC number we found is **non-causal**: the system reads
+context on both sides of the quote (a centred window, or a whole chapter chunk),
+which includes the following text where the attribution cue usually lives.
 
 | System | PDNC overall | non-explicit | Setting |
 |---|---|---|---|
 | BookNLP+ | 78.5 | 68.9 | non-causal `[published]` |
 | Llama-3 8B zero-shot | **90.6** | **89.1** | non-causal `[published]` |
+| Joint scoring, ModernBERT-large (fine-tuned) | **94.5** | **92.4** | non-causal `[published]` |
 
-Source: Michel, Epure, Hennequin & Cerisara (2024), *Evaluating LLMs for
-Quotation Attribution in Literary Texts*, arXiv:2406.11380, Table 1.
+Sources: Michel, Epure, Hennequin & Cerisara (2024), *Evaluating LLMs for
+Quotation Attribution in Literary Texts*, arXiv:2406.11380, Table 1; Michel,
+Attali & Epure (2026), *Fast and Accurate Quotation Attribution in Literary
+Texts*, arXiv:2608.02359, Table 1. All rows are on PDNC's 22-novel first release with gold
+alias lists. BookNLP+ (supervised) and Llama-3 (zero-shot) are scored on
+characters with at least ten quotes; the joint-scoring encoder is fine-tuned
+under PDNC's 5-fold cross-validation and scored on characters mentioned at least
+ten times.
 
-**No published number exists for the prefix-causal setting.** E1 produces the
-first one, on an established benchmark, against a known non-causal ceiling.
+**We found no published number for the prefix-causal setting.** To our
+knowledge E1 produces the first one, on an established benchmark, against a
+known non-causal ceiling. The item sets differ: E1 scores all 28 novels and
+every annotated speaker.
 
 ### 2.3 What causality actually removes `[measured]`
 
@@ -95,7 +104,7 @@ does the speaker's name occur within ±250 characters of the quote?
 | before only | 1,524 | 14.2% |
 
 **So a strict prefix-causal cut removes the decisive lexical cue for 29.3% of
-explicit quotes (~8.8% of the whole corpus).** The constraint is real and its
+explicit quotes (3,148 of 37,131 quotes, 8.5% of the whole corpus).** The constraint is real and its
 cost is now quantified rather than assumed. This is itself a publishable
 measurement — it says how much of PDNC's attribution signal is *post-hoc*.
 
@@ -140,10 +149,11 @@ The experiment is designed to be informative under every result:
   beyond generation, which is a stronger and more surprising negative than v1's.
 - **3 ≈ 5** → causality is nearly free on this task once state is present. Strong
   result.
-- **3 ≪ 5** → we have priced causality on a benchmark with known SOTA. Still first.
+- **3 ≪ 5** → we have priced causality on a benchmark with known SOTA. Still, to our
+  knowledge, the first.
 
 No outcome is unpublishable, and none requires a win. **We do not promise to
-beat 90.6 and must not imply we will.**
+beat 94.5 and must not imply we will.**
 
 ### 2.6 Leakage controls — enforced in code, not by convention
 
@@ -161,12 +171,14 @@ Mandatory guards:
   assembled prompt shares any 40-character substring with `text[s:]`. This runs
   on every quote, not a sample, and fails the run rather than warning.
 - **G2 — no gold at inference.** Report two candidate regimes: *gold candidates*
-  (matches the literature protocol, comparable to 90.6) and *system candidates*
+  (matches the literature's candidate protocol, though not its item set) and *system candidates*
   (derived from causal state, harder, honest). Never mix them in one table.
 - **G3 — memorization covariate.** Qwen and Llama have read these public-domain
   novels. Per novel, run name cloze *with our own model over PDNC* and correlate
   it with attribution accuracy (Spearman, permutation test). Michel et al. ran
-  this exact check and found memorization did not explain their gain; if our
+  name cloze, found it near zero for Llama-3 8B even on canonical novels, judged
+  it unreliable for that model class, and used a corrupted-speaker test instead,
+  which also found memorization did not explain their gain; if our
   correlation is significant and positive, the result is contaminated and must be
   reported as such. **Not** taken from `gpt4_books`: those numbers are ChatGPT's,
   and the corpora only align for 16 of 28 novels with at least one wrong match
@@ -224,10 +236,11 @@ context brackets the quote. Fixed to mark the target inline; rerun pending.
 2. *The state hurts, −0.073, interval excluding zero.* **Not yet interpretable**
    without `state-shuffled`: adding state also adds 1,400 characters, so this
    may price the block rather than its contents.
-3. *G3 is flagged.* ρ = +0.411, permutation p = 0.030. But mean cloze is 0.054 —
-   the model can barely recall these books — and `text-causal` correlates
-   equally (ρ = 0.403). Equal correlation with and without state points at
-   **book tractability**, not memorization: famous, small-cast novels are easier
+3. *G3 is flagged.* ρ = +0.411, permutation p = 0.030. Mean cloze is 0.054, which
+   Michel et al. (2024) would read as a failure of the measure rather than as
+   absence of recall, and `text-causal` correlates equally (ρ = 0.403). Equal
+   correlation with and without state points away from the state and plausibly
+   at **book tractability**, without ruling memorization out: famous, small-cast novels are easier
    to cloze *and* easier to attribute. Reported as a complication, not
    explained away, and it wants a difficulty control.
 
@@ -238,7 +251,9 @@ baseline it was competing against.
 
 `manuscript-memory-engine/FAILURE_PROFILE_REPORT.md` Part 2 `[measured, prior]`:
 advertised context windows are 3–18× larger than usable ones — Qwen2.5-7B holds
-to only ~7,292 tokens of its advertised 131,072.
+to only ~7,292 tokens of its advertised 131,072. That window assumes YaRN rope
+scaling; Qwen2.5-7B's native window is 32,768 tokens, and the failure point is a
+ladder rung on a quantized Ollama build, not a precise measurement.
 
 v1's `full-context` condition peaked at **5,308–5,398 prompt tokens** at 20
 chapters — *below* that breaking point. So every graph condition was competing
@@ -350,10 +365,63 @@ Carried forward from v1 and still binding:
   MEIC-DT `[published, verified]`). Our identity plane is an unsupervised
   alias-string partition, a different item set.
 - The contradiction rate does not measure textual consistency (AUC 0.394).
-- No "first" claim until every related-work entry is checked against its
-  published version.
+- No "first" claim without "to our knowledge".
+- The `SUPERSEDE`/`REVISE` distinction is not ours: it is Katsuno & Mendelzon's
+  (1991) update versus revision.
+- The generation gaps were not pre-specified; report them with Holm-corrected
+  intervals (`audit/generation/holm.json`).
 - The 0.492 canon-capture figure does **not** rule out an extraction ceiling. It
   shows half the canon was present and unused. Say that instead.
 - The `manuscript-memory-engine` "Graph 0.816 vs Long-Context 0.653" comparison
   is **invalid** — the graph reads gold PDNC speaker labels for neighbouring
   quotes while the baselines read raw prose. Do not cite it.
+
+---
+
+## 9. Open issues
+
+### 9.1 The violation checker misattributes facts across characters `[observed]`
+
+`CanonFact.check` (`dsg/generate/canon.py`) flags a violation when a
+contradicting value appears within 220 characters of *any* mention of the
+fact's subject. It never asks whose attribute the value is. When another
+character's description sits near the subject's name, that character's
+attribute is charged to the subject.
+
+Seen in the prose smoke run `gen-qwen7b-prose-smoke` (2026-10-09), story00,
+whose canon gives Hesper grey eyes and Odell amber eyes:
+
+- Classic, chapter 1: `s00f00` (Hesper's grey eyes) flagged on *"Hesper
+  nodded, her eyes narrowing … Odell, with his amber eyes and mysterious
+  demeanor"*. The amber eyes are Odell's, and that is correct canon.
+- Prose, chapter 2: `s00f00` flagged on *"Silas stood up, his amber eyes
+  reflecting the same melancholy"*. The amber eyes are given to Silas, which is
+  wrong but contradicts no planted fact; Hesper is merely named nearby.
+
+The checker does not even need a second character. Any word from a fact's
+closed vocabulary near the subject's name counts, whatever it describes. Two
+more from `gen-qwen7b-prose-smoke2` (2026-10-09), story00, prose arm,
+chapter 1:
+
+- `s00f00` (Hesper's grey eyes) flagged on *"a modest cottage stood, painted a
+  dull blue with green shutters. Hesper sat at her kitchen table"*. "Blue" and
+  "green" are the cottage's paint; they are in the eye-colour vocabulary.
+- `s00f07` (Hesper works as a cartographer) flagged on *"Halloran, the village
+  bookbinder, entered"*. That is Halloran's trade, and correct canon;
+  "bookbinder" is in the trade vocabulary and Hesper is named nearby.
+
+Both violations that the smoke run charged to this chapter are false
+positives. This is not specific to the prose template. **Every published generation
+result uses the same checker**, so its violation rates include false positives
+of this kind. Any condition whose prose packs several characters into a short
+span is penalised more. A planted cast that shares a vocabulary (two
+characters with eye-colour facts, as every premise has) makes the collision
+routine, not rare.
+
+Not yet measured: the false-positive rate. A fix would bind each value to the
+nearest named subject, or to the subject of its clause, and should be scored
+against a small hand-labelled sample before any published number is restated.
+Until then, the published rates are not upper bounds either: these false
+positives inflate them, while contradictions outside the closed vocabularies
+are never counted at all. The net direction is unknown, so compare conditions
+only with this shared bias in mind.
