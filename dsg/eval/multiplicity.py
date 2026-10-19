@@ -32,7 +32,7 @@ from dsg.eval.provenance import record as provenance
 from dsg.generate.score import COMPARISONS, METRICS, score_runs
 
 RUNS = ("gen-qwen3b-s30-c20", "gen-v3-hybrid", "gen-v4-retrieval", "gen-v5-selection")
-N_BOOT = 10_000
+N_BOOT = 100_000     # 10,000 put adjusted p near its resolution floor (27 x 2/10,001)
 ALPHA = 0.05
 SEED = 0          # paired_bootstrap's default, used for every reported interval
 
