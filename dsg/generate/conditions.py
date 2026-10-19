@@ -11,10 +11,19 @@ the two that differ only in whether the carried state may be revised.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from dsg.generate.canon import Premise
-from dsg.generate.prompt import state_memory, writer_prompt
+from dsg.generate.canon import SIZE_FACTOR, Premise, beat_size
+from dsg.generate.prompt import (
+    TEMPLATES,
+    background_memory,
+    load_example,
+    plain_digest,
+    state_memory,
+    writer_messages,
+    writer_prompt,
+)
 from dsg.store import NarrativeState
 
 # Memory kinds: what the writer is given about everything before this chapter.
@@ -95,6 +104,32 @@ RETRIEVAL_LADDER = (
 )
 
 
+# The prose template against the classic one, at the same memory, in one run.
+# `last-chapter` is the incumbent and `dsg-hybrid` the system's best cell; both
+# already carry recent text, so the prose arm's continuity cue adds the least.
+PROSE_LADDER = (
+    "base:last-chapter",
+    "base:last-chapter~prose",
+    "base:dsg-hybrid",
+    "base:dsg-hybrid~prose",
+)
+
+
+# Chapter sampling. The published ladders keep exactly what they ran with. The
+# prose ladder raises the cap for BOTH of its arms -- the smoke run showed the
+# 7B writes 570-700 words whatever it is asked, so 900 tokens cut over half
+# the chapters mid-sentence -- and adds a mild repetition penalty, because both
+# arms looped lines of dialogue. Recorded in each run's meta.
+CHAPTER_SAMPLING: dict[str, float] = {"max_tokens": 900}
+LADDER_SAMPLING: dict[str, dict[str, float]] = {
+    "prose": {"max_tokens": 1400, "repetition_penalty": 1.1},
+}
+
+
+def chapter_sampling(ladder: str) -> dict[str, float]:
+    return dict(LADDER_SAMPLING.get(ladder, CHAPTER_SAMPLING))
+
+
 def parse_selection(condition: str) -> tuple[int, str]:
     """How many candidates to draw for this condition, and how to pick one.
 
@@ -113,9 +148,20 @@ def parse_selection(condition: str) -> tuple[int, str]:
 
 
 def split_condition(condition: str) -> tuple[str, str]:
-    base = condition.split("@", 1)[0]
+    base = condition.split("@", 1)[0].split("~", 1)[0]
     variant, _, memory = base.partition(":")
     return (variant, memory) if memory else ("base", variant)
+
+
+def template_of(condition: str) -> str:
+    """The writer template, tagged as ``variant:memory~template@k-strategy``."""
+    base = condition.split("@", 1)[0]
+    _, tagged, template = base.partition("~")
+    if not tagged:
+        return "classic"
+    if template not in TEMPLATES:
+        raise ValueError(f"unknown template {template!r} in {condition!r}")
+    return template
 
 
 def memory_of(condition: str) -> str:
@@ -125,6 +171,50 @@ def memory_of(condition: str) -> str:
 def variant_of(condition: str) -> str:
     return split_condition(condition)[0]
 
+
+
+def check_conditions(conditions: tuple[str, ...]) -> None:
+    """Refuse combinations a run cannot honestly serve.
+
+    The adapter was trained on the classic prompt; serving it the prose one
+    would measure formatting drift, not the template. Until a writer is trained
+    on prose, the tuned arm stays classic.
+    """
+    for condition in conditions:
+        template = template_of(condition)
+        if variant_of(condition) == "tuned" and template != "classic":
+            raise ValueError(
+                f"{condition!r}: the tuned writer was trained on the classic "
+                f"template and cannot be served the {template!r} one"
+            )
+
+
+def resolve_example(
+    conditions: tuple[str, ...], example_path: str = "", no_example: bool = False
+) -> str:
+    """The voice example a run will use, refusing every accidental omission.
+
+    A prose run without its example is a different treatment, and on a paid
+    run that should only ever be a decision: so it needs ``no_example`` said
+    out loud, and the shipped placeholder never counts as an example.
+    """
+    has_prose = any(template_of(c) == "prose" for c in conditions)
+    if no_example:
+        if example_path:
+            raise ValueError("pass either --example-path or --no-example, not both")
+        return ""
+    example = load_example(example_path)
+    if not has_prose:
+        if example_path:
+            raise ValueError("--example-path only applies to a ladder with prose conditions")
+        return ""
+    if not example:
+        where = f"{example_path} is still the placeholder" if example_path else "none given"
+        raise ValueError(
+            f"prose conditions need a voice example ({where}); supply one with "
+            "--example-path, or pass --no-example to run without one on purpose"
+        )
+    return example
 
 # Backwards-compatible alias used by the state-policy map.
 STATE_CONDITIONS = STATE_MEMORIES
@@ -184,10 +274,20 @@ def _truncate_head_and_tail(chapters: list[str], budget_chars: int) -> str:
     return head + "\n\n[...]\n\n" + "\n\n".join(reversed(tail))
 
 
+def prose_framing(digest: str) -> str:
+    """How the prose template shows a state: plain phrases, as background."""
+    return background_memory(plain_digest(digest))
+
+
 def build_memory(
-    run: StoryRun, budget_chars: int = 24_000, beat: str = ""
+    run: StoryRun, budget_chars: int = 24_000, beat: str = "",
+    framing: Callable[[str], str] = state_memory,
 ) -> str:
-    """The memory block for the next chapter, under this run's condition."""
+    """The memory block for the next chapter, under this run's condition.
+
+    ``framing`` is how a state digest is presented; the selection of facts and
+    every other memory kind are the same under either template.
+    """
     if not run.chapters:
         return ""
     condition = memory_of(run.condition)
@@ -206,7 +306,7 @@ def build_memory(
         # Query the state with the beat rather than serialising all of it. A
         # beat names two or three people; retrieving only their canon leaves
         # room for the recent text instead of displacing it.
-        digest = state_memory(
+        digest = framing(
             run.state.beat_digest(beat) if run.state is not None else ""
         )
         if condition == "beat-retrieval" or not run.chapters:
@@ -217,10 +317,10 @@ def build_memory(
         # them is an artefact of the ablation, not something a real writer would
         # do: the digest carries what must stay true, the previous chapter
         # carries voice and immediate continuity.
-        digest = state_memory(run.state.fact_digest() if run.state is not None else "")
+        digest = framing(run.state.fact_digest() if run.state is not None else "")
         return f"{digest}\n\nThe previous chapter:\n{run.chapters[-1]}"
     if condition in STATE_MEMORIES:
-        return state_memory(run.state.fact_digest() if run.state is not None else "")
+        return framing(run.state.fact_digest() if run.state is not None else "")
     raise ValueError(f"unknown condition {condition!r}")
 
 
@@ -245,6 +345,57 @@ def build_chapter_prompt(
         beat=premise.beats[(chapter - 1) % len(premise.beats)],
         chapter=chapter,
         words=words,
+    )
+
+
+def prose_size(beat: str, chapter: int) -> str:
+    """The beat's size, except that chapter 1 is never small: it plants the canon."""
+    size = beat_size(beat)
+    return "medium" if chapter == 1 and size == "small" else size
+
+
+def chapter_budget(premise: Premise, run: StoryRun, chapter: int, words: int) -> int:
+    """The word budget the writer is asked for: flat for classic, per beat for prose."""
+    if template_of(run.condition) == "classic":
+        return words
+    beat = premise.beats[(chapter - 1) % len(premise.beats)]
+    return round(words * SIZE_FACTOR[prose_size(beat, chapter)])
+
+
+def build_chapter_messages(
+    premise: Premise, run: StoryRun, chapter: int, total: int, words: int = 500,
+    example: str = "",
+) -> list[dict]:
+    """The chat turns for one chapter under this run's template.
+
+    Classic is exactly ``build_chapter_prompt`` as a single user turn. Prose
+    keeps the same rule on canon -- given in chapter 1 only -- and the same
+    memory content; what changes is how it is asked.
+    """
+    if template_of(run.condition) == "classic":
+        if example.strip():
+            raise ValueError("the classic template takes no example passage")
+        return [{"role": "user",
+                 "content": build_chapter_prompt(premise, run, chapter, total, words)}]
+    beats = premise.beats
+    beat = beats[(chapter - 1) % len(beats)]
+    return writer_messages(
+        "prose",
+        example=example,
+        title=premise.title,
+        header=(
+            f"Setting: {premise.setting}\n"
+            f"Characters: {', '.join(premise.characters)}"
+        ),
+        canon=premise.canon_block() if chapter == 1 else "",
+        memory=build_memory(run, beat=beat, framing=prose_framing),
+        previous=run.chapters[-1] if run.chapters else "",
+        beat=beat,
+        next_beat=beats[chapter % len(beats)] if chapter < total else "",
+        chapter=chapter,
+        total=total,
+        words=chapter_budget(premise, run, chapter, words),
+        size=prose_size(beat, chapter),
     )
 
 
