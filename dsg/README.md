@@ -77,13 +77,14 @@ none.
 
 | corpus and extractor | documents | append only | DSG |
 |---|---|---|---|
-| PDNC, Qwen2.5 7B | 28 novels | **0.371** | 0.000 |
-| PDNC, Qwen2.5 3B | 28 novels | **0.423** | 0.000 |
-| PDNC, Qwen2.5 1.5B | 28 novels | **0.107** | 0.000 |
-| LitBank, Qwen2.5 7B | 100 excerpts | **0.181** | 0.000 |
+| PDNC, Qwen2.5 7B | 28 novels | **0.382** | 0.000 |
+| PDNC, Qwen2.5 3B | 28 novels | **0.422** | 0.000 |
+| PDNC, Qwen2.5 1.5B | 28 novels | **0.090** | 0.000 |
+| LitBank, Qwen2.5 7B | 100 excerpts | **0.185** | 0.000 |
 
 Share of single valued slots holding two or more live conflicting values. Lower
-is better.
+is better. Numbers are recomputed under current code (after commit `0be8e0d`);
+`audit/repro/study_current_code.md` lists published vs current values.
 
 **The empirical column is the left one.** Invariant I1 is defined as two live
 conflicting values in one single valued slot, and `_close_and_link` in
@@ -225,7 +226,8 @@ edited novels should score far below machine generated ones.
 
 **AUC 0.394, 95 percent interval [0.259, 0.534].** The interval spans chance.
 Published novels score 0.238, which is not a credible rate of genuine self
-contradiction in edited prose.
+contradiction in edited prose. *(Computed at commit `0be8e0d`; this predates the
+current-code rerun of section 3 and was not recomputed.)*
 
 **Diagnosis.** The flagged conflicts in real novels are extraction artefacts. In
 Peter Pan: `Mrs. Darling.occupation: [wife, mother]`, both true;
@@ -265,8 +267,12 @@ refined against where it is corrected.
 ![Revision profile](../docs/figures/fig6-revision-profile.png)
 
 Reported with a shuffled window control, because state growth alone manufactures
-such trends. Under shuffling the elaboration trend disappears, so it is a
-property of narrative order *(Draft, pending audit phase 4c: at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites, which replace a value rather than refine it; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the trend is refinement depends on the 4c labels.)*, while most of the revision trend survives, so it is
+such trends. Elaboration declines with reading position at both 3B (ρ −0.850)
+and 7B (ρ −0.741), and under shuffling it is flat (3B −0.141, p 0.55; 7B +0.292,
+p 0.21), so it is a property of narrative order. This measure excludes the
+low-confidence overwrite rule (`elaborate:provisional`), so it differs from the
+one published earlier; the earlier reading, real at 3B and reversing at 7B, came
+from counting that rule as elaboration *(Draft, pending audit phase 4c: in the measure that counts the rule, at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the remaining `ELABORATE` operations are refinements depends on the 4c labels.)*. Most of the revision trend survives shuffling, so it is
 largely an artefact of the state getting larger.
 
 ## 7. Architecture

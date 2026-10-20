@@ -1,7 +1,12 @@
 # Findings
 
-Every number below is read from `artifacts/report/*/results.md`, which is
-generated from `results.json` by `python -m dsg report`. Comparisons are paired
+Every reading-study number below is read from
+`audit/repro/study_current_code.json`, which `python -m dsg.eval.study_repro`
+builds from reruns of `python -m dsg study` (`results-current/` on the Hub,
+pinned in `audit/repro/hub_manifest.json`). Numbers are recomputed under current
+code (after commit `0be8e0d`, which made `occupation` multi-valued and widened
+`refines()`); `audit/repro/study_current_code.md` lists published vs current
+values. No conclusion weakened; one strengthened. Comparisons are paired
 bootstraps over books (10,000 resamples, 95% intervals). No LLM judge appears in
 any metric; identity is scored against PDNC's human alias annotation and
 LitBank's gold coreference, and mention linking against PDNC's annotated
@@ -27,9 +32,9 @@ On 28 PDNC novels with a 3B extractor, moving one rung at a time:
 
 | rung | identity CoNLL F1 | mention linking | self-contradictory slots | rollbacks |
 | --- | --- | --- | --- | --- |
-| persistent state (`append-only` − `window-only`) | **+0.088** | **+0.310** | **+0.323** *(worse)* | 0 |
-| + identity merging | −0.004 (ns) | **−0.016** *(worse)* | +0.010 (ns) | **+2.36** |
-| + fact revision | 0.000 (ns) | 0.000 (ns) | **−0.433** | +33.1 |
+| persistent state (`append-only` − `window-only`) | **+0.088** | **+0.310** | **+0.320** *(worse)* | 0 |
+| + identity merging | −0.003 (ns) | **−0.016** *(worse)* | **+0.017** *(worse)* | **+2.36** |
+| + fact revision | 0.000 (ns) | 0.000 (ns) | **−0.439** | +33.1 |
 | + deferred commitment | −0.002 (ns) | **+0.014** | 0.000 | **−2.57** |
 | cost of causality (`retrospective` − `dsg-full`) | +0.005 (ns) | **+0.031** | 0.000 | ns |
 
@@ -44,9 +49,9 @@ conflicting values:
 
 | corpus / model | `window-only` | `append-only` | `dsg-full` |
 | --- | --- | --- | --- |
-| PDNC, Qwen2.5-3B | 0.101 | 0.423 | **0.000** |
-| PDNC, Qwen2.5-1.5B | 0.004 | 0.107 | **0.000** |
-| LitBank, Qwen2.5-7B | 0.091 | 0.181 | **0.000** |
+| PDNC, Qwen2.5-3B | 0.102 | 0.422 | **0.000** |
+| PDNC, Qwen2.5-1.5B | 0.004 | 0.090 | **0.000** |
+| LitBank, Qwen2.5-7B | 0.092 | 0.185 | **0.000** |
 
 ## 2. The pre-registered falsifiers
 
@@ -55,8 +60,9 @@ Stated in `docs/RESEARCH_PLAN.md` §5 before any run.
 **F1 — "`dsg-full` ≈ `append-only` on gold identity ⇒ premature commitment is
 not the bottleneck." This falsifier FIRED.**
 On identity CoNLL F1 the difference is indistinguishable from zero at every
-model size (3B: −0.005, CI [−0.011, +0.001]; 1.5B: −0.003; LitBank: −0.003, CI
-spans zero), and mention linking is likewise flat. **The revision calculus does
+model size (3B: −0.005, CI [−0.011, +0.000]; 1.5B: −0.003; LitBank: −0.003, CI
+spans zero). Mention linking is flat at 3B (−0.002, ns) and lower at 1.5B
+(−0.017, CI [−0.034, −0.004]). **The revision calculus does
 not make the state more accurate.** What it does is make the state
 *consistent* — a different claim, and the one the evidence supports. The paper's
 framing follows the evidence rather than the other way round.
@@ -72,15 +78,15 @@ the causal system already matches the oracle exactly (both 0.000).
 
 **F3 — "invariant violations near zero for `append-only` ⇒ the breakage premise
 is wrong." Did not fire; the premise holds decisively.**
-42.3% of `append-only`'s slots are self-contradictory at 3B on full novels.
+42.2% of `append-only`'s slots are self-contradictory at 3B on full novels.
 
 **F4 — "revision events distribute uniformly over discourse position ⇒ the
 instrument has no signal." Fired for revision; did not fire for elaboration.**
 
 In narrative order both operations trend strongly with position: elaboration
-falls (Spearman ρ = −0.59, p = 0.007) and revision rises steeply, from 4.6% of
-operations in the first twentieth of a book to 29.8% in the last
-(ρ = +0.82, p = 9×10⁻⁶). Read alone that is a tidy narratological story —
+falls (Spearman ρ = −0.850 at 3B, −0.741 at 7B) and revision rises steeply, from
+4.4% of operations in the first twentieth of a book to 29.8% in the last
+(3B, ρ = +0.82, p = 9×10⁻⁶). Read alone that is a tidy narratological story —
 exposition first, reversal later.
 
 It is mostly an artefact, and only a control shows it. As a book proceeds the
@@ -88,17 +94,24 @@ state holds more assertions, so *any* conflict-driven operation becomes
 mechanically more likely. Permuting the reading order destroys narrative order
 while preserving state growth exactly:
 
-| ordering | elaboration ρ | revision ρ |
-| --- | --- | --- |
-| narrative | **−0.59** (p = 0.007) | **+0.82** (p = 9×10⁻⁶) |
-| shuffled | +0.08 (p = 0.75) | **+0.69** (p = 8×10⁻⁴) |
+| ordering | elaboration ρ, 3B | elaboration ρ, 7B | revision ρ, 3B |
+| --- | --- | --- | --- |
+| narrative | **−0.850** (p = 2×10⁻⁶) | **−0.741** (p = 2×10⁻⁴) | **+0.82** (p = 9×10⁻⁶) |
+| shuffled | −0.141 (p = 0.55) | +0.292 (p = 0.21) | **+0.68** (p = 1×10⁻³) |
 
 The revision trend largely **survives** shuffling, so most of it is state
 growth rather than a property of the text; the honest residual is the gap
-between ρ = 0.82 and ρ = 0.69, which this design cannot cleanly separate. The
-elaboration trend **disappears** under shuffling. That one is real: refinement
-of underspecified structure is genuinely front-loaded in narrative order, and
-not explained by how much state has accumulated. *(Draft, pending audit phase 4c: at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites, which replace a value rather than refine it; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the trend is refinement depends on the 4c labels.)*
+between ρ = 0.82 and ρ = 0.68, which this design cannot cleanly separate. The
+elaboration trend **disappears** under shuffling at both scales. That one is
+real: elaboration is front-loaded in narrative order, and not explained by how
+much state has accumulated.
+
+This elaboration measure excludes the low-confidence overwrite rule
+(`elaborate:provisional`), which replaces a provisional value rather than
+refining it, so it differs from the one published earlier
+(`audit/calculus/elaboration_trend.json`). Counting that rule as elaboration
+gives ρ = −0.59 (p = 0.007) at 3B and ρ = −0.155 (p = 0.51) at 7B; the earlier
+reading — real at 3B, reverses at 7B — came from that rule. *(Draft, pending audit phase 4c: in the measure that counts the rule, at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the remaining `ELABORATE` operations are refinements depends on the 4c labels.)*
 
 So the instrument has signal, but less than the uncontrolled numbers suggest,
 and in the opposite operation from the one we expected to carry it.
@@ -109,11 +122,12 @@ and in the opposite operation from the one we expected to carry it.
   mention linking over reading each window in isolation. It is also where all
   the inconsistency comes from.
 - **Identity merging alone makes things worse.** On its own it costs mention
-  accuracy (−0.016, CI excludes zero) and buys 2.4 rollbacks per book. Merging
+  accuracy (−0.016, CI excludes zero), raises self-contradictory slots
+  (+0.017, CI [+0.003, +0.031]) and buys 2.4 rollbacks per book. Merging
   two characters unifies their assertion slots, and without revision the merged
   slot simply holds both rival values. The two mechanisms are complementary:
   merging is only safe once the state can revise.
-- **Fact revision** is the load-bearing contribution: −0.433 self-contradictory
+- **Fact revision** is the load-bearing contribution: −0.439 self-contradictory
   slots, 0–28; its accuracy cost is untested (the 0.000 on the accuracy metrics
   is guaranteed by construction).
 - **Deferred commitment** converts rollbacks into monotone updates. The size of
@@ -146,6 +160,9 @@ does not work:** across 205 links on one novel, `Mr. Darcy -> Elizabeth` was
 proposed nine times, exactly as often as the correct `Mr. Bingley -> Bingley`.
 Repetition does not separate good links from bad, so the constraint had to be
 structural rather than statistical.
+
+*(Both are one-off diagnostics that predate the current-code rerun and were not
+recomputed.)*
 
 ## 5. Limitations
 

@@ -41,7 +41,9 @@ def _from_hub(manifest: dict, entry: dict) -> Path:
 
 
 def resolve(name_or_path: str | Path, manifest_path: Path = MANIFEST,
-            fetch=_from_hub) -> Path:
+            fetch=_from_hub, local_dirs: tuple[str, ...] = LOCAL_DIRS,
+            env: str = "DSG_E1_LOCAL") -> Path:
+    """Other manifests (``audit/repro/hub_manifest.json``) pass their own folders."""
     path = Path(name_or_path)
     if path.exists():
         return path
@@ -53,12 +55,12 @@ def resolve(name_or_path: str | Path, manifest_path: Path = MANIFEST,
     try:
         candidates.append(fetch(manifest, entry))
     except Exception as exc:  # no network, no huggingface_hub, missing revision
-        print(f"[e1] Hub copy unavailable ({type(exc).__name__}); trying local folders")
-    local = [os.environ["DSG_E1_LOCAL"]] if os.environ.get("DSG_E1_LOCAL") else []
-    candidates += [Path(d) / entry["name"] for d in (*local, *LOCAL_DIRS)]
+        print(f"[hub] {entry['name']} unavailable ({type(exc).__name__}); trying local folders")
+    local = [os.environ[env]] if os.environ.get(env) else []
+    candidates += [Path(d) / entry["name"] for d in (*local, *local_dirs)]
     for candidate in candidates:
         if candidate.exists():
             if _sha256(candidate) != entry["sha256"]:
                 raise ArtifactError(f"{candidate} does not match the manifest hash")
             return candidate
-    raise ArtifactError(f"no copy of {entry['name']} on the Hub or in {list(LOCAL_DIRS)}")
+    raise ArtifactError(f"no copy of {entry['name']} on the Hub or in {list(local_dirs)}")

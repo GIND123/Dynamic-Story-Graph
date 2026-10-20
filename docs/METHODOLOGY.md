@@ -20,7 +20,7 @@ positive claim narrow enough to be true.
 ## 2. C1 — The revision calculus (positive, well evidenced)
 
 **Claim.** Given a fixed stream of extracted assertions, an append-only store
-turns **0.107–0.423** of its own single-valued slots self-contradictory — at
+turns **0.090–0.422** of its own single-valued slots self-contradictory — at
 1.5B, 3B and 7B extractors, over 28 novels — and equipping the store with an
 explicit update calculus removes that. Its cost in accuracy is **untested**:
 identity and mention scoring never read fact assertions, so the 0.000 is guaranteed by construction, like I1; correct-value scoring in audit phase 4d is the first real test.
@@ -139,7 +139,9 @@ should score far below machine-generated ones.
 
 **Result.** They do not separate: AUC **0.394**, 95% CI [0.259, 0.534] — the
 interval spans chance. Published novels score **0.238**, which is not credible
-as a rate of genuine self-contradiction in edited prose.
+as a rate of genuine self-contradiction in edited prose. *(Computed at commit
+`0be8e0d`; this predates the current-code rerun of the reading study and was not
+recomputed.)*
 
 **Diagnosis.** The flagged "contradictions" in real novels are extraction
 artefacts. In *Peter Pan*: `Mrs. Darling.occupation: [wife, mother]` — both

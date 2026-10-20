@@ -178,14 +178,19 @@ scales. Extraction is **held constant**: every policy replays a byte-identical
 cached proposal stream, so differences are attributable to the representation and
 not to extractor variance.
 
+Numbers are recomputed under current code (after commit `0be8e0d`, which made
+`occupation` multi-valued and widened `refines()`);
+[`audit/repro/study_current_code.md`](audit/repro/study_current_code.md) lists
+published vs current values. No conclusion weakened; one strengthened.
+
 Carrying state forward buys a great deal and breaks the state in the same motion.
 At 7B, `append-only` against `window-only`:
 
 | metric | Δ | 95% CI | win split |
 |---|---|---|---|
 | identity CoNLL F1 | **+0.209** | [+0.182, +0.240] | 28–0 |
-| mention linking | **+0.152** | [+0.124, +0.183] | 28–0 |
-| self-contradictory slots | **+0.261** *(worse)* | [+0.233, +0.291] | 28–0 |
+| mention linking | **+0.152** | [+0.124, +0.182] | 28–0 |
+| self-contradictory slots | **+0.269** *(worse)* | [+0.239, +0.299] | 28–0 |
 
 The accuracy gain is large at every scale but its shape moves, so the range is
 reported rather than a single cell: CoNLL +0.209 (7B) / +0.088 (3B) / +0.063
@@ -196,15 +201,15 @@ The share of single-valued slots holding two or more live conflicting values:
 
 | corpus / extractor | `window-only` | `append-only` |
 |---|---|---|
-| PDNC, Qwen2.5-7B | 0.110 | **0.371** |
-| PDNC, Qwen2.5-3B | 0.101 | **0.423** |
-| PDNC, Qwen2.5-1.5B‡ | 0.004 | **0.107** |
-| LitBank, Qwen2.5-7B | 0.091 | **0.181** |
+| PDNC, Qwen2.5-7B | 0.113 | **0.382** |
+| PDNC, Qwen2.5-3B | 0.102 | **0.422** |
+| PDNC, Qwen2.5-1.5B‡ | 0.004 | **0.090** |
+| LitBank, Qwen2.5-7B | 0.092 | **0.185** |
 
 ‡ Partly a yield comparison: the 1.5B extractor fails to produce parseable output
 on 20.6% of windows (3,226/4,063), so its lower rates reflect a thinner state.
 
-**An append-only store, given a real novel, turns 11–42% of its own slots
+**An append-only store, given a real novel, turns 9–42% of its own slots
 self-contradictory.** It cannot say "this was true then", "this was never true",
 or "these two people are one", so every contradiction it creates is permanent.
 That is the empirical result, and it is a measurement of what novels do to a
@@ -234,8 +239,8 @@ chosen values against the labelled correct value (audit phase 4d).
 
 | rung (7B) | identity CoNLL F1 | mention linking | self-contradictory slots |
 |---|---|---|---|
-| + identity merging | −0.002 (ns) | −0.005 (ns) | +0.007 *(worse)* |
-| + fact revision | 0.000 (exact) | 0.000 (exact) | **−0.377** (0–28) |
+| + identity merging | −0.002 (ns) | −0.005 (ns) | **+0.005** *(worse)* |
+| + fact revision | 0.000 (exact) | 0.000 (exact) | **−0.388** (0–28) |
 | + deferred commitment | −0.003 (ns) | **+0.007** | 0.000 |
 | cost of causality | −0.002 (ns) | **+0.028** | 0.000 |
 
@@ -250,7 +255,9 @@ Two findings on that ladder are genuinely empirical:
 - **Identity merging without fact revision makes the state worse.** Merging two
   characters unifies their assertion slots; without revision the merged slot
   simply holds both rival values. Mention linking −0.016 at 3B and −0.023 at
-  1.5B, both intervals excluding zero (not significant at 7B). The two mechanisms
+  1.5B, both intervals excluding zero (not significant at 7B), and
+  self-contradictory slots rise by +0.017 at 3B [+0.003, +0.031] and +0.005 at
+  7B [+0.001, +0.010], both intervals excluding zero. The two mechanisms
   are complementary, not additive — merging is only safe once the state can
   revise.
 - **Causality has a price, and it is small.** A non-causal oracle given the
@@ -320,7 +327,8 @@ edited novels should score far below machine-generated ones.
 
 **They do not separate: AUC 0.394, 95% CI [0.259, 0.534]** — the interval spans
 chance. Published novels score 0.238, which is not credible as a rate of genuine
-self-contradiction in edited prose. The flagged "contradictions" are extraction
+self-contradiction in edited prose. *(Computed at commit `0be8e0d`; this predates
+the current-code rerun of §3 and was not recomputed.)* The flagged "contradictions" are extraction
 artefacts: in *Peter Pan*, `Mrs. Darling.occupation: [wife, mother]` (both true),
 `Nana.material: [Newfoundland dog, dog]` (the same thing at two precisions),
 `Wendy.resides_in: [14, nursery]` (a house number and a room).
@@ -331,26 +339,33 @@ measure of how consistent a *text* is would not be, and we do not.
 
 ### 4.3 The revision trace is a weaker instrument than it first appeared
 
-Revision events trend steeply with discourse position — from 4.6% of operations
-in the first twentieth of a book to 29.8% in the last (ρ = +0.82, p = 9×10⁻⁶).
-Read alone that is a tidy narratological story: exposition first, reversal later.
+Revision events trend steeply with discourse position — from 4.4% of operations
+in the first twentieth of a book to 29.8% in the last (3B, ρ = +0.82,
+p = 9×10⁻⁶). Read alone that is a tidy narratological story: exposition first,
+reversal later.
 
 It is mostly an artefact. As a book proceeds the state holds more assertions, so
 *any* conflict-driven operation becomes mechanically more likely. Permuting the
 reading order destroys narrative order while preserving state growth exactly:
 
-| ordering (3B) | elaboration ρ | revision ρ |
-|---|---|---|
-| narrative | **−0.59** (p = 0.007) | **+0.82** (p = 9×10⁻⁶) |
-| shuffled | +0.08 (p = 0.75) | **+0.69** (p = 8×10⁻⁴) |
+| ordering | elaboration ρ, 3B | elaboration ρ, 7B | revision ρ, 3B |
+|---|---|---|---|
+| narrative | **−0.850** (p = 2×10⁻⁶) | **−0.741** (p = 2×10⁻⁴) | **+0.82** (p = 9×10⁻⁶) |
+| shuffled | −0.141 (p = 0.55) | +0.292 (p = 0.21) | **+0.68** (p = 1×10⁻³) |
 
-The revision trend largely survives shuffling, so most of it is state growth. The
-elaboration trend disappears, so that one is real. *(Draft, pending audit phase 4c: at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites, which replace a value rather than refine it; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the trend is refinement depends on the 4c labels.)* **The control reversed our
-first reading of this result**, and the surviving signal is in the opposite
-operation from the one we expected to carry it.
+The revision trend largely survives shuffling, so most of it is state growth.
+Elaboration declines with reading position at both 3B and 7B, and the shuffled
+controls are flat, so that trend is real.
 
-Scope: this holds at 3B and **reverses at 7B** (narrative elaboration ρ = −0.084,
-p = 0.72). The claim is restricted accordingly rather than generalised.
+This elaboration measure excludes the low-confidence overwrite rule
+(`elaborate:provisional`), which replaces a provisional value rather than
+refining it, so it differs from the one published earlier
+([`audit/calculus/elaboration_trend.json`](audit/calculus/elaboration_trend.json)).
+Counting that rule as elaboration gives ρ = −0.59 (p = 0.007) at 3B and
+ρ = −0.155 (p = 0.51) at 7B; the earlier reading — real at 3B, reverses at 7B —
+came from that rule. *(Draft, pending audit phase 4c: in the measure that counts the rule, at 3B, 278 of the 972 operations counted in the elaboration rate (28.6%) are low-confidence `ELABORATE` overwrites; 1,263 of 2,708 (46.6%) at 7B (`audit/calculus/elaborate_census.json`). Whether the remaining `ELABORATE` operations are refinements depends on the 4c labels.)*
+**The control reversed our first reading of this result**, and the surviving
+signal is in the opposite operation from the one we expected to carry it.
 
 ---
 
@@ -409,6 +424,9 @@ adopting, and it does not work:** across 205 links on one novel, `Mr. Darcy →
 Elizabeth` was proposed nine times, exactly as often as the correct `Mr. Bingley
 → Bingley`. Repetition does not separate good links from bad, so the constraint
 had to be structural rather than statistical.
+
+*(Both are one-off diagnostics that predate the current-code rerun of §3 and
+were not recomputed.)*
 
 ---
 

@@ -1,0 +1,31 @@
+{
+  "repo": "GOVINDFROM/dsg-artifacts",
+  "repo_type": "model",
+  "revision": null,
+  "files": [
+    {
+      "name": "pdnc-qwen1.5b/results.json",
+      "hub_path": "results-current/pdnc-qwen1.5b/results.json",
+      "bytes": 8956670,
+      "sha256": "5df6129c9c7f0f844c7317e79ec74e10aec766587038d1183e69a3d518f17637"
+    },
+    {
+      "name": "pdnc-qwen3b/results.json",
+      "hub_path": "results-current/pdnc-qwen3b/results.json",
+      "bytes": 9478834,
+      "sha256": "9a7e04e05145ed96602accb67a3b3f7d83a5811c9570fb3ff22519158c81fcc0"
+    },
+    {
+      "name": "pdnc-qwen7b/results.json",
+      "hub_path": "results-current/pdnc-qwen7b/results.json",
+      "bytes": 9769586,
+      "sha256": "651cca3f6872565d46502847157ebca0bb600125aa1765bb6ec721f5a30a7362"
+    },
+    {
+      "name": "litbank-qwen7b/results.json",
+      "hub_path": "results-current/litbank-qwen7b/results.json",
+      "bytes": 11334838,
+      "sha256": "d898625d9c1e568bf8bbe4eeda350837ce5d7f68a6b4cc4e4c7e2553ab4b0796"
+    }
+  ]
+}
