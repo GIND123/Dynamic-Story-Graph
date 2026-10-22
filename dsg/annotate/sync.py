@@ -3,7 +3,10 @@
 Only the annotator's own CSVs are ever staged, so other work in the checkout is
 left alone, and two annotators never edit the same file, so the rebase onto the
 other person's pushes cannot conflict. Commits carry ``[skip ci]``: labels are
-data, and pushing every few minutes should not start CI runs.
+data, and pushing every few minutes should not start CI runs. (The workflows'
+path filters already leave ``audit/`` out; the marker keeps it that way if they
+change. Never quote the marker in a code commit's message: GitHub skips CI for
+any push whose message contains it.)
 """
 
 from __future__ import annotations
