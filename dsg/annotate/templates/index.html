@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSG labelling</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1c2330; --muted: #5f6b7a; --line: #d9dee5;
+    --accent: #2457c5; --accent-ink: #ffffff; --subj: #dbe7ff; --flag: #ffe2b3;
+    --mark: #fff0a8; --ok: #1d7a46; --warn: #9a5b00; --err: #b3261e; --chosen: #2457c5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --ink: #e8ecf2; --muted: #9aa5b4; --line: #2e3542;
+      --accent: #6c9cff; --accent-ink: #0d1117; --subj: #23407a; --flag: #6b4510;
+      --mark: #5a4d0f; --ok: #5fd08f; --warn: #f0b45a; --err: #ff8a80; --chosen: #6c9cff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+           padding: 10px 20px; background: var(--card); border-bottom: 1px solid var(--line);
+           position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 16px; margin: 0 12px 0 0; }
+  .tab { border: 1px solid var(--line); background: transparent; color: var(--ink);
+         padding: 6px 12px; border-radius: 6px; cursor: pointer; font: inherit; }
+  .tab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .spacer { flex: 1; }
+  .pill { font-size: 13px; color: var(--muted); }
+  .pill.err { color: var(--err); } .pill.pending { color: var(--warn); }
+  button { font: inherit; }
+  .btn { border: 1px solid var(--line); background: var(--card); color: var(--ink);
+         padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px 20px 60px; }
+  .nav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .nav input { width: 70px; padding: 5px; border: 1px solid var(--line); border-radius: 6px;
+               background: var(--card); color: var(--ink); font: inherit; }
+  .badge { padding: 2px 9px; border-radius: 10px; font-size: 13px; border: 1px solid var(--line); }
+  .badge.done { color: var(--ok); border-color: var(--ok); }
+  .badge.open { color: var(--warn); border-color: var(--warn); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+          padding: 16px 18px; margin-bottom: 14px; }
+  .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .meta div small { display: block; color: var(--muted); font-size: 12px;
+                    text-transform: uppercase; letter-spacing: .04em; }
+  .meta div b { font-size: 16px; }
+  .question { font-size: 18px; font-weight: 600; margin: 4px 0 0; }
+  .context { font-family: Georgia, Cambria, serif; font-size: 18px; line-height: 1.8;
+             white-space: pre-wrap; }
+  .subj { background: var(--subj); padding: 1px 5px; border-radius: 4px; font-weight: 700; }
+  .flag { background: var(--flag); padding: 1px 5px; border-radius: 4px; font-weight: 700; }
+  .mark { background: var(--mark); padding: 1px 3px; border-radius: 3px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } }
+  .scroll { max-height: 300px; overflow-y: auto; border-top: 1px solid var(--line);
+            padding-top: 8px; margin-top: 8px; }
+  .fact { font-size: 17px; font-weight: 700; }
+  details summary { cursor: pointer; color: var(--muted); margin-top: 8px; }
+  .q { border: 2px solid transparent; border-radius: 8px; padding: 10px 12px; margin: 8px 0; }
+  .q.active { border-color: var(--accent); }
+  .q .title { margin-bottom: 8px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 8px; }
+  .choice { border: 1px solid var(--line); background: var(--card); color: var(--ink);
+            padding: 7px 14px; border-radius: 6px; cursor: pointer; }
+  .choice.on { background: var(--chosen); color: var(--accent-ink); border-color: var(--chosen); }
+  .choice kbd, .btn kbd { font-size: 11px; opacity: .7; margin-left: 6px; }
+  textarea, .textin { width: 100%; padding: 8px; border: 1px solid var(--line);
+                      border-radius: 6px; background: var(--card); color: var(--ink); font: inherit; }
+  textarea { min-height: 56px; resize: vertical; }
+  label.field { display: block; margin: 10px 0 4px; color: var(--muted); font-size: 13px; }
+  .msg { padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; display: none; }
+  .msg.show { display: block; }
+  .msg.err { border: 1px solid var(--err); color: var(--err); }
+  .msg.ok { border: 1px solid var(--ok); color: var(--ok); }
+  .msg.warn { border: 1px solid var(--warn); color: var(--warn); }
+  .keys { color: var(--muted); font-size: 13px; }
+  .na { color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+<header>
+  <h1>DSG labelling · {{ me }} ({{ initials|upper }})</h1>
+  <button class="tab" data-sheet="detector">Detector <span id="p-detector"></span></button>
+  <button class="tab" data-sheet="calculus">Calculus <span id="p-calculus"></span></button>
+  <span class="spacer"></span>
+  <span id="sync" class="pill"></span>
+  <button class="btn" id="sync-now">Sync now</button>
+  <button class="btn" id="check">Check my file</button>
+</header>
+<main>
+  <div id="msg" class="msg"></div>
+  <div class="nav">
+    <button class="btn" id="prev">◀ Previous <kbd>←</kbd></button>
+    <span>Row <input id="jump" type="number" min="1"> of <span id="total">–</span></span>
+    <button class="btn" id="next">Next <kbd>→</kbd> ▶</button>
+    <button class="btn" id="next-open">Next unlabelled</button>
+    <span id="state" class="badge"></span>
+    <span class="spacer"></span>
+    <span id="keys" class="keys"></span>
+  </div>
+  <div id="view"></div>
+</main>
+<script>
+const LABEL_KEYS = {s: "SUPERSEDE", r: "REVISE", e: "ELABORATE", x: "EXTRACTION_ERROR", u: "UNSURE"};
+const VALUE_KEYS = {"1": "old", "2": "new", "3": "both", "4": "neither", "5": "unsure"};
+const QTEXT = {
+  real_violation: "Real violation? Does it give the subject's attribute a value other than the true value?",
+  real_restatement: "Real restatement? Does it state the subject's attribute as the true value?",
+};
+let sheet = "detector", data = null, answers = {}, dirty = false, active = 0;
+
+const $ = (id) => document.getElementById(id);
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;"}[c]));
+}
+// Split raw text on marker pairs, escape every piece, wrap the marked ones.
+function markup(text, pairs) {
+  let out = esc(text);
+  for (const [open, close, cls] of pairs) {
+    const o = esc(open).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const c = esc(close).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp(o + "([\\s\\S]*?)" + c, "g"), `<span class="${cls}">$1</span>`);
+  }
+  return out;
+}
+function say(text, kind = "err") {
+  const m = $("msg");
+  m.className = "msg show " + kind;
+  m.innerHTML = text;
+}
+function quiet() { $("msg").className = "msg"; }
+
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || res.statusText);
+  return json;
+}
+
+function showSync(s) {
+  const el = $("sync");
+  if (!s || !s.enabled) { el.textContent = "sync off"; el.className = "pill"; return; }
+  if (s.error) { el.textContent = "sync error"; el.title = s.error; el.className = "pill err"; return; }
+  el.title = "";
+  el.textContent = s.pending ? "unsynced saves" + (s.last_push ? ` · last push ${s.last_push}` : "")
+                             : (s.last_push ? `pushed ${s.last_push}` : "up to date");
+  el.className = "pill" + (s.pending ? " pending" : "");
+}
+function showProgress(name, p) { $("p-" + name).textContent = `${p.done}/${p.total}`; }
+
+async function refreshState() {
+  const st = await api("/api/state");
+  for (const [name, p] of Object.entries(st.sheets)) showProgress(name, p);
+  showSync(st.sync);
+  return st;
+}
+
+function blockIfDirty() {
+  if (!dirty) return false;
+  say('Unsaved changes on this row. <button class="btn primary" id="m-save">Save</button> ' +
+      '<button class="btn" id="m-discard">Discard</button>', "warn");
+  $("m-save").onclick = () => saveRow(false);
+  $("m-discard").onclick = () => { dirty = false; quiet(); load(data.i); };
+  return true;
+}
+
+async function load(i) {
+  try {
+    data = await api(`/api/row?sheet=${sheet}&i=${i}`);
+  } catch (e) { say(esc(e.message)); return; }
+  answers = {};
+  for (const c of [...Object.keys(data.options), "notes", "correct_value_text"])
+    answers[c] = data.row[c] ?? "";
+  dirty = false; active = 0;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.sheet === sheet));
+  $("total").textContent = data.total;
+  $("jump").value = data.i + 1; $("jump").max = data.total;
+  $("prev").disabled = data.i === 0; $("next").disabled = data.i >= data.total - 1;
+  showProgress(sheet, data.progress);
+  render();
+}
+
+function go(i) {
+  if (blockIfDirty()) return;
+  quiet();
+  load(Math.max(0, Math.min(data.total - 1, i)));
+}
+
+function setAnswer(col, value) {
+  answers[col] = value; dirty = true;
+  const asked = data.asked;
+  if (sheet === "detector" && asked.indexOf(col) === active && active < asked.length - 1) active++;
+  render();
+  if (value.toLowerCase() === "unsure") $("notes").focus();
+}
+
+function choiceRow(col, keys) {
+  return `<div class="choices">` + data.options[col].map(v => {
+    const k = keys ? Object.keys(keys).find(x => keys[x] === v) : null;
+    return `<button class="choice${answers[col] === v ? " on" : ""}" data-col="${col}" data-v="${v}">` +
+           `${esc(v)}${k ? `<kbd>${k.toUpperCase()}</kbd>` : ""}</button>`;
+  }).join("") + `</div>`;
+}
+
+function renderDetector(r) {
+  const type = r.item_type;
+  const q = type === "flagged_violation"
+    ? `Does the marked word give <span class="subj">${esc(r.subject)}</span>'s <b>${esc(r.kind)}</b> a value other than <b>${esc(r.true_value)}</b>?`
+    : type === "flagged_restatement"
+    ? `Does the marked word state <span class="subj">${esc(r.subject)}</span>'s <b>${esc(r.kind)}</b> as <b>${esc(r.true_value)}</b>?`
+    : `Does anything in the passage give <span class="subj">${esc(r.subject)}</span>'s <b>${esc(r.kind)}</b> a wrong value? Does anything state it as <b>${esc(r.true_value)}</b>? Answer each on its own.`;
+  const qs = ["real_violation", "real_restatement"].map(col => {
+    if (!data.asked.includes(col))
+      return `<div class="q"><div class="title">${QTEXT[col]}</div><span class="na">not asked for this row (n/a)</span></div>`;
+    const on = data.asked.indexOf(col) === active;
+    return `<div class="q${on ? " active" : ""}" data-q="${data.asked.indexOf(col)}">` +
+      `<div class="title">${QTEXT[col]}</div>${choiceRow(col, {y: "yes", n: "no", u: "unsure"})}</div>`;
+  }).join("");
+  $("keys").innerHTML = "Y / N / U answer the outlined question · Enter saves and moves on";
+  return `
+    <div class="card meta">
+      <div><small>Subject</small><b>${esc(r.subject)}</b></div>
+      <div><small>Attribute</small><b>${esc(r.kind)}</b></div>
+      <div><small>True value (chapter 1)</small><b>${esc(r.true_value)}</b></div>
+      <div><small>Matched word</small><b>${esc(r.matched_word) || "—"}</b></div>
+      <div><small>Row type</small><b>${esc(type.replace("_", " "))}</b></div>
+    </div>
+    <div class="card"><p class="question">${q}</p></div>
+    <div class="card context">${markup(r.context, [["[[", "]]", "subj"], ["<<", ">>", "flag"]])}</div>
+    <div class="card">${qs}
+      <label class="field" for="notes">Notes (required when you answer unsure)</label>
+      <textarea id="notes">${esc(answers.notes)}</textarea>
+      <p><button class="btn primary" id="save">Save and next <kbd>Enter</kbd></button>
+         <button class="btn" id="save-stay">Save</button></p>
+    </div>`;
+}
+
+function factPanel(r, side, title) {
+  const ctx = r[side + "_context"], win = r[side + "_window"], match = r[side + "_match"];
+  const shown = ctx ? `<div class="context scroll">${markup(ctx, [[">>>", "<<<", "mark"]])}</div>`
+    : `<p class="na">Evidence sentence not found: read the full passage below.</p>`;
+  return `<div class="card"><small class="pill">${title}</small>
+    <div class="fact">${esc(r[side + "_object"])}</div>
+    <p>Evidence: <i>${esc(r[side + "_evidence"]) || "—"}</i> <span class="badge">${esc(match)}</span></p>
+    ${shown}
+    <details${ctx ? "" : " open"}><summary>Full passage</summary>
+      <div class="context scroll">${esc(win)}</div></details></div>`;
+}
+
+function renderCalculus(r) {
+  $("keys").innerHTML = "S R E X U choose the label · 1–5 the correct value · Enter saves and moves on";
+  const pred = r.raw_predicate && r.raw_predicate !== r.predicate ? ` (${esc(r.raw_predicate)})` : "";
+  return `
+    <div class="card meta">
+      <div><small>Book</small><b>${esc(r.book)}</b></div>
+      <div><small>Subject</small><b>${esc(r.subject)}</b></div>
+      <div><small>Slot</small><b>${esc(r.predicate)}${pred}</b></div>
+    </div>
+    <div class="card"><p class="question">Did the story world change (SUPERSEDE), was the earlier
+      belief wrong (REVISE), or is the new value the old one stated more precisely (ELABORATE)?</p>
+      <p class="pill">Judge as a reader who has read up to the end of the new passage and no further.</p></div>
+    <div class="cols">${factPanel(r, "old", "Earlier fact")}${factPanel(r, "new", "New fact")}</div>
+    <div class="card">
+      <div class="q"><div class="title">Label</div>${choiceRow("label", LABEL_KEYS)}</div>
+      <div class="q"><div class="title">Which value is true now?</div>${choiceRow("correct_value", VALUE_KEYS)}</div>
+      <label class="field" for="cvt">Correct value text (optional, if neither value is right as written)</label>
+      <input id="cvt" class="textin" value="${esc(answers.correct_value_text)}">
+      <label class="field" for="notes">Notes (required for UNSURE / unsure)</label>
+      <textarea id="notes">${esc(answers.notes)}</textarea>
+      <p><button class="btn primary" id="save">Save and next <kbd>Enter</kbd></button>
+         <button class="btn" id="save-stay">Save</button></p>
+    </div>`;
+}
+
+function render() {
+  const r = data.row;
+  $("state").textContent = dirty ? "unsaved changes" : (data.done ? `labelled (${r.labeller})` : "not labelled");
+  $("state").className = "badge " + (dirty ? "open" : data.done ? "done" : "open");
+  $("view").innerHTML = sheet === "detector" ? renderDetector(r) : renderCalculus(r);
+  document.querySelectorAll(".choice").forEach(b => b.onclick = ev => {
+    ev.stopPropagation();
+    const qi = data.asked.indexOf(b.dataset.col);
+    if (sheet === "detector" && qi >= 0) active = qi;
+    setAnswer(b.dataset.col, b.dataset.v);
+  });
+  document.querySelectorAll(".q[data-q]").forEach(q => q.onclick = () => {
+    active = +q.dataset.q; render();
+  });
+  $("notes").oninput = e => { answers.notes = e.target.value; dirty = true; };
+  if ($("cvt")) $("cvt").oninput = e => { answers.correct_value_text = e.target.value; dirty = true; };
+  $("save").onclick = () => saveRow(true);
+  $("save-stay").onclick = () => saveRow(false);
+}
+
+async function saveRow(advance) {
+  try {
+    const out = await api("/api/save", {sheet, item_id: data.row.item_id, answers});
+    dirty = false;
+    showProgress(sheet, out.progress); showSync(out.sync);
+    say(`Saved ${esc(data.row.item_id)}.`, "ok");
+    setTimeout(quiet, 1500);
+    if (advance && data.i < data.total - 1) load(data.i + 1); else load(data.i);
+  } catch (e) { say(esc(e.message)); }
+}
+
+document.addEventListener("keydown", e => {
+  const t = e.target.tagName;
+  if (t === "TEXTAREA" || t === "INPUT") {
+    if (e.key === "Escape") e.target.blur();
+    if (e.key === "Enter" && t === "INPUT" && e.target.id === "jump") go(+e.target.value - 1);
+    return;
+  }
+  if (!data || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (e.key === "ArrowLeft") { e.preventDefault(); go(data.i - 1); return; }
+  if (e.key === "ArrowRight") { e.preventDefault(); go(data.i + 1); return; }
+  if (e.key === "Enter") { e.preventDefault(); saveRow(true); return; }
+  if (sheet === "detector") {
+    const v = {y: "yes", n: "no", u: "unsure"}[k];
+    if (v && data.asked.length) { e.preventDefault(); setAnswer(data.asked[active], v); }
+  } else if (LABEL_KEYS[k]) { e.preventDefault(); setAnswer("label", LABEL_KEYS[k]); }
+  else if (VALUE_KEYS[k]) { e.preventDefault(); setAnswer("correct_value", VALUE_KEYS[k]); }
+});
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = async () => {
+  if (blockIfDirty()) return;
+  quiet(); sheet = t.dataset.sheet;
+  const st = await refreshState();
+  load(st.sheets[sheet].next_open ?? 0);
+});
+$("prev").onclick = () => go(data.i - 1);
+$("next").onclick = () => go(data.i + 1);
+$("jump").onchange = e => go(+e.target.value - 1);
+$("next-open").onclick = async () => {
+  if (blockIfDirty()) return;
+  const st = await refreshState();
+  const n = st.sheets[sheet].next_open;
+  if (n === null) say("Every row in this sheet is labelled. Run “Check my file”.", "ok");
+  else go(n);
+};
+$("sync-now").onclick = async () => {
+  $("sync").textContent = "syncing…";
+  try { showSync((await api("/api/sync", {})).sync); } catch (e) { say(esc(e.message)); }
+};
+$("check").onclick = async () => {
+  try {
+    const out = await api("/api/check", {sheet});
+    if (!out.problems.length) say(`No problems in your ${sheet} file (unlabelled rows are allowed until you finish).`, "ok");
+    else say(`<b>${out.problems.length} problem(s):</b><br>` + out.problems.slice(0, 20).map(esc).join("<br>"));
+  } catch (e) { say(esc(e.message)); }
+};
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+setInterval(() => refreshState().catch(() => {}), 30000);
+
+refreshState().then(st => load(st.sheets[sheet].next_open ?? 0));
+</script>
+</body>
+</html>
