@@ -162,6 +162,13 @@ def test_two_annotators_push_their_own_files(clones):
     assert (b / "README.md").read_text() == "an unrelated local edit\n"
 
 
+def test_a_sync_with_nothing_new_makes_no_commit(clones):
+    remote, (a, _) = clones
+    status = _syncer(a, "annotator_01").sync()
+    assert status["error"] is None
+    assert _git(remote, "log", "--format=%s", "main").splitlines() == ["seed"]
+
+
 def test_sync_refuses_to_push_other_unpushed_work(clones):
     remote, (a, _) = clones
     (a / "README.md").write_text("someone else's commit\n")
